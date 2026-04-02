@@ -1,4 +1,4 @@
-# Stay On Deck
+# Survive the Field
 
 Simple Next.js + TypeScript HTML5 Canvas game MVP.
 

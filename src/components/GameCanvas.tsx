@@ -47,6 +47,7 @@ interface GameData {
 interface GameCanvasProps {
   onStateChange?: (state: { score: number; stage: number; mode: string; eventTimeLeft?: number; inEvent?: boolean; eventName?: string }) => void
   isPaused?: boolean
+  uiState?: 'title' | 'rules' | 'playing' | 'paused'
 }
 
 const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) => {
@@ -117,17 +118,15 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     )
   }
 
-  const resetGame = () => {
+  const resetGame = (options?: { spawnEnemies?: boolean }) => {
     const w = canvasWidthRef.current
     const h = canvasHeightRef.current
     playerRef.current = createPlayer(w / 2, h / 2)
-    enemiesRef.current = [spawnEnemy(w, h, 1, 1)]
-    goalRef.current = spawnCataclysmGoals(
-      w,
-      h,
-      playerRef.current.x,
-      playerRef.current.y
-    )[0]
+    const spawnEnemies = options?.spawnEnemies ?? (props.uiState === 'playing' || props.uiState === 'rules')
+    enemiesRef.current = spawnEnemies ? [spawnEnemy(w, h, 1, 1)] : []
+    goalRef.current = spawnEnemies
+      ? spawnCataclysmGoals(w, h, playerRef.current.x, playerRef.current.y)[0]
+      : null
     gameDataRef.current = {
       score: 0,
       stage: 1,
@@ -179,6 +178,11 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
   // Setup canvas and input
   useEffect(() => {
+    // Respond to UI state changes from parent. This allows the page to control
+    // initialization (title = clean canvas, rules = initialize but paused,
+    // playing = start game, paused = keep paused)
+    // Note: we intentionally initialize entities for `rules` so the rules modal
+    // shows over a ready-but-paused game.
     const canvas = canvasRef.current!
     const dpr = window.devicePixelRatio || 1
     const resize = () => {
@@ -270,7 +274,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
     function update(dt: number) {
       const gameData = gameDataRef.current
-      if (gameData.state === 'gameOver' || props.isPaused) return
+      // Only run game logic when the UI state explicitly indicates `playing`.
+      if (props.uiState !== 'playing' || gameData.state === 'gameOver' || props.isPaused) return
 
       const player = playerRef.current!
       const w = canvasWidthRef.current
@@ -842,6 +847,24 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
   }, [props])
+
+  // Watch UI state changes (title/rules/playing/paused) and react accordingly.
+  useEffect(() => {
+    if (!props.uiState) return
+
+    if (props.uiState === 'title') {
+      // Clean canvas, no enemies
+      resetGame({ spawnEnemies: false })
+    } else if (props.uiState === 'rules') {
+      // Initialize entities but remain paused until user clicks Play
+      resetGame({ spawnEnemies: true })
+    } else if (props.uiState === 'playing') {
+      // Ensure timing doesn't jump when starting/resuming
+      lastRef.current = performance.now()
+      pauseTimeRef.current = null
+    }
+    // pausing is handled by the update gate (props.uiState !== 'playing')
+  }, [props.uiState])
 
   return (
     <canvas

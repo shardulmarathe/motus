@@ -2,7 +2,7 @@ import './globals.css'
 import React from 'react'
 
 export const metadata = {
-  title: 'Stay On Deck',
+  title: 'Survive the Field',
   description: 'Fast-paced physics survival game',
 }
 
