@@ -16,6 +16,8 @@ export type Goal = {
   radius: number
   vx?: number
   vy?: number
+  directionChangeTimer?: number // Timer for sporadic direction changes
+  moveSpeed?: number // Unique speed for this goal
 }
 
 export type Vec = { x: number; y: number }
@@ -110,10 +112,39 @@ export function clampToBounds(puck: Puck, canvasWidth: number, canvasHeight: num
 
 /**
  * Update a goal position (for moving goals with velocity)
- * Goals bounce off walls
+ * Goals bounce off walls and periodically change direction
  */
 export function integrateGoal(goal: Goal, dt: number, canvasWidth: number, canvasHeight: number) {
   if (goal.vx === undefined || goal.vy === undefined) return
+
+  // Initialize direction change timer if not set
+  if (goal.directionChangeTimer === undefined) {
+    goal.directionChangeTimer = 0.5 + Math.random() * 1.0 // 0.5-1.5 seconds
+  }
+
+  // Decrease timer and change direction if needed
+  goal.directionChangeTimer -= dt
+  if (goal.directionChangeTimer <= 0) {
+    // Pick new random direction with slight jitter
+    const angle = Math.random() * Math.PI * 2
+    const moveSpeed = goal.moveSpeed || 50
+    
+    // Add some variation to the velocity
+    const speedVariation = moveSpeed * (0.85 + Math.random() * 0.3)
+    goal.vx = Math.cos(angle) * speedVariation
+    goal.vy = Math.sin(angle) * speedVariation
+    
+    // Occasionally pause briefly
+    if (Math.random() < 0.3) {
+      const pauseDuration = 0.2 + Math.random() * 0.2
+      goal.directionChangeTimer = pauseDuration
+      goal.vx = 0
+      goal.vy = 0
+    } else {
+      // Set next direction change time
+      goal.directionChangeTimer = 0.8 + Math.random() * 0.7
+    }
+  }
 
   goal.x += goal.vx * dt
   goal.y += goal.vy * dt

@@ -98,12 +98,15 @@ export function spawnGoal(
     radius: 12,
   }
 
-  // For moving goals, add velocity
+  // For moving goals, add velocity with variation per goal
   if (isMoving) {
-    const moveSpeed = 40 // pixels per second, slower than enemies
+    const baseSpeed = 50 // pixels per second
+    const moveSpeed = baseSpeed * (0.7 + Math.random() * 0.6) // Each goal has different speed (0.7x to 1.3x)
     const angle = Math.random() * Math.PI * 2
     goal.vx = Math.cos(angle) * moveSpeed
     goal.vy = Math.sin(angle) * moveSpeed
+    goal.moveSpeed = moveSpeed // Store for direction changes
+    goal.directionChangeTimer = 0.5 + Math.random() * 1.0 // Start timer for first direction change
   }
 
   return goal
@@ -139,6 +142,24 @@ export function getEventType(): CataclysmEventType {
   const selected = availableTypes[Math.floor(Math.random() * availableTypes.length)]
   lastEventType = selected
   return selected
+}
+
+/**
+ * Get event name for current Cataclysm event (themed)
+ */
+export function getEventName(eventType: CataclysmEventType): string {
+  switch (eventType) {
+    case 'staticGoals':
+      return 'Precision Run'
+    case 'movingGoals':
+      return 'Chase Sequence'
+    case 'shakeMode':
+      return 'System Overload'
+    case 'shrinkingArena':
+      return 'Last Stand'
+    default:
+      return 'Event'
+  }
 }
 
 /**

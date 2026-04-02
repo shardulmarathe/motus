@@ -7,6 +7,7 @@ import {
   spawnEnemy,
   spawnCataclysmGoals,
   getEventType,
+  getEventName,
   getCataclysmObjective,
   getDifficultyMultiplier,
   shouldTriggerCataclysm,
@@ -27,6 +28,7 @@ interface CataclysmData {
   goalsNeeded: number
   goalsCollected: number
   eventType: CataclysmEventType
+  eventName: string
   goals: Goal[]
   arenaWidth?: number
   arenaHeight?: number
@@ -43,7 +45,8 @@ interface GameData {
 }
 
 interface GameCanvasProps {
-  onStateChange?: (state: { score: number; stage: number; mode: string }) => void
+  onStateChange?: (state: { score: number; stage: number; mode: string; eventTimeLeft?: number; inEvent?: boolean; eventName?: string }) => void
+  isPaused?: boolean
 }
 
 const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) => {
@@ -65,6 +68,9 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
   const shakeIntensityRef = useRef<number>(0)
   const collisionFlashRef = useRef<number>(0)
   const particlesRef = useRef<Particle[]>([])
+  const pauseTimeRef = useRef<number | null>(null)
+  const canvasWidthRef = useRef<number>(0) // Display width (unscaled)
+  const canvasHeightRef = useRef<number>(0) // Display height (unscaled)
 
   // Expose canvas ref
   useEffect(() => {
@@ -83,11 +89,13 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     let mode = 'Normal'
     let eventTimeLeft: number | undefined = undefined
     let inEvent = false
+    let eventName: string | undefined = undefined
     
     if (gameData.state === 'cataclysm' && gameData.cataclysm) {
       mode = 'Event'
       eventTimeLeft = gameData.cataclysm.timeLeft
       inEvent = true
+      eventName = gameData.cataclysm.eventName
     }
 
     const state = {
@@ -96,6 +104,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       mode,
       eventTimeLeft,
       inEvent,
+      eventName,
     }
 
     if (props.onStateChange) {
@@ -109,12 +118,13 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
   }
 
   const resetGame = () => {
-    const canvas = canvasRef.current!
-    playerRef.current = createPlayer(canvas.width / 2, canvas.height / 2)
-    enemiesRef.current = [spawnEnemy(canvas.width, canvas.height, 1, 1)]
+    const w = canvasWidthRef.current
+    const h = canvasHeightRef.current
+    playerRef.current = createPlayer(w / 2, h / 2)
+    enemiesRef.current = [spawnEnemy(w, h, 1, 1)]
     goalRef.current = spawnCataclysmGoals(
-      canvas.width,
-      canvas.height,
+      w,
+      h,
       playerRef.current.x,
       playerRef.current.y
     )[0]
@@ -147,13 +157,51 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     }
   }
 
+  // Handle pause events
+  useEffect(() => {
+    const handlePause = (e: any) => {
+      if (e.detail && !props.isPaused && lastRef.current) {
+        // Pause started, save current time
+        pauseTimeRef.current = performance.now()
+      } else if (!e.detail && props.isPaused && pauseTimeRef.current) {
+        // Resume, add pause duration to lastRef
+        const pauseDuration = (performance.now() - pauseTimeRef.current) / 1000
+        if (lastRef.current) {
+          lastRef.current += pauseDuration
+        }
+        pauseTimeRef.current = null
+      }
+    }
+
+    window.addEventListener('gamePause', handlePause)
+    return () => window.removeEventListener('gamePause', handlePause)
+  }, [props.isPaused])
+
   // Setup canvas and input
   useEffect(() => {
     const canvas = canvasRef.current!
+    const dpr = window.devicePixelRatio || 1
     const resize = () => {
       const parent = canvas.parentElement!
-      canvas.width = parent.clientWidth
-      canvas.height = parent.clientHeight
+      const clientWidth = parent.clientWidth
+      const clientHeight = parent.clientHeight
+      
+      // Store display dimensions for game logic (no HUD offset needed - canvas is below HUD)
+      canvasWidthRef.current = clientWidth
+      canvasHeightRef.current = clientHeight
+      
+      // Set internal resolution for high-DPI displays
+      canvas.width = clientWidth * dpr
+      canvas.height = clientHeight * dpr
+      
+      // Scale context to match device pixel ratio
+      const ctx = canvas.getContext('2d')!
+      ctx.scale(dpr, dpr)
+      
+      // Set CSS size to match intended display size
+      canvas.style.width = `${clientWidth}px`
+      canvas.style.height = `${clientHeight}px`
+      
       resetGame()
     }
 
@@ -222,9 +270,11 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
     function update(dt: number) {
       const gameData = gameDataRef.current
-      if (gameData.state === 'gameOver') return
+      if (gameData.state === 'gameOver' || props.isPaused) return
 
       const player = playerRef.current!
+      const w = canvasWidthRef.current
+      const h = canvasHeightRef.current
 
       // ===== MOMENTUM-BASED MOVEMENT =====
       const acceleration = 1000
@@ -245,7 +295,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
       integrate(player, dt)
 
-      if (isOutOfBounds(player, canvas.width, canvas.height)) {
+      if (isOutOfBounds(player, w, h)) {
         gameData.state = 'gameOver'
         player.vx = 0
         player.vy = 0
@@ -261,16 +311,17 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       const diffMultiplier = getDifficultyMultiplier(gameData.cataclysmCount)
       const baseSpawnChance = 0.8
       const spawnChance = baseSpawnChance * diffMultiplier
-      if (Math.random() < dt * spawnChance && gameData.state === 'playing') {
-        enemiesRef.current.push(spawnEnemy(canvas.width, canvas.height, gameData.stage, diffMultiplier))
+      // CRITICAL FIX: Enemies spawn during ALL modes, not just playing
+      if (Math.random() < dt * spawnChance) {
+        enemiesRef.current.push(spawnEnemy(w, h, gameData.stage, diffMultiplier))
       }
 
       enemiesRef.current = enemiesRef.current.filter((e) => {
         return (
           e.x + e.radius > -50 &&
-          e.x - e.radius < canvas.width + 50 &&
+          e.x - e.radius < w + 50 &&
           e.y + e.radius > -50 &&
-          e.y - e.radius < canvas.height + 50
+          e.y - e.radius < h + 50
         )
       })
 
@@ -288,8 +339,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
             gameData.lastCataclysmTriggerScore = gameData.score
             const eventType = getEventType()
             const cataclysmGoals = spawnCataclysmGoals(
-              canvas.width,
-              canvas.height,
+              w,
+              h,
               player.x,
               player.y,
               eventType === 'movingGoals'
@@ -299,13 +350,14 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
               goalsNeeded: 7,
               goalsCollected: 0,
               eventType,
+              eventName: getEventName(eventType),
               goals: cataclysmGoals,
-              arenaWidth: canvas.width,
-              arenaHeight: canvas.height,
+              arenaWidth: w,
+              arenaHeight: h,
               enterTime: 0,
             }
           } else {
-            const goals = spawnCataclysmGoals(canvas.width, canvas.height, player.x, player.y)
+            const goals = spawnCataclysmGoals(w, h, player.x, player.y)
             goalRef.current = goals[0]
           }
           updateGameState()
@@ -315,12 +367,16 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       // ===== CATACLYSM MODE =====
       if (gameData.state === 'cataclysm' && gameData.cataclysm) {
         const cat = gameData.cataclysm
-        cat.timeLeft -= dt
         if (cat.enterTime !== undefined) cat.enterTime += dt
+        
+        // Only decrement timer AFTER intro finishes (enterTime >= 1.5)
+        if (cat.enterTime === undefined || cat.enterTime >= 1.5) {
+          cat.timeLeft -= dt
+        }
 
         if (cat.eventType === 'movingGoals') {
           for (const goal of cat.goals) {
-            integrateGoal(goal, dt, canvas.width, canvas.height)
+            integrateGoal(goal, dt, w, h)
           }
         }
 
@@ -341,6 +397,32 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
             repositionGoalInBounds(goal, arenaSize.x, arenaSize.y, arenaSize.width, arenaSize.height)
           }
           
+          // CONSTRAINT: Keep enemies within shrinking arena
+          for (const enemy of enemiesRef.current) {
+            const enemyLeft = enemy.x - enemy.radius
+            const enemyRight = enemy.x + enemy.radius
+            const enemyTop = enemy.y - enemy.radius
+            const enemyBottom = enemy.y + enemy.radius
+            
+            // Clamp enemy position to stay within shrinking boundary
+            if (enemyLeft < arenaSize.x) {
+              enemy.x = arenaSize.x + enemy.radius
+              enemy.vx = Math.abs(enemy.vx) // Bounce inward
+            }
+            if (enemyRight > arenaSize.x + arenaSize.width) {
+              enemy.x = arenaSize.x + arenaSize.width - enemy.radius
+              enemy.vx = -Math.abs(enemy.vx) // Bounce inward
+            }
+            if (enemyTop < arenaSize.y) {
+              enemy.y = arenaSize.y + enemy.radius
+              enemy.vy = Math.abs(enemy.vy) // Bounce inward
+            }
+            if (enemyBottom > arenaSize.y + arenaSize.height) {
+              enemy.y = arenaSize.y + arenaSize.height - enemy.radius
+              enemy.vy = -Math.abs(enemy.vy) // Bounce inward
+            }
+          }
+          
           if (isOutOfArena(player, arenaSize.x, arenaSize.y, arenaSize.width, arenaSize.height)) {
             gameData.state = 'gameOver'
             player.vx = 0
@@ -351,9 +433,12 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           }
         }
 
+        // Only count goals AFTER overlay finishes (enterTime >= 1.5)
+        const isInOverlay = (cat.enterTime ?? 0) < 1.5
+        
         for (let i = 0; i < cat.goals.length; i++) {
           const goal = cat.goals[i]
-          if (puckCollideGoal(player, goal)) {
+          if (puckCollideGoal(player, goal) && !isInOverlay) {
             cat.goalsCollected++
             spawnBurst(goal.x, goal.y)
             cat.goals.splice(i, 1)
@@ -369,7 +454,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
               // Apply difficulty scaling: increase enemy speed and spawn rate
               // Enemies spawned after this point will use the updated difficulty multiplier
               
-              const goals = spawnCataclysmGoals(canvas.width, canvas.height, player.x, player.y)
+              const goals = spawnCataclysmGoals(w, h, player.x, player.y)
               goalRef.current = goals[0]
               updateGameState()
             }
@@ -385,14 +470,22 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         }
       }
 
+      // Collision detection - with grace period during event overlay
+      const isInEventOverlay = gameData.state === 'cataclysm' && 
+        gameData.cataclysm && 
+        (gameData.cataclysm.enterTime ?? 0) < 1.5
+      
       for (const enemy of enemiesRef.current) {
         if (circlesCollide(player, enemy)) {
-          gameData.state = 'gameOver'
-          player.vx = 0
-          player.vy = 0
-          shakeIntensityRef.current = 20
-          collisionFlashRef.current = 0.5
-          return
+          // Don't die during overlay grace period (fairness - transition from intro to gameplay)
+          if (!isInEventOverlay) {
+            gameData.state = 'gameOver'
+            player.vx = 0
+            player.vy = 0
+            shakeIntensityRef.current = 20
+            collisionFlashRef.current = 0.5
+            return
+          }
         }
       }
 
@@ -414,20 +507,24 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     // ===== RENDERING FUNCTIONS =====
 
     const drawGradientPuck = (x: number, y: number, radius: number, colorStop1: string, colorStop2: string) => {
+      // Use perfect circle with radial gradient - no distortion
       const grad = ctx.createRadialGradient(x - 3, y - 3, 0, x, y, radius)
       grad.addColorStop(0, colorStop1)
       grad.addColorStop(1, colorStop2)
       ctx.fillStyle = grad
       ctx.beginPath()
+      // Perfect circle: same radius for x and y
       ctx.arc(x, y, radius, 0, Math.PI * 2)
       ctx.fill()
     }
 
     const drawGlowCircle = (x: number, y: number, radius: number, color: string, blur: number, alpha: number) => {
+      // Draw perfect glow circle without distortion
       ctx.shadowColor = color
       ctx.shadowBlur = blur
       ctx.fillStyle = `${color}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`
       ctx.beginPath()
+      // Perfect circle: same radius for x and y
       ctx.arc(x, y, radius, 0, Math.PI * 2)
       ctx.fill()
       ctx.shadowColor = 'transparent'
@@ -435,8 +532,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     }
 
     function render() {
-      const w = canvas.width
-      const h = canvas.height
+      const w = canvasWidthRef.current
+      const h = canvasHeightRef.current
       const gameData = gameDataRef.current
       const shake = getShakeOffset(shakeIntensityRef.current)
 
@@ -513,11 +610,16 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
       ctx.restore()
 
-      // ===== DRAW BOUNDARY INDICATOR WITH GLOW =====
-      let boundaryGlowIntensity = 0.15
+      // ===== RENDER ORDER ===== 
+      // 1. Background (cleared above)
+      // 2. Border (canvas boundary)
+      // 3. Goals and enemies and player (drawn above)
+      // 4. Effects and particles (drawn above)
+      // 5. Now draw boundary border at the end
       
-      // Increase glow intensity when player is close to boundary
-      const proximityThreshold = 100 // pixels from edge
+      // ===== DRAW BOUNDARY INDICATOR WITH PROXIMITY-BASED GLOW =====
+      // Border is subtle when far from edge, glows red when player approaches danger
+      const proximityThreshold = 100 // pixels from edge where danger activates
       const minDistToBoundary = Math.min(
         player.x - player.radius,
         player.y - player.radius,
@@ -525,24 +627,61 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         h - (player.y + player.radius)
       )
       
-      if (minDistToBoundary < proximityThreshold) {
-        // Map proximity to glow intensity: at 0px = 0.6, at threshold = 0.15
-        boundaryGlowIntensity = 0.15 + (1 - minDistToBoundary / proximityThreshold) * 0.45
+      // proximityFactor: 0 = far from edge (safe), 1 = at edge (danger)
+      const proximityFactor = Math.max(0, 1 - (minDistToBoundary / proximityThreshold))
+      
+      // Dynamic styling based on proximity
+      // Far from edge: very subtle white border
+      // Near edge: transitions to intense red glow
+      let outerColor: string
+      let innerColor: string
+      let shadowColor: string
+      let shadowBlur: number
+      let outerOpacity: number
+      let innerOpacity: number
+      let lineWidth: number
+      
+      if (proximityFactor < 0.1) {
+        // SAFE: Very subtle neutral border (almost invisible)
+        outerColor = 'rgba(255, 255, 255, 0.05)'
+        innerColor = 'rgba(255, 255, 255, 0.08)'
+        shadowColor = 'transparent'
+        shadowBlur = 0
+        outerOpacity = 1
+        innerOpacity = 1
+        lineWidth = 1
+      } else {
+        // DANGER: Red/orange glowing alarm state
+        const dangerFactor = proximityFactor // Now 0.1 to 1.0
+        outerColor = `rgba(239, 68, 68, ${0.3 * dangerFactor})`
+        innerColor = `rgba(252, 165, 165, ${0.4 + dangerFactor * 0.6})`
+        shadowColor = '#ef4444'
+        shadowBlur = 15 + dangerFactor * 25
+        outerOpacity = 1
+        innerOpacity = 1
+        lineWidth = 2 + dangerFactor * 2
       }
       
       // Outer glow layer
-      ctx.strokeStyle = `rgba(239, 68, 68, ${boundaryGlowIntensity * 0.6})`
+      ctx.strokeStyle = outerColor
       ctx.lineWidth = 8
-      ctx.shadowColor = '#ef4444'
-      ctx.shadowBlur = 20
+      ctx.shadowColor = shadowColor
+      ctx.shadowBlur = shadowBlur
       ctx.strokeRect(0, 0, w, h)
       
       // Inner bright edge
-      ctx.strokeStyle = `rgba(252, 165, 165, ${boundaryGlowIntensity})`
-      ctx.lineWidth = 2
+      ctx.strokeStyle = innerColor
+      ctx.lineWidth = lineWidth
       ctx.shadowColor = 'transparent'
       ctx.shadowBlur = 0
       ctx.strokeRect(0, 0, w, h)
+      
+      // Optional: Subtle screen tint when VERY close to danger (proximityFactor > 0.8)
+      if (proximityFactor > 0.8) {
+        const tintAlpha = (proximityFactor - 0.8) * 0.2 * 0.15 // Very subtle
+        ctx.fillStyle = `rgba(239, 68, 68, ${tintAlpha})`
+        ctx.fillRect(0, 0, w, h)
+      }
 
       // ===== COLLISION FLASH =====
       if (collisionFlashRef.current > 0) {
@@ -550,34 +689,106 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         ctx.fillRect(0, 0, w, h)
       }
 
-      // ===== CATACLYSM TEXT ANIMATION =====
-      if (gameData.state === 'cataclysm' && gameData.cataclysm && gameData.cataclysm.enterTime !== undefined) {
-        const enterTime = gameData.cataclysm.enterTime
-        const fadeInDuration = 0.5
-        const displayDuration = 1.5
-        const fadeOutDuration = 0.5
+      // ===== OPTIONAL: EVENT VIGNETTE (subtle intensity effect) =====
+      if (gameData.state === 'cataclysm' && gameData.cataclysm) {
+        const vignetteIntensity = 0.15
+        const gradient = ctx.createRadialGradient(w / 2, h / 2, Math.max(w, h) * 0.3, w / 2, h / 2, Math.max(w, h) * 0.8)
+        gradient.addColorStop(0, `rgba(0, 0, 0, 0)`)
+        gradient.addColorStop(1, `rgba(0, 0, 0, ${vignetteIntensity})`)
+        ctx.fillStyle = gradient
+        ctx.fillRect(0, 0, w, h)
+      }
 
-        if (enterTime < fadeInDuration + displayDuration + fadeOutDuration) {
+      // ===== CATACLYSM EVENT - INTRO OVERLAY + TIMER =====
+      if (gameData.state === 'cataclysm' && gameData.cataclysm) {
+        const cat = gameData.cataclysm
+        const enterTime = cat.enterTime ?? 0
+        
+        // ===== EVENT INTRO OVERLAY (First 1.5 seconds) =====
+        if (enterTime < 1.5) {
+          const fadeInDuration = 0.3
+          const holdDuration = 0.9
+          const fadeOutDuration = 0.3
+          
           let alpha = 1
-
           if (enterTime < fadeInDuration) {
+            // Fade in
             alpha = enterTime / fadeInDuration
-          } else if (enterTime > fadeInDuration + displayDuration) {
-            alpha = 1 - (enterTime - fadeInDuration - displayDuration) / fadeOutDuration
+          } else if (enterTime < fadeInDuration + holdDuration) {
+            // Hold
+            alpha = 1
+          } else {
+            // Fade out
+            alpha = 1 - ((enterTime - fadeInDuration - holdDuration) / fadeOutDuration)
           }
-
+          
+          // Semi-transparent dark background with blue tint
+          ctx.save()
+          ctx.globalAlpha = alpha * 0.5
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.9)'
+          ctx.fillRect(0, 0, w, h)
+          ctx.restore()
+          
+          // Centered event title and objective
           ctx.save()
           ctx.globalAlpha = alpha
-          ctx.fillStyle = '#06b6d4'
-          ctx.font = 'bold 48px monospace'
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
-          ctx.shadowColor = 'rgba(6, 182, 212, 0.6)'
-          ctx.shadowBlur = 20
-          const objective = getCataclysmObjective(gameData.cataclysm.eventType)
-          ctx.fillText(objective, w / 2, h / 2)
-
+          
+          // Event name (large, bold, blue glow)
+          ctx.fillStyle = '#06b6d4'
+          ctx.font = 'bold 56px monospace'
+          ctx.shadowColor = 'rgba(6, 182, 212, 0.8)'
+          ctx.shadowBlur = 30
+          ctx.fillText(cat.eventName, w / 2, h / 2 - 40)
+          
+          // Event objective (smaller, gray)
+          const objective = getCataclysmObjective(cat.eventType)
+          ctx.fillStyle = '#a0aec0'
+          ctx.font = '24px monospace'
+          ctx.shadowColor = 'rgba(160, 174, 192, 0.5)'
+          ctx.shadowBlur = 15
+          ctx.fillText(objective, w / 2, h / 2 + 30)
+          
           ctx.restore()
+        
+        // ===== CATACLYSM TIMER (After intro ends) =====
+        } else {
+          const timeLeft = Math.ceil(cat.timeLeft)
+          
+          // Color based on time remaining
+          if (timeLeft > 10) {
+            ctx.fillStyle = '#FFFFFF'
+            ctx.shadowColor = 'rgba(255, 255, 255, 0.5)'
+          } else if (timeLeft > 5) {
+            ctx.fillStyle = '#FFD166'
+            ctx.shadowColor = 'rgba(255, 209, 102, 0.8)'
+          } else {
+            ctx.fillStyle = '#EF4444'
+            ctx.shadowColor = 'rgba(239, 68, 68, 1)'
+          }
+          
+          ctx.font = 'bold 48px monospace'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'top'
+          ctx.shadowBlur = 20
+          
+          // Apply subtle pulse when critical
+          let scaleOffset = 1
+          if (timeLeft <= 5) {
+            const pulsePhase = (Date.now() % 400) / 400
+            scaleOffset = 1 + Math.sin(pulsePhase * Math.PI * 2) * 0.05
+          }
+          
+          ctx.save()
+          ctx.translate(w / 2, 40)
+          ctx.scale(scaleOffset, scaleOffset)
+          ctx.translate(-w / 2, -40)
+          ctx.fillText(`${timeLeft}s`, w / 2, 40)
+          ctx.restore()
+          
+          ctx.shadowColor = 'transparent'
+          ctx.shadowBlur = 0
         }
       }
 
@@ -616,6 +827,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       const capped = Math.min(dt, 0.05)
       update(capped)
       render()
+      // CRITICAL: Update game state every frame so timer renders/updates in HUD
+      updateGameState()
 
       rafRef.current = requestAnimationFrame(loop)
     }
