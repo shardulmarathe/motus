@@ -386,7 +386,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       }
 
       // ===== CATACLYSM MODE (SURVIVAL ONLY) =====
-      if (props.gameMode === 'survival' && gameData.state === 'cataclysm' && gameData.cataclysm) {
+      if (gameData.state === 'cataclysm' && gameData.cataclysm && props.gameMode === 'survival') {
         const cat = gameData.cataclysm
         if (cat.enterTime !== undefined) cat.enterTime += dt
         
@@ -445,25 +445,12 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           }
           
           if (isOutOfArena(player, arenaSize.x, arenaSize.y, arenaSize.width, arenaSize.height)) {
-            if (props.gameMode === 'zen') {
-              // Wrap within shrinking arena: teleport to opposite side inside arena
-              const left = arenaSize.x + player.radius
-              const right = arenaSize.x + arenaSize.width - player.radius
-              const top = arenaSize.y + player.radius
-              const bottom = arenaSize.y + arenaSize.height - player.radius
-
-              if (player.x - player.radius < arenaSize.x) player.x = right
-              if (player.x + player.radius > arenaSize.x + arenaSize.width) player.x = left
-              if (player.y - player.radius < arenaSize.y) player.y = bottom
-              if (player.y + player.radius > arenaSize.y + arenaSize.height) player.y = top
-            } else {
-              gameData.state = 'gameOver'
-              player.vx = 0
-              player.vy = 0
-              shakeIntensityRef.current = 20
-              collisionFlashRef.current = 0.5
-              return
-            }
+            gameData.state = 'gameOver'
+            player.vx = 0
+            player.vy = 0
+            shakeIntensityRef.current = 20
+            collisionFlashRef.current = 0.5
+            return
           }
         }
 
