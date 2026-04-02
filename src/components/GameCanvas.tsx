@@ -48,6 +48,7 @@ interface GameCanvasProps {
   onStateChange?: (state: { score: number; stage: number; mode: string; eventTimeLeft?: number; inEvent?: boolean; eventName?: string }) => void
   isPaused?: boolean
   uiState?: 'title' | 'rules' | 'playing' | 'paused'
+  gameMode?: 'survival' | 'zen'
 }
 
 const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) => {
@@ -92,7 +93,9 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     let inEvent = false
     let eventName: string | undefined = undefined
     
-    if (gameData.state === 'cataclysm' && gameData.cataclysm) {
+    if (props.gameMode === 'zen') {
+      mode = 'Zen'
+    } else if (gameData.state === 'cataclysm' && gameData.cataclysm) {
       mode = 'Event'
       eventTimeLeft = gameData.cataclysm.timeLeft
       inEvent = true
@@ -123,7 +126,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     const h = canvasHeightRef.current
     playerRef.current = createPlayer(w / 2, h / 2)
     // Default: clear enemies on reset, but always spawn initial green goals.
-    const spawnEnemies = options?.spawnEnemies ?? false
+    const spawnEnemies = options?.spawnEnemies ?? (props.gameMode === 'survival')
     enemiesRef.current = spawnEnemies ? [spawnEnemy(w, h, 1, 1)] : []
     // Always spawn at least one goal on reset so the game shows green goals.
     goalRef.current = spawnCataclysmGoals(w, h, playerRef.current.x, playerRef.current.y)[0]
@@ -301,12 +304,20 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       integrate(player, dt)
 
       if (isOutOfBounds(player, w, h)) {
-        gameData.state = 'gameOver'
-        player.vx = 0
-        player.vy = 0
-        shakeIntensityRef.current = 20
-        collisionFlashRef.current = 0.5
-        return
+        if (props.gameMode === 'zen') {
+          // Wrap-around teleport to opposite side in Zen mode
+          if (player.x - player.radius < 0) player.x = w - player.radius
+          if (player.x + player.radius > w) player.x = player.radius
+          if (player.y - player.radius < 0) player.y = h - player.radius
+          if (player.y + player.radius > h) player.y = player.radius
+        } else {
+          gameData.state = 'gameOver'
+          player.vx = 0
+          player.vy = 0
+          shakeIntensityRef.current = 20
+          collisionFlashRef.current = 0.5
+          return
+        }
       }
 
       for (const enemy of enemiesRef.current) {
@@ -321,7 +332,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
       // Cap max enemies and increase cap with stage for gradual difficulty
       const maxEnemies = Math.min(12 + Math.floor(gameData.stage * 2), 80)
-      if (enemiesRef.current.length < maxEnemies && Math.random() < dt * spawnChance) {
+      if (props.gameMode === 'survival' && enemiesRef.current.length < maxEnemies && Math.random() < dt * spawnChance) {
         enemiesRef.current.push(spawnEnemy(w, h, gameData.stage, diffMultiplier))
       }
 
@@ -341,6 +352,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           spawnBurst(goalRef.current.x, goalRef.current.y)
 
           if (
+            props.gameMode === 'survival' &&
             shouldTriggerCataclysm(gameData.score) &&
             gameData.score > gameData.lastCataclysmTriggerScore
           ) {
@@ -373,8 +385,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         }
       }
 
-      // ===== CATACLYSM MODE =====
-      if (gameData.state === 'cataclysm' && gameData.cataclysm) {
+      // ===== CATACLYSM MODE (SURVIVAL ONLY) =====
+      if (props.gameMode === 'survival' && gameData.state === 'cataclysm' && gameData.cataclysm) {
         const cat = gameData.cataclysm
         if (cat.enterTime !== undefined) cat.enterTime += dt
         
@@ -433,12 +445,25 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           }
           
           if (isOutOfArena(player, arenaSize.x, arenaSize.y, arenaSize.width, arenaSize.height)) {
-            gameData.state = 'gameOver'
-            player.vx = 0
-            player.vy = 0
-            shakeIntensityRef.current = 20
-            collisionFlashRef.current = 0.5
-            return
+            if (props.gameMode === 'zen') {
+              // Wrap within shrinking arena: teleport to opposite side inside arena
+              const left = arenaSize.x + player.radius
+              const right = arenaSize.x + arenaSize.width - player.radius
+              const top = arenaSize.y + player.radius
+              const bottom = arenaSize.y + arenaSize.height - player.radius
+
+              if (player.x - player.radius < arenaSize.x) player.x = right
+              if (player.x + player.radius > arenaSize.x + arenaSize.width) player.x = left
+              if (player.y - player.radius < arenaSize.y) player.y = bottom
+              if (player.y + player.radius > arenaSize.y + arenaSize.height) player.y = top
+            } else {
+              gameData.state = 'gameOver'
+              player.vx = 0
+              player.vy = 0
+              shakeIntensityRef.current = 20
+              collisionFlashRef.current = 0.5
+              return
+            }
           }
         }
 
@@ -627,68 +652,60 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       // 5. Now draw boundary border at the end
       
       // ===== DRAW BOUNDARY INDICATOR WITH PROXIMITY-BASED GLOW =====
-      // Border is subtle when far from edge, glows red when player approaches danger
-      const proximityThreshold = 100 // pixels from edge where danger activates
+      // Compute distance to nearest edge
+      const proximityThreshold = 120 // px where warning starts
       const minDistToBoundary = Math.min(
         player.x - player.radius,
         player.y - player.radius,
         w - (player.x + player.radius),
         h - (player.y + player.radius)
       )
-      
-      // proximityFactor: 0 = far from edge (safe), 1 = at edge (danger)
-      const proximityFactor = Math.max(0, 1 - (minDistToBoundary / proximityThreshold))
-      
-      // Dynamic styling based on proximity
-      // Far from edge: very subtle white border
-      // Near edge: transitions to intense red glow
-      let outerColor: string
-      let innerColor: string
-      let shadowColor: string
-      let shadowBlur: number
-      let outerOpacity: number
-      let innerOpacity: number
-      let lineWidth: number
-      
-      if (proximityFactor < 0.1) {
-        // SAFE: Very subtle neutral border (almost invisible)
-        outerColor = 'rgba(255, 255, 255, 0.05)'
-        innerColor = 'rgba(255, 255, 255, 0.08)'
-        shadowColor = 'transparent'
-        shadowBlur = 0
-        outerOpacity = 1
-        innerOpacity = 1
-        lineWidth = 1
-      } else {
-        // DANGER: Red/orange glowing alarm state
-        const dangerFactor = proximityFactor // Now 0.1 to 1.0
-        outerColor = `rgba(239, 68, 68, ${0.3 * dangerFactor})`
-        innerColor = `rgba(252, 165, 165, ${0.4 + dangerFactor * 0.6})`
-        shadowColor = '#ef4444'
-        shadowBlur = 15 + dangerFactor * 25
-        outerOpacity = 1
-        innerOpacity = 1
-        lineWidth = 2 + dangerFactor * 2
+
+      // Raw factor 0..1 (0 far, 1 touching)
+      const rawFactor = Math.max(0, Math.min(1, 1 - minDistToBoundary / proximityThreshold))
+      // Smoothstep for nicer curve
+      const eased = rawFactor * rawFactor * (3 - 2 * rawFactor)
+      const dangerFactor = eased
+
+      // Default subtle border (used for Zen or safe state)
+      let outerLine = 6
+      let innerLine = 1
+      let outerColor = 'rgba(255,255,255,0.06)'
+      let innerColor = 'rgba(255,255,255,0.08)'
+      let shadowColor = 'transparent'
+      let shadowBlur = 0
+
+      if (props.gameMode === 'survival' && dangerFactor > 0) {
+        // Amplify for survival mode
+        const of = Math.min(1, 0.15 + dangerFactor * 0.95)
+        outerLine = 12 + dangerFactor * 16
+        innerLine = 2 + dangerFactor * 6
+        outerColor = `rgba(239,68,68,${0.6 * of})`
+        innerColor = `rgba(255,90,90,${0.45 + dangerFactor * 0.55})`
+        shadowColor = 'rgba(239,68,68,0.95)'
+        shadowBlur = 20 + dangerFactor * 60
       }
-      
-      // Outer glow layer
+
+      // Draw outer glow inset by half maximum stroke to avoid clipping
+      const halfMax = Math.max(outerLine, innerLine) / 2
       ctx.strokeStyle = outerColor
-      ctx.lineWidth = 8
+      ctx.lineWidth = outerLine
       ctx.shadowColor = shadowColor
       ctx.shadowBlur = shadowBlur
-      ctx.strokeRect(0, 0, w, h)
-      
+      ctx.strokeRect(halfMax, halfMax, Math.max(0, w - halfMax * 2), Math.max(0, h - halfMax * 2))
+
       // Inner bright edge
       ctx.strokeStyle = innerColor
-      ctx.lineWidth = lineWidth
+      ctx.lineWidth = innerLine
       ctx.shadowColor = 'transparent'
       ctx.shadowBlur = 0
-      ctx.strokeRect(0, 0, w, h)
-      
-      // Optional: Subtle screen tint when VERY close to danger (proximityFactor > 0.8)
-      if (proximityFactor > 0.8) {
-        const tintAlpha = (proximityFactor - 0.8) * 0.2 * 0.15 // Very subtle
-        ctx.fillStyle = `rgba(239, 68, 68, ${tintAlpha})`
+      const halfInner = innerLine / 2
+      ctx.strokeRect(halfInner + 2, halfInner + 2, Math.max(0, w - (halfInner + 2) * 2), Math.max(0, h - (halfInner + 2) * 2))
+
+      // Stronger tint when very close
+      if (props.gameMode === 'survival' && dangerFactor > 0.6) {
+        const tintAlpha = Math.min(0.35, (dangerFactor - 0.6) * 0.9)
+        ctx.fillStyle = `rgba(239,68,68,${tintAlpha})`
         ctx.fillRect(0, 0, w, h)
       }
 
@@ -698,8 +715,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         ctx.fillRect(0, 0, w, h)
       }
 
-      // ===== OPTIONAL: EVENT VIGNETTE (subtle intensity effect) =====
-      if (gameData.state === 'cataclysm' && gameData.cataclysm) {
+      // ===== OPTIONAL: EVENT VIGNETTE (subtle intensity effect, survival only) =====
+      if (props.gameMode === 'survival' && gameData.state === 'cataclysm' && gameData.cataclysm) {
         const vignetteIntensity = 0.15
         const gradient = ctx.createRadialGradient(w / 2, h / 2, Math.max(w, h) * 0.3, w / 2, h / 2, Math.max(w, h) * 0.8)
         gradient.addColorStop(0, `rgba(0, 0, 0, 0)`)
@@ -708,8 +725,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         ctx.fillRect(0, 0, w, h)
       }
 
-      // ===== CATACLYSM EVENT - INTRO OVERLAY + TIMER =====
-      if (gameData.state === 'cataclysm' && gameData.cataclysm) {
+      // ===== CATACLYSM EVENT - INTRO OVERLAY + TIMER (survival only) =====
+      if (props.gameMode === 'survival' && gameData.state === 'cataclysm' && gameData.cataclysm) {
         const cat = gameData.cataclysm
         const enterTime = cat.enterTime ?? 0
         
@@ -861,7 +878,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       resetGame({ spawnEnemies: false })
     } else if (props.uiState === 'rules') {
       // Initialize entities but remain paused until user clicks Play
-      resetGame({ spawnEnemies: true })
+      resetGame({ spawnEnemies: props.gameMode === 'survival' })
     } else if (props.uiState === 'playing') {
       // Ensure timing doesn't jump when starting/resuming
       lastRef.current = performance.now()
