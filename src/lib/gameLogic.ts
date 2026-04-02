@@ -127,12 +127,36 @@ export function spawnCataclysmGoals(
 }
 
 /**
- * Get Cataclysm event type based on event count
- * Cycles through: staticGoals → movingGoals → shakeMode → shrinkingArena → (repeat)
+ * Get a random Cataclysm event type
+ * Randomly selects from available events, avoiding immediate repeats
  */
-export function getEventType(eventCount: number): CataclysmEventType {
+let lastEventType: CataclysmEventType | null = null
+
+export function getEventType(): CataclysmEventType {
   const types: CataclysmEventType[] = ['staticGoals', 'movingGoals', 'shakeMode', 'shrinkingArena']
-  return types[eventCount % types.length]
+  // Filter out the last event type to avoid immediate repeats
+  const availableTypes = lastEventType ? types.filter(t => t !== lastEventType) : types
+  const selected = availableTypes[Math.floor(Math.random() * availableTypes.length)]
+  lastEventType = selected
+  return selected
+}
+
+/**
+ * Get objective text for current Cataclysm event
+ */
+export function getCataclysmObjective(eventType: CataclysmEventType): string {
+  switch (eventType) {
+    case 'staticGoals':
+      return 'Collect all 7 goals'
+    case 'movingGoals':
+      return 'Collect all 7 moving goals'
+    case 'shakeMode':
+      return 'Collect all 7 goals before time runs out'
+    case 'shrinkingArena':
+      return 'Stay inside the shrinking area'
+    default:
+      return 'Complete the objective'
+  }
 }
 
 /**

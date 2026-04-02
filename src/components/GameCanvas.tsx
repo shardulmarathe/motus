@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useEffect, useRef, forwardRef } from 'react'
-import { Puck, Goal, integrate, applyAcceleration, applyDamping, circlesCollide, puckCollideGoal, isOutOfBounds, integrateGoal, isOutOfArena, getShakeOffset } from '../lib/physics'
+import { Puck, Goal, integrate, applyAcceleration, applyDamping, circlesCollide, puckCollideGoal, isOutOfBounds, integrateGoal, isOutOfArena, getShakeOffset, repositionGoalInBounds } from '../lib/physics'
 import {
   createPlayer,
   spawnEnemy,
   spawnCataclysmGoals,
   getEventType,
+  getCataclysmObjective,
   getDifficultyMultiplier,
   shouldTriggerCataclysm,
   calculateArenaSize,
@@ -80,14 +81,21 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
   const updateGameState = () => {
     const gameData = gameDataRef.current
     let mode = 'Normal'
+    let eventTimeLeft: number | undefined = undefined
+    let inEvent = false
+    
     if (gameData.state === 'cataclysm' && gameData.cataclysm) {
-      mode = `Cataclysm: ${gameData.cataclysm.eventType.replace(/([A-Z])/g, ' $1').trim()}`
+      mode = 'Event'
+      eventTimeLeft = gameData.cataclysm.timeLeft
+      inEvent = true
     }
 
     const state = {
       score: gameData.score,
       stage: gameData.stage,
       mode,
+      eventTimeLeft,
+      inEvent,
     }
 
     if (props.onStateChange) {
@@ -219,7 +227,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       const player = playerRef.current!
 
       // ===== MOMENTUM-BASED MOVEMENT =====
-      const acceleration = 800
+      const acceleration = 1000
       if (activeKeysRef.current.has('ArrowRight')) applyAcceleration(player, acceleration * dt, 0)
       if (activeKeysRef.current.has('ArrowLeft')) applyAcceleration(player, -acceleration * dt, 0)
       if (activeKeysRef.current.has('ArrowDown')) applyAcceleration(player, 0, acceleration * dt)
@@ -278,7 +286,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           ) {
             gameData.state = 'cataclysm'
             gameData.lastCataclysmTriggerScore = gameData.score
-            const eventType = getEventType(gameData.cataclysmCount)
+            const eventType = getEventType()
             const cataclysmGoals = spawnCataclysmGoals(
               canvas.width,
               canvas.height,
@@ -287,7 +295,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
               eventType === 'movingGoals'
             )
             gameData.cataclysm = {
-              timeLeft: 10,
+              timeLeft: 30,
               goalsNeeded: 7,
               goalsCollected: 0,
               eventType,
@@ -325,8 +333,14 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
             cat.arenaWidth!,
             cat.arenaHeight!,
             cat.timeLeft,
-            10
+            30
           )
+          
+          // Ensure all goals stay within the shrinking boundary
+          for (const goal of cat.goals) {
+            repositionGoalInBounds(goal, arenaSize.x, arenaSize.y, arenaSize.width, arenaSize.height)
+          }
+          
           if (isOutOfArena(player, arenaSize.x, arenaSize.y, arenaSize.width, arenaSize.height)) {
             gameData.state = 'gameOver'
             player.vx = 0
@@ -351,6 +365,10 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
               gameData.state = 'playing'
               gameData.cataclysm = undefined
               shakeIntensityRef.current = 0
+              
+              // Apply difficulty scaling: increase enemy speed and spawn rate
+              // Enemies spawned after this point will use the updated difficulty multiplier
+              
               const goals = spawnCataclysmGoals(canvas.width, canvas.height, player.x, player.y)
               goalRef.current = goals[0]
               updateGameState()
@@ -422,9 +440,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       const gameData = gameDataRef.current
       const shake = getShakeOffset(shakeIntensityRef.current)
 
-      // Motion trail: fade instead of clear
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.15)'
-      ctx.fillRect(0, 0, w, h)
+      // Clear canvas completely to prevent motion trails/streaking
+      ctx.clearRect(0, 0, w, h)
 
       ctx.save()
       ctx.translate(shake.x, shake.y)
@@ -455,7 +472,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           gameData.cataclysm.arenaWidth!,
           gameData.cataclysm.arenaHeight!,
           gameData.cataclysm.timeLeft,
-          10
+          30
         )
         ctx.strokeStyle = 'rgba(251, 191, 36, 0.4)'
         ctx.lineWidth = 2
@@ -496,6 +513,37 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
       ctx.restore()
 
+      // ===== DRAW BOUNDARY INDICATOR WITH GLOW =====
+      let boundaryGlowIntensity = 0.15
+      
+      // Increase glow intensity when player is close to boundary
+      const proximityThreshold = 100 // pixels from edge
+      const minDistToBoundary = Math.min(
+        player.x - player.radius,
+        player.y - player.radius,
+        w - (player.x + player.radius),
+        h - (player.y + player.radius)
+      )
+      
+      if (minDistToBoundary < proximityThreshold) {
+        // Map proximity to glow intensity: at 0px = 0.6, at threshold = 0.15
+        boundaryGlowIntensity = 0.15 + (1 - minDistToBoundary / proximityThreshold) * 0.45
+      }
+      
+      // Outer glow layer
+      ctx.strokeStyle = `rgba(239, 68, 68, ${boundaryGlowIntensity * 0.6})`
+      ctx.lineWidth = 8
+      ctx.shadowColor = '#ef4444'
+      ctx.shadowBlur = 20
+      ctx.strokeRect(0, 0, w, h)
+      
+      // Inner bright edge
+      ctx.strokeStyle = `rgba(252, 165, 165, ${boundaryGlowIntensity})`
+      ctx.lineWidth = 2
+      ctx.shadowColor = 'transparent'
+      ctx.shadowBlur = 0
+      ctx.strokeRect(0, 0, w, h)
+
       // ===== COLLISION FLASH =====
       if (collisionFlashRef.current > 0) {
         ctx.fillStyle = `rgba(239, 68, 68, ${collisionFlashRef.current * 0.3})`
@@ -506,7 +554,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       if (gameData.state === 'cataclysm' && gameData.cataclysm && gameData.cataclysm.enterTime !== undefined) {
         const enterTime = gameData.cataclysm.enterTime
         const fadeInDuration = 0.5
-        const displayDuration = 2
+        const displayDuration = 1.5
         const fadeOutDuration = 0.5
 
         if (enterTime < fadeInDuration + displayDuration + fadeOutDuration) {
@@ -520,18 +568,14 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
           ctx.save()
           ctx.globalAlpha = alpha
-          ctx.fillStyle = '#fbbf24'
-          ctx.font = 'bold 56px monospace'
+          ctx.fillStyle = '#06b6d4'
+          ctx.font = 'bold 48px monospace'
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
-          ctx.shadowColor = 'rgba(251, 191, 36, 0.8)'
-          ctx.shadowBlur = 20
-          ctx.fillText('CATACLYSM MODE', w / 2, h / 2 - 40)
-
-          ctx.font = 'bold 32px monospace'
-          ctx.fillStyle = '#06b6d4'
           ctx.shadowColor = 'rgba(6, 182, 212, 0.6)'
-          ctx.fillText(gameData.cataclysm.eventType.replace(/([A-Z])/g, ' $1').toUpperCase(), w / 2, h / 2 + 40)
+          ctx.shadowBlur = 20
+          const objective = getCataclysmObjective(gameData.cataclysm.eventType)
+          ctx.fillText(objective, w / 2, h / 2)
 
           ctx.restore()
         }

@@ -119,6 +119,42 @@ body {
   letter-spacing: 1px;
 }
 
+.hud-timer {
+  font-size: 28px;
+  font-weight: bold;
+  margin-top: 4px;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+  transition: all 0.2s ease;
+}
+
+.timer-normal {
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+}
+
+.timer-warning {
+  color: var(--glow-yellow);
+  text-shadow: 0 0 15px rgba(251, 191, 36, 0.8);
+}
+
+.timer-critical {
+  color: var(--glow-red);
+  text-shadow: 0 0 20px rgba(239, 68, 68, 0.9);
+  animation: pulse-critical 0.5s ease-in-out infinite;
+}
+
+@keyframes pulse-critical {
+  0%, 100% {
+    transform: scale(1);
+    text-shadow: 0 0 20px rgba(239, 68, 68, 0.9);
+  }
+  50% {
+    transform: scale(1.1);
+    text-shadow: 0 0 30px rgba(239, 68, 68, 1);
+  }
+}
+
 .hud-mode {
   font-size: 16px;
   font-weight: bold;

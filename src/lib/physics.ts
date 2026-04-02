@@ -159,3 +159,37 @@ export function getShakeOffset(intensity: number): { x: number; y: number } {
     y: (Math.random() - 0.5) * intensity * 2,
   }
 }
+
+/**
+ * Reposition a goal to be inside a rectangular boundary if it's outside
+ * Used for shrinking arena to ensure goals remain reachable
+ */
+export function repositionGoalInBounds(
+  goal: Goal,
+  boundaryX: number,
+  boundaryY: number,
+  boundaryWidth: number,
+  boundaryHeight: number
+): void {
+  const margin = goal.radius
+  
+  // Check if goal is outside boundary
+  if (
+    goal.x - margin < boundaryX ||
+    goal.x + margin > boundaryX + boundaryWidth ||
+    goal.y - margin < boundaryY ||
+    goal.y + margin > boundaryY + boundaryHeight
+  ) {
+    // Reposition to center of boundary with slight random offset
+    const centerX = boundaryX + boundaryWidth / 2
+    const centerY = boundaryY + boundaryHeight / 2
+    const offsetRange = Math.min(boundaryWidth, boundaryHeight) * 0.2
+    
+    goal.x = centerX + (Math.random() - 0.5) * offsetRange
+    goal.y = centerY + (Math.random() - 0.5) * offsetRange
+    
+    // Clamp to ensure it stays in bounds
+    goal.x = Math.max(boundaryX + margin, Math.min(boundaryX + boundaryWidth - margin, goal.x))
+    goal.y = Math.max(boundaryY + margin, Math.min(boundaryY + boundaryHeight - margin, goal.y))
+  }
+}

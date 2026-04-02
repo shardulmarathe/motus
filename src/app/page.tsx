@@ -6,6 +6,8 @@ interface GameState {
   score: number
   stage: number
   mode: string
+  eventTimeLeft?: number
+  inEvent?: boolean
 }
 
 export default function Page() {
@@ -43,8 +45,27 @@ export default function Page() {
         </div>
 
         <div className="hud-panel hud-right">
-          <div className="hud-label">Stage</div>
-          <div className="hud-value">{gameState.stage}</div>
+          {gameState.inEvent && gameState.eventTimeLeft !== undefined ? (
+            <>
+              <div className="hud-label">TIME</div>
+              <div 
+                className={`hud-timer ${
+                  gameState.eventTimeLeft <= 5 
+                    ? 'timer-critical' 
+                    : gameState.eventTimeLeft <= 10 
+                    ? 'timer-warning' 
+                    : 'timer-normal'
+                }`}
+              >
+                {Math.ceil(gameState.eventTimeLeft)}s
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="hud-label">Stage</div>
+              <div className="hud-value">{gameState.stage}</div>
+            </>
+          )}
         </div>
       </div>
 
