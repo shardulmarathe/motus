@@ -122,11 +122,11 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     const w = canvasWidthRef.current
     const h = canvasHeightRef.current
     playerRef.current = createPlayer(w / 2, h / 2)
-    const spawnEnemies = options?.spawnEnemies ?? (props.uiState === 'playing' || props.uiState === 'rules')
+    // Default: clear enemies on reset, but always spawn initial green goals.
+    const spawnEnemies = options?.spawnEnemies ?? false
     enemiesRef.current = spawnEnemies ? [spawnEnemy(w, h, 1, 1)] : []
-    goalRef.current = spawnEnemies
-      ? spawnCataclysmGoals(w, h, playerRef.current.x, playerRef.current.y)[0]
-      : null
+    // Always spawn at least one goal on reset so the game shows green goals.
+    goalRef.current = spawnCataclysmGoals(w, h, playerRef.current.x, playerRef.current.y)[0]
     gameDataRef.current = {
       score: 0,
       stage: 1,
@@ -195,12 +195,12 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       canvasHeightRef.current = clientHeight
       
       // Set internal resolution for high-DPI displays
-      canvas.width = clientWidth * dpr
-      canvas.height = clientHeight * dpr
-      
-      // Scale context to match device pixel ratio
+      canvas.width = Math.max(1, Math.floor(clientWidth * dpr))
+      canvas.height = Math.max(1, Math.floor(clientHeight * dpr))
+
+      // Set transform to match device pixel ratio (avoid cumulative scaling)
       const ctx = canvas.getContext('2d')!
-      ctx.scale(dpr, dpr)
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       
       // Set CSS size to match intended display size
       canvas.style.width = `${clientWidth}px`
@@ -313,11 +313,15 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         integrate(enemy, dt)
       }
 
-      const diffMultiplier = getDifficultyMultiplier(gameData.cataclysmCount)
+      // Difficulty multiplier now factors stage and completed cataclysms
+      const diffMultiplier = getDifficultyMultiplier(gameData.stage, gameData.cataclysmCount)
       const baseSpawnChance = 0.8
-      const spawnChance = baseSpawnChance * diffMultiplier
-      // CRITICAL FIX: Enemies spawn during ALL modes, not just playing
-      if (Math.random() < dt * spawnChance) {
+      // Slightly increase spawn frequency with stage so difficulty ramps smoothly
+      const spawnChance = baseSpawnChance * diffMultiplier * (1 + (gameData.stage - 1) * 0.02)
+
+      // Cap max enemies and increase cap with stage for gradual difficulty
+      const maxEnemies = Math.min(12 + Math.floor(gameData.stage * 2), 80)
+      if (enemiesRef.current.length < maxEnemies && Math.random() < dt * spawnChance) {
         enemiesRef.current.push(spawnEnemy(w, h, gameData.stage, diffMultiplier))
       }
 
@@ -740,10 +744,10 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
           
-          // Event name (large, bold, blue glow)
-          ctx.fillStyle = '#06b6d4'
+          // Event name (large, bold, RED glow)
+          ctx.fillStyle = '#ef4444'
           ctx.font = 'bold 56px monospace'
-          ctx.shadowColor = 'rgba(6, 182, 212, 0.8)'
+          ctx.shadowColor = 'rgba(239, 68, 68, 0.85)'
           ctx.shadowBlur = 30
           ctx.fillText(cat.eventName, w / 2, h / 2 - 40)
           
@@ -853,7 +857,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     if (!props.uiState) return
 
     if (props.uiState === 'title') {
-      // Clean canvas, no enemies
+      // Reset game and spawn initial goals (no enemies) so title / restart always has green goals
       resetGame({ spawnEnemies: false })
     } else if (props.uiState === 'rules') {
       // Initialize entities but remain paused until user clicks Play

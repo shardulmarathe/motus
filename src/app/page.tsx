@@ -13,43 +13,52 @@ export default function Home() {
 
   return (
     <div className="page">
-      {/* HUD Overlay */}
-      <div className="hud-overlay">
-        <div className="hud-box score-box">
-          <div className="box-label">Score</div>
-          <div className="box-value">{hud.score}</div>
-        </div>
+      {/* Fixed header always present to maintain layout; inner HUD content hidden on title */}
+      <header className="hud-overlay">
+        {uiState !== 'title' ? (
+          <>
+            <div className="hud-box score-box">
+              <div className="box-label">Score</div>
+              <div className="box-value">{hud.score}</div>
+            </div>
 
-        <div className="center-status">
-          {hud.mode === 'Event' ? (
-            <div className="status-text event-name">{hud.eventName}</div>
-          ) : (
-            <div className="status-text">Stage {hud.stage}</div>
-          )}
-        </div>
+            <div className="center-status">
+              {hud.mode === 'Event' ? (
+                <div className="status-text event-name">{hud.eventName}</div>
+              ) : (
+                <div className="status-text">Stage {hud.stage}</div>
+              )}
+            </div>
 
-        <button
-          className="menu-button"
-          onClick={() => setUiState('paused')}
-          aria-label="Menu"
-        >
-          <div className="menu-icon">☰</div>
-          <div className="menu-text">Menu</div>
-        </button>
-      </div>
+            <button
+              className="menu-button"
+              onClick={() => setUiState('paused')}
+              aria-label="Menu"
+            >
+              <div className="menu-icon">☰</div>
+              <div className="menu-text">Menu</div>
+            </button>
+          </>
+        ) : (
+          // When hidden, render an invisible spacer to preserve header height (accessibility)
+          <div style={{ width: '100%', height: '100%' }} aria-hidden />
+        )}
+      </header>
 
       {/* Canvas area */}
-      <div className="canvas-wrap">
+      <main className="canvas-wrap game-area">
         <GameCanvas uiState={uiState} isPaused={uiState !== 'playing'} onStateChange={handleStateUpdate} />
+        {/* CSS fallback boundary to ensure visible red border inside game area */}
+        <div className="game-boundary" />
 
         {/* Title Screen (no blur/dim) */}
         {uiState === 'title' && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto', zIndex: 50 }}>
-            <div style={{ textAlign: 'center' }}>
-              <h1 className="glow-text" style={{ fontSize: 64, color: '#06b6d4', marginBottom: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
+              <h1 className="glow-text" style={{ fontSize: 78, color: '#06b6d4', margin: 0 }}>
                 Survive the Field
               </h1>
-              <div style={{ marginTop: 8 }}>
+              <div style={{ marginTop: 20 }}>
                 <button
                   onClick={() => setUiState('rules')}
                   style={{
@@ -59,7 +68,7 @@ export default function Home() {
                     padding: '18px 28px',
                     borderRadius: 12,
                     cursor: 'pointer',
-                    transition: 'transform 0.2s ease',
+                    transition: 'transform 0.24s ease, box-shadow 240ms',
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
                   onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
@@ -75,8 +84,8 @@ export default function Home() {
         {/* Dark blur overlay + Rules modal */}
         {uiState === 'rules' && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', transition: 'opacity 220ms' }} />
-            <div style={{ width: 560, background: 'rgba(12,18,30,0.72)', borderRadius: 14, padding: 28, boxShadow: '0 8px 30px rgba(6,182,212,0.08)', color: '#e6eef8', textAlign: 'center', transform: 'translateY(0)', transition: 'all 240ms' }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', transition: 'opacity 220ms', zIndex: 10, pointerEvents: 'auto' }} />
+            <div style={{ position: 'relative', zIndex: 20, width: 560, background: 'rgba(12,18,30,0.72)', borderRadius: 14, padding: 28, boxShadow: '0 8px 30px rgba(6,182,212,0.08)', color: '#e6eef8', textAlign: 'center', transform: 'translateY(0)', transition: 'all 240ms' }}>
               <h2 className="glow-text" style={{ fontSize: 32, color: '#67e8f9', marginBottom: 8 }}>Survive the Field</h2>
               <div style={{ color: '#cbd5e1', marginBottom: 16 }}>
                 <ul style={{ textAlign: 'left', paddingLeft: 18, lineHeight: 1.6 }}>
@@ -113,8 +122,8 @@ export default function Home() {
         {/* Pause Modal */}
         {uiState === 'paused' && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', transition: 'opacity 220ms' }} />
-            <div style={{ width: 420, background: 'rgba(12,18,30,0.78)', borderRadius: 12, padding: 24, textAlign: 'center', boxShadow: '0 8px 30px rgba(6,182,212,0.08)' }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', transition: 'opacity 220ms', zIndex: 10, pointerEvents: 'auto' }} />
+            <div style={{ position: 'relative', zIndex: 20, width: 420, background: 'rgba(12,18,30,0.78)', borderRadius: 12, padding: 24, textAlign: 'center', boxShadow: '0 8px 30px rgba(6,182,212,0.08)', transition: 'transform 240ms, opacity 240ms' }}>
               <div style={{ fontSize: 44, fontWeight: 800, color: '#06b6d4', marginBottom: 12 }} className="glow-text">Paused</div>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 12 }}>
                 <button
@@ -133,7 +142,7 @@ export default function Home() {
             </div>
           </div>
         )}
-      </div>
+      </main>
     </div>
   )
 }

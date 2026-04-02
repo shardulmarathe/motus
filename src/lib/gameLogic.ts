@@ -184,9 +184,12 @@ export function getCataclysmObjective(eventType: CataclysmEventType): string {
  * Calculate difficulty multiplier based on number of completed cataclysms
  * Values slightly increase each time for gradual challenge scaling
  */
-export function getDifficultyMultiplier(cataclysmCount: number): number {
-  // Each completed cataclysm increases difficulty by ~5%
-  return Math.pow(1.05, cataclysmCount)
+export function getDifficultyMultiplier(stage: number, cataclysmCount: number): number {
+  // Difficulty increases smoothly with stage and number of completed cataclysms.
+  // Stage scaling: ~6% per stage (configurable), Cataclysm scaling: ~5% per event.
+  const stageMultiplier = Math.pow(1.06, Math.max(0, stage - 1))
+  const eventMultiplier = Math.pow(1.05, Math.max(0, cataclysmCount))
+  return stageMultiplier * eventMultiplier
 }
 
 /**
