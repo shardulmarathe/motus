@@ -1,4 +1,4 @@
-# Survive the Field
+# Motus
 
 Simple Next.js + TypeScript HTML5 Canvas game MVP.
 

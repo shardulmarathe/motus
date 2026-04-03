@@ -58,7 +58,7 @@ export default function Home() {
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto', zIndex: 50 }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 36, transform: 'translateY(-6vh)' }}>
               <h1 className="glow-text" style={{ fontSize: 86, color: '#06b6d4', margin: 0 }}>
-                Survive the Field
+                Motus
               </h1>
               <div style={{ display: 'flex', gap: 18, marginTop: 12 }}>
                 <button
@@ -103,8 +103,8 @@ export default function Home() {
                   onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
                   onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                 >
-                  <div style={{ fontSize: 22, fontWeight: 700, color: '#67e8f9' }}>Zen Mode</div>
-                  <div style={{ fontSize: 13, color: '#cbd5e1', marginTop: 6 }}>Relaxing play: no enemies.</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: '#67e8f9' }}>Practice Mode</div>
+                  <div style={{ fontSize: 13, color: '#cbd5e1', marginTop: 6 }}>No enemies; focus on movement and orbs.</div>
                 </button>
               </div>
             </div>
@@ -116,14 +116,14 @@ export default function Home() {
           <div style={{ position: 'absolute', inset: 0, zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}>
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', transition: 'opacity 220ms', zIndex: 10, pointerEvents: 'auto' }} />
             <div style={{ position: 'relative', zIndex: 20, width: 560, background: 'rgba(12,18,30,0.78)', borderRadius: 14, padding: 28, boxShadow: '0 8px 40px rgba(0,0,0,0.6)', color: '#e6eef8', textAlign: 'center', transform: 'translateY(0)', transition: 'all 240ms' }}>
-              <h2 className="glow-text" style={{ fontSize: 28, color: '#67e8f9', marginBottom: 10 }}>{gameMode === 'zen' ? 'Zen Mode – Rules' : 'Survival Mode – Rules'}</h2>
+              <h2 className="glow-text" style={{ fontSize: 28, color: '#67e8f9', marginBottom: 10 }}>{gameMode === 'zen' ? 'Practice Mode – Rules' : 'Survival Mode – Rules'}</h2>
               <div style={{ color: '#cbd5e1', marginBottom: 18 }}>
                 {gameMode === 'zen' ? (
                   <ul style={{ textAlign: 'left', paddingLeft: 18, lineHeight: 1.7 }}>
-                    <li>Move using arrow keys</li>
-                    <li>Collect green orbs</li>
                     <li>No enemies</li>
-                    <li>Relax and enjoy</li>
+                    <li>No death — you cannot lose</li>
+                    <li>Wrap-around borders (teleport to opposite side)</li>
+                    <li>Focus on collecting green orbs and movement</li>
                   </ul>
                 ) : (
                   <ul style={{ textAlign: 'left', paddingLeft: 18, lineHeight: 1.7 }}>

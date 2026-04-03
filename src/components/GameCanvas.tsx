@@ -317,7 +317,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
       if (isOutOfBounds(player, w, h)) {
         if (props.gameMode === 'zen') {
-          // Wrap-around teleport to opposite side in Zen mode
+          // Wrap-around teleport to opposite side in Practice Mode
           if (player.x - player.radius < 0) player.x = w - player.radius
           if (player.x + player.radius > w) player.x = player.radius
           if (player.y - player.radius < 0) player.y = h - player.radius
