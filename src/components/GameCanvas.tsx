@@ -208,13 +208,25 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       // Set CSS size to match intended display size
       canvas.style.width = `${clientWidth}px`
       canvas.style.height = `${clientHeight}px`
-      
+
+      // Recreate or reposition entities based on new size
       resetGame()
     }
 
+    // Run once on mount
     resize()
+
     window.addEventListener('resize', resize)
-    return () => window.removeEventListener('resize', resize)
+    // Handle fullscreen changes which may not trigger resize events on some browsers
+    const onFullScreen = () => resize()
+    document.addEventListener('fullscreenchange', onFullScreen)
+    document.addEventListener('webkitfullscreenchange', onFullScreen)
+
+    return () => {
+      window.removeEventListener('resize', resize)
+      document.removeEventListener('fullscreenchange', onFullScreen)
+      document.removeEventListener('webkitfullscreenchange', onFullScreen)
+    }
   }, [])
 
   useEffect(() => {
@@ -689,12 +701,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       const halfInner = innerLine / 2
       ctx.strokeRect(halfInner + 2, halfInner + 2, Math.max(0, w - (halfInner + 2) * 2), Math.max(0, h - (halfInner + 2) * 2))
 
-      // Stronger tint when very close
-      if (props.gameMode === 'survival' && dangerFactor > 0.6) {
-        const tintAlpha = Math.min(0.35, (dangerFactor - 0.6) * 0.9)
-        ctx.fillStyle = `rgba(239,68,68,${tintAlpha})`
-        ctx.fillRect(0, 0, w, h)
-      }
+      // (removed full-screen tint) Keep only two border layers: base + glow
 
       // ===== COLLISION FLASH =====
       if (collisionFlashRef.current > 0) {
@@ -872,6 +879,12 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       pauseTimeRef.current = null
     }
     // pausing is handled by the update gate (props.uiState !== 'playing')
+    // Ensure layout recalculation (fixes fullscreen/bottom-border clipping)
+    try {
+      window.dispatchEvent(new Event('resize'))
+    } catch (e) {
+      /* ignore */
+    }
   }, [props.uiState])
 
   return (

@@ -74,7 +74,11 @@ export function spawnGoal(
   playerY: number,
   isMoving: boolean = false
 ): Goal {
-  const minMargin = 60 // pixels from edge
+  const minMargin = 60 // desired safe pixels from edge
+  // Ensure margin fits within current canvas. If canvas is very small,
+  // reduce margin to avoid negative spawn ranges.
+  const effMarginX = Math.max(8, Math.min(minMargin, Math.floor(width * 0.25)))
+  const effMarginY = Math.max(8, Math.min(minMargin, Math.floor(height * 0.25)))
   const minDistanceFromPlayer = 120 // pixels from player
 
   let x = 0
@@ -83,9 +87,11 @@ export function spawnGoal(
   let attempts = 0
 
   // Keep trying until we find a safe spot
-  while (tooCloseToPlayer && attempts < 20) {
-    x = minMargin + Math.random() * (width - 2 * minMargin)
-    y = minMargin + Math.random() * (height - 2 * minMargin)
+  while (tooCloseToPlayer && attempts < 40) {
+    const rangeX = Math.max(0, width - 2 * effMarginX)
+    const rangeY = Math.max(0, height - 2 * effMarginY)
+    x = effMarginX + (rangeX > 0 ? Math.random() * rangeX : width / 2)
+    y = effMarginY + (rangeY > 0 ? Math.random() * rangeY : height / 2)
 
     const dist = Math.hypot(x - playerX, y - playerY)
     tooCloseToPlayer = dist < minDistanceFromPlayer
