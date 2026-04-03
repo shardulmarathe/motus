@@ -1,5 +1,6 @@
 import './globals.css'
 import React from 'react'
+import { Analytics } from '@vercel/analytics/react'
 
 export const metadata = {
   title: 'Survive the Field',
@@ -11,6 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         {children}
+        <Analytics />
       </body>
     </html>
   )
