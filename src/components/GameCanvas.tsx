@@ -340,7 +340,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       const diffMultiplier = getDifficultyMultiplier(gameData.stage, gameData.cataclysmCount)
       const baseSpawnChance = 0.8
       // Slightly increase spawn frequency with stage so difficulty ramps smoothly
-      const spawnChance = baseSpawnChance * diffMultiplier * (1 + (gameData.stage - 1) * 0.02)
+      const spawnChance = baseSpawnChance * diffMultiplier * (1 + (gameData.stage - 1) * 0.07)
 
       // Cap max enemies and increase cap with stage for gradual difficulty
       const maxEnemies = Math.min(12 + Math.floor(gameData.stage * 2), 80)
