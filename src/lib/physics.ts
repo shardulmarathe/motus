@@ -10,6 +10,10 @@ export type Puck = {
   id?: string
 }
 
+export type Enemy = Puck & {
+  baseSpeed: number // Base speed before stage multiplier
+}
+
 export type Goal = {
   x: number
   y: number

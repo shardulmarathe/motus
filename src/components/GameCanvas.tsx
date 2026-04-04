@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, forwardRef } from 'react'
-import { Puck, Goal, integrate, applyAcceleration, applyDamping, circlesCollide, puckCollideGoal, isOutOfBounds, integrateGoal, isOutOfArena, getShakeOffset, repositionGoalInBounds } from '../lib/physics'
+import { Puck, Goal, Enemy, integrate, applyAcceleration, applyDamping, circlesCollide, puckCollideGoal, isOutOfBounds, integrateGoal, isOutOfArena, getShakeOffset, repositionGoalInBounds } from '../lib/physics'
 import {
   createPlayer,
   spawnEnemy,
@@ -32,6 +32,13 @@ interface Particle {
   vx: number
   vy: number
   life: number
+  centerX?: number
+  centerY?: number
+  angle?: number
+  maxRadius?: number
+  currentRadius?: number
+  rotationSpeed?: number
+  radiusGrowth?: number
 }
 
 interface CataclysmData {
@@ -53,6 +60,7 @@ interface GameData {
   cataclysm?: CataclysmData
   lastCataclysmTriggerScore: number
   cataclysmCount: number
+  eventProgress: number
 }
 
 interface GameCanvasProps {
@@ -67,7 +75,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
   const rafRef = useRef<number | null>(null)
   const lastRef = useRef<number | null>(null)
   const playerRef = useRef<Puck | null>(null)
-  const enemiesRef = useRef<Puck[]>([])
+  const enemiesRef = useRef<Enemy[]>([])
   const goalRef = useRef<Goal | null>(null)
   const gameDataRef = useRef<GameData>({
     score: 0,
@@ -75,7 +83,9 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     state: 'playing',
     lastCataclysmTriggerScore: 0,
     cataclysmCount: 0,
+    eventProgress: 0,
   })
+  const lastStageRef = useRef<number>(1) // Track stage changes for speed updates
 
   const activeKeysRef = useRef<Set<string>>(new Set())
   const shakeIntensityRef = useRef<number>(0)
@@ -131,6 +141,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       eventTimeLeft,
       inEvent,
       eventName,
+      eventProgress: gameData.eventProgress,
     }
 
     if (props.onStateChange) {
@@ -162,7 +173,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       }
       
       // Set enemies and goals
-      enemiesRef.current = setup.enemies || []
+      enemiesRef.current = (setup.enemies || []) as Enemy[]
       tutorialGoalsRef.current = setup.goals || []
       tutorialStateRef.current.totalGoalsInStep = tutorialGoalsRef.current.length
       
@@ -183,7 +194,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     } else {
       // Default: clear enemies on reset, but always spawn initial green goals.
       const spawnEnemies = options?.spawnEnemies ?? (props.gameMode === 'survival')
-      enemiesRef.current = spawnEnemies ? [spawnEnemy(w, h, 1, 1)] : []
+      enemiesRef.current = spawnEnemies ? [spawnEnemy(w, h, 1, 1) as Enemy] : []
       // Always spawn at least one goal on reset so the game shows green goals.
       goalRef.current = spawnCataclysmGoals(w, h, playerRef.current.x, playerRef.current.y)[0]
       tutorialGoalsRef.current = []
@@ -195,6 +206,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       state: 'playing',
       lastCataclysmTriggerScore: 0,
       cataclysmCount: 0,
+      eventProgress: 0,
     }
     activeKeysRef.current.clear()
     shakeIntensityRef.current = 0
@@ -205,16 +217,26 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
   }
 
   const spawnBurst = (x: number, y: number) => {
-    const particleCount = 12
+    const particleCount = 8 // Reduced from 10
+    const rotationSpeed = 0.08 // Slower rotation (was 0.15)
+    const radiusGrowth = 0.8 // Slower growth (was 1.5)
+    
     for (let i = 0; i < particleCount; i++) {
-      const angle = (i / particleCount) * Math.PI * 2
-      const speed = 200
+      const baseAngle = (i / particleCount) * Math.PI * 2
+      
       particlesRef.current.push({
         x,
         y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        life: 0.6,
+        vx: 0,
+        vy: 0,
+        life: 0.8, // Slightly longer life for smoother fade
+        centerX: x,
+        centerY: y,
+        angle: baseAngle,
+        maxRadius: 25 + Math.random() * 15, // Smaller max radius
+        currentRadius: 0,
+        rotationSpeed: rotationSpeed,
+        radiusGrowth: radiusGrowth
       })
     }
   }
@@ -269,8 +291,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       canvas.style.width = `${clientWidth}px`
       canvas.style.height = `${clientHeight}px`
 
-      // Recreate or reposition entities based on new size
-      resetGame()
+      // DO NOT reset game - preserve all state during resize
     }
 
     // Run once on mount
@@ -534,10 +555,39 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       // Slightly increase spawn frequency with stage so difficulty ramps smoothly
       const spawnChance = baseSpawnChance * diffMultiplier * (1 + (gameData.stage - 1) * 0.07)
 
-      // Cap max enemies and increase cap with stage for gradual difficulty
+      // Update enemy speeds when stage changes
+    if (lastStageRef.current !== gameData.stage) {
+      const stageMultiplier = 1 + 0.15 * (gameData.stage - 1) // Stage 1: 1.0x, Stage 2: 1.15x, Stage 3: 1.30x
+      
+      // Update all existing enemies
+      enemiesRef.current = enemiesRef.current.map(enemy => ({
+        ...enemy,
+        vx: (enemy.vx / (enemy.baseSpeed || 80)) * stageMultiplier * (enemy.baseSpeed || 80),
+        vy: (enemy.vy / (enemy.baseSpeed || 80)) * stageMultiplier * (enemy.baseSpeed || 80)
+      }))
+      
+      lastStageRef.current = gameData.stage
+    }
+    
+    // Cap max enemies and increase cap with stage for gradual difficulty
       const maxEnemies = Math.min(12 + Math.floor(gameData.stage * 2), 80)
+      const minEnemies = 3 + Math.floor(gameData.stage / 3) // Minimum enemies: 3 at stage 1, +1 every 3 stages
+      
+      // Ensure minimum enemy count
+      if (props.gameMode === 'survival' && enemiesRef.current.length < minEnemies) {
+        const baseSpeed = 80 + gameData.stage * 20
+        const speedVariation = 0.9 + Math.random() * 0.2 // 0.9-1.1 variation
+        const finalSpeed = baseSpeed * speedVariation
+        
+        enemiesRef.current.push(spawnEnemy(w, h, gameData.stage, 1) as Enemy) // Use diffMultiplier=1
+      }
+      
       if (props.gameMode === 'survival' && enemiesRef.current.length < maxEnemies && Math.random() < dt * spawnChance) {
-        enemiesRef.current.push(spawnEnemy(w, h, gameData.stage, diffMultiplier))
+        const baseSpeed = 80 + gameData.stage * 20
+        const speedVariation = 0.9 + Math.random() * 0.2 // 0.9-1.1 variation
+        const finalSpeed = baseSpeed * speedVariation
+        
+        enemiesRef.current.push(spawnEnemy(w, h, gameData.stage, 1) as Enemy) // Use diffMultiplier=1
       }
 
       enemiesRef.current = enemiesRef.current.filter((e) => {
@@ -553,15 +603,16 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       if (gameData.state === 'playing' && goalRef.current) {
         if (puckCollideGoal(player, goalRef.current)) {
           gameData.score++
+          gameData.eventProgress++
           spawnBurst(goalRef.current.x, goalRef.current.y)
 
           if (
             props.gameMode === 'survival' &&
-            shouldTriggerCataclysm(gameData.score) &&
-            gameData.score > gameData.lastCataclysmTriggerScore
+            gameData.eventProgress >= 10 &&
+            gameData.state === 'playing'
           ) {
             gameData.state = 'cataclysm'
-            gameData.lastCataclysmTriggerScore = gameData.score
+            gameData.eventProgress = 0
             const eventType = getEventType()
             const cataclysmGoals = spawnCataclysmGoals(
               w,
@@ -600,6 +651,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
             tutorialGoalsRef.current.splice(i, 1)
             tutorialState.goalsCollected++
             gameData.score++
+            gameData.eventProgress++
             console.log(`Goal collected! Total: ${tutorialState.goalsCollected}, Remaining: ${tutorialGoalsRef.current.length}`)
             i--
             updateGameState()
@@ -624,7 +676,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         }
 
         if (cat.eventType === 'shakeMode') {
-          shakeIntensityRef.current = Math.max(0, 8 - cat.goalsCollected)
+          // SAFETY: Shake event disabled - return early
+          return;
         }
 
         if (cat.eventType === 'shrinkingArena') {
@@ -683,6 +736,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           const goal = cat.goals[i]
           if (puckCollideGoal(player, goal) && !isInOverlay) {
             cat.goalsCollected++
+            gameData.score++
             spawnBurst(goal.x, goal.y)
             cat.goals.splice(i, 1)
             i--
@@ -740,8 +794,22 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
       for (let i = 0; i < particlesRef.current.length; i++) {
         const p = particlesRef.current[i]
-        p.x += p.vx * dt
-        p.y += p.vy * dt
+        
+        // Handle spiral motion for burst particles
+        if (p.angle !== undefined && p.currentRadius !== undefined && p.centerX !== undefined && p.centerY !== undefined) {
+          // Update spiral motion
+          p.angle += (p.rotationSpeed || 0.15)
+          p.currentRadius += (p.radiusGrowth || 1.5)
+          
+          // Calculate position based on spiral
+          p.x = p.centerX + Math.cos(p.angle) * p.currentRadius
+          p.y = p.centerY + Math.sin(p.angle) * p.currentRadius
+        } else {
+          // Regular linear motion for other particles
+          p.x += p.vx * dt
+          p.y += p.vy * dt
+        }
+        
         p.life -= dt
         if (p.life <= 0) {
           particlesRef.current.splice(i, 1)

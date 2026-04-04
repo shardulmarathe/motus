@@ -22,10 +22,17 @@ body {
 }
 
 body {
-  background: radial-gradient(ellipse at center, #1a2847 0%, var(--bg-secondary) 100%);
+  background: #020617;
   font-family: 'Courier New', monospace;
   color: #e6eef8;
   overflow: hidden;
+}
+
+/* Standardized font base for consistency */
+body, button, .box-label, .box-value, .menu-icon, .menu-text {
+  font-family: 'Courier New', monospace;
+  font-weight: 800;
+  letter-spacing: 1px;
 }
 
 /* Glow text for titles */
@@ -58,6 +65,20 @@ body {
   gap: 0;
   position: relative;
   overflow: hidden;
+}
+
+.home-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(20, 45, 85, 0.25) 0%,
+    rgba(2, 6, 23, 1) 70%
+  );
 }
 
 /* HUD Overlay Styles - Fixed header */
@@ -154,7 +175,7 @@ body {
 }
 
 .status-text {
-  font-size: 28px; /* increased for prominence */
+  font-size: 28px; /* Stage text size - reference */
   font-weight: 800;
   letter-spacing: 1px;
   color: #fbbf24; /* Yellow stage text */
@@ -203,30 +224,30 @@ body {
 
 .menu-icon {
   font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 1px;
 }
 
 .menu-text {
-  font-size: 10px;
+  font-size: 12px; /* Smaller than icon - proper hierarchy */
+  font-weight: 800;
   letter-spacing: 1px;
   text-transform: uppercase;
-  font-weight: bold;
 }
 
 .box-label {
-  font-size: 10px;
+  font-size: 12px; /* Consistent with menu-text */
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   opacity: 0.6;
-  font-weight: bold;
-  margin-bottom: 4px;
+  font-weight: 800;
 }
 
 .box-value {
-  font-size: 20px;
-  font-weight: bold;
+  font-size: 20px; /* Larger than labels - proper hierarchy */
+  font-weight: 800;
   color: var(--glow-cyan);
   text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
-  font-family: 'Courier New', monospace;
   letter-spacing: 1px;
 }
 

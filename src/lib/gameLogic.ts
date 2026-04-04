@@ -1,4 +1,5 @@
 import { Puck, Goal, normalize } from './physics'
+import { Enemy } from './physics'
 
 // Event types for Cataclysm mode
 export type CataclysmEventType = 'staticGoals' | 'movingGoals' | 'shakeMode' | 'shrinkingArena'
@@ -49,9 +50,10 @@ export function spawnEnemy(width: number, height: number, stage: number, diffMul
     y: cy - y + (Math.random() - 0.5) * 80,
   })
 
-  // Base speed increases with stages and difficulty multiplier
-  const baseSpeed = 80 + stage * 20
-  const speed = (baseSpeed + Math.random() * 100) * diffMultiplier
+  // Stage-based speed scaling: baseSpeed * (1 + 0.15 * (stage - 1))
+  const baseSpeed = 80
+  const stageMultiplier = 1 + 0.15 * (stage - 1) // Stage 1: 1.0x, Stage 2: 1.15x, Stage 3: 1.30x
+  const speed = (baseSpeed + Math.random() * 100) * stageMultiplier
 
   return {
     x,
@@ -60,7 +62,8 @@ export function spawnEnemy(width: number, height: number, stage: number, diffMul
     vy: dir.y * speed,
     radius: 12,
     id: `enemy-${Date.now()}-${Math.random()}`,
-  }
+    baseSpeed: baseSpeed, // Store base speed for dynamic updates
+  } as Enemy
 }
 
 /**
@@ -142,7 +145,7 @@ export function spawnCataclysmGoals(
 let lastEventType: CataclysmEventType | null = null
 
 export function getEventType(): CataclysmEventType {
-  const types: CataclysmEventType[] = ['staticGoals', 'movingGoals', 'shakeMode', 'shrinkingArena']
+  const types: CataclysmEventType[] = ['staticGoals', 'movingGoals', 'shrinkingArena'] // Removed 'shakeMode'
   // Filter out the last event type to avoid immediate repeats
   const availableTypes = lastEventType ? types.filter(t => t !== lastEventType) : types
   const selected = availableTypes[Math.floor(Math.random() * availableTypes.length)]
@@ -223,7 +226,7 @@ export function calculateArenaSize(
 } {
   // Shrink from edges inward as time decreases
   const shrinkProgress = 1 - timeLeft / totalTime
-  const maxShrink = Math.min(initialWidth, initialHeight) * 0.3
+  const maxShrink = Math.min(initialWidth, initialHeight) * 0.375 // Increased from 0.3 (25% faster)
   const shrinkAmount = maxShrink * shrinkProgress
 
   return {

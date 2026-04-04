@@ -2,14 +2,16 @@
 
 import React, { useCallback, useState, useEffect } from 'react'
 import GameCanvas from '../components/GameCanvas'
+import ParticleBackground from '../components/ParticleBackground'
+import WaterDistortion from '../components/WaterDistortion'
 
 export default function Home() {
   const [uiState, setUiState] = useState<'title' | 'rules' | 'playing' | 'paused'>('title')
-  const [hud, setHud] = useState({ score: 0, stage: 1, mode: 'Normal', eventName: '' })
+  const [hud, setHud] = useState({ score: 0, stage: 1, mode: 'Normal', eventName: '', eventProgress: 0 })
   const [gameMode, setGameMode] = useState<'survival' | 'zen' | 'tutorial'>('survival')
 
   const handleStateUpdate = useCallback((s: any) => {
-    setHud({ score: s.score ?? 0, stage: s.stage ?? 1, mode: s.mode ?? 'Normal', eventName: s.eventName ?? '' })
+    setHud({ score: s.score ?? 0, stage: s.stage ?? 1, mode: s.mode ?? 'Normal', eventName: s.eventName ?? '', eventProgress: s.eventProgress ?? 0 })
   }, [])
 
   // Handle tutorial completion
@@ -33,6 +35,15 @@ export default function Home() {
 
   return (
     <div className="page">
+      {/* Only show animated background on home screen */}
+      {uiState === 'title' && (
+        <>
+          <div className="home-background" />
+          <WaterDistortion />
+          <ParticleBackground />
+        </>
+      )}
+      
       {/* HUD only visible while actively playing or paused (no HUD on title/rules) */}
       {(uiState === 'playing' || uiState === 'paused') && (
         <header className="hud-overlay">
@@ -41,6 +52,13 @@ export default function Home() {
               <div className="box-label">Score</div>
               <div className="box-value">{hud.score}</div>
             </div>
+
+            {gameMode !== 'tutorial' && (
+              <div className="hud-box score-box">
+                <div className="box-label">Next</div>
+                <div className="box-value">{hud.eventProgress}/10</div>
+              </div>
+            )}
 
             {gameMode === 'survival' && (
               <div className="center-status">
@@ -228,6 +246,15 @@ export default function Home() {
                   style={{ padding: '10px 20px', borderRadius: 10, background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.3)', color: '#e6eef8', cursor: 'pointer', fontWeight: 700 }}
                 >
                   Resume
+                </button>
+                <button
+                  onClick={() => {
+                    setGameMode(gameMode);
+                    setUiState('rules');
+                  }}
+                  style={{ padding: '10px 20px', borderRadius: 10, background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', color: '#fef3c7', cursor: 'pointer', fontWeight: 700 }}
+                >
+                  Restart
                 </button>
                 <button
                   onClick={() => setUiState('title')}
