@@ -1299,19 +1299,19 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         ctx.textBaseline = 'middle'
         ctx.shadowColor = 'rgba(239, 68, 68, 0.8)'
         ctx.shadowBlur = 30
-        ctx.fillText('GAME OVER', w / 2, h / 2 - 80)
+        ctx.fillText('GAME OVER', w / 2, h / 2 - 60) // Moved up 20px
 
         ctx.fillStyle = '#fbbf24'
         ctx.font = 'bold 48px monospace'
         ctx.shadowColor = 'rgba(251, 191, 36, 0.6)'
         ctx.shadowBlur = 20
-        ctx.fillText(`Score: ${gameData.score}`, w / 2, h / 2)
+        ctx.fillText(`Score: ${gameData.score}`, w / 2, h / 2) // Stay centered
 
         ctx.fillStyle = '#a0aec0'
         ctx.font = 'bold 24px monospace'
         ctx.shadowColor = 'transparent'
         ctx.shadowBlur = 0
-        ctx.fillText('Press SPACE to restart', w / 2, h / 2 + 80)
+        ctx.fillText('Press SPACE to restart', w / 2, h / 2 + 60) // Moved up 20px
       }
     }
 

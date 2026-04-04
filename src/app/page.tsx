@@ -107,7 +107,8 @@ export default function Home() {
                 <button
                   onClick={() => { setGameMode('tutorial'); setUiState('rules') }}
                   style={{
-                    minWidth: 200,
+                    width: 360, // Increased width for single-line descriptions
+                    height: 120, // Fixed height for consistency
                     background: 'rgba(6,182,212,0.08)',
                     border: '1px solid rgba(6,182,212,0.25)',
                     color: '#e6eef8',
@@ -124,15 +125,16 @@ export default function Home() {
                   onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                 >
                   <div style={{ fontSize: 24, fontWeight: 700, color: '#67e8f9' }}>Tutorial Mode</div>
-                  <div style={{ fontSize: 14, color: '#cbd5e1', marginTop: 6 }}>Learn the basics step-by-step.</div>
+                  <div style={{ fontSize: 18, color: '#cbd5e1', marginTop: 6 }}>Learn the basics of gameplay step-by-step.</div>
                 </button>
 
                 <button
                   onClick={() => { setGameMode('survival'); setUiState('rules') }}
                   style={{
-                    minWidth: 200,
-                    background: 'rgba(6,182,212,0.06)',
-                    border: '1px solid rgba(6,182,212,0.18)',
+                    width: 360, // Increased width for single-line descriptions
+                    height: 120, // Fixed height for consistency
+                    background: 'rgba(6,182,212,0.08)', // Same as tutorial
+                    border: '1px solid rgba(6,182,212,0.25)', // Same as tutorial
                     color: '#e6eef8',
                     padding: '24px 28px',
                     borderRadius: 12,
@@ -147,15 +149,16 @@ export default function Home() {
                   onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                 >
                   <div style={{ fontSize: 24, fontWeight: 700, color: '#67e8f9' }}>Survival Mode</div>
-                  <div style={{ fontSize: 14, color: '#cbd5e1', marginTop: 6 }}>Avoid enemies and score points.</div>
+                  <div style={{ fontSize: 18, color: '#cbd5e1', marginTop: 6 }}>Avoid enemies and score points. Be the Best!</div>
                 </button>
 
                 <button
                   onClick={() => { setGameMode('zen'); setUiState('rules') }}
                   style={{
-                    minWidth: 200,
-                    background: 'rgba(6,182,212,0.06)',
-                    border: '1px solid rgba(6,182,212,0.18)',
+                    width: 360, // Increased width for single-line descriptions
+                    height: 120, // Fixed height for consistency
+                    background: 'rgba(6,182,212,0.08)', // Same as tutorial
+                    border: '1px solid rgba(6,182,212,0.25)', // Same as tutorial
                     color: '#e6eef8',
                     padding: '24px 28px',
                     borderRadius: 12,
@@ -170,7 +173,7 @@ export default function Home() {
                   onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                 >
                   <div style={{ fontSize: 24, fontWeight: 700, color: '#67e8f9' }}>Practice Mode</div>
-                  <div style={{ fontSize: 14, color: '#cbd5e1', marginTop: 6 }}>No enemies; just have fun!</div>
+                  <div style={{ fontSize: 18, color: '#cbd5e1', marginTop: 6 }}>There are no enemies; only good vibes!</div>
                 </button>
               </div>
             </div>
