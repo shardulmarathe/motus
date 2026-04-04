@@ -14,6 +14,17 @@ import {
   calculateArenaSize,
   type CataclysmEventType,
 } from '../lib/gameLogic'
+import {
+  TutorialStep,
+  TutorialGameState,
+  tutorialSteps,
+  createTutorialState,
+  getCurrentTutorialStep,
+  shouldShowInstruction,
+  canProgressToNextStep,
+  advanceStep,
+  restartCurrentStep,
+} from '../lib/tutorialLogic'
 
 interface Particle {
   x: number
@@ -48,7 +59,7 @@ interface GameCanvasProps {
   onStateChange?: (state: { score: number; stage: number; mode: string; eventTimeLeft?: number; inEvent?: boolean; eventName?: string }) => void
   isPaused?: boolean
   uiState?: 'title' | 'rules' | 'playing' | 'paused'
-  gameMode?: 'survival' | 'zen'
+  gameMode?: 'survival' | 'zen' | 'tutorial'
 }
 
 const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) => {
@@ -73,6 +84,10 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
   const pauseTimeRef = useRef<number | null>(null)
   const canvasWidthRef = useRef<number>(0) // Display width (unscaled)
   const canvasHeightRef = useRef<number>(0) // Display height (unscaled)
+  const tutorialStateRef = useRef<TutorialGameState>(createTutorialState())
+  const tutorialGoalsRef = useRef<Goal[]>([])
+  const lastMovementTimeRef = useRef<number>(0)
+  const borderWarningStartTime = useRef<number>(0)
 
   // Expose canvas ref
   useEffect(() => {
@@ -95,6 +110,13 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     
     if (props.gameMode === 'zen') {
       mode = 'Zen'
+    } else if (props.gameMode === 'tutorial') {
+      mode = 'Tutorial'
+      const tutorialState = tutorialStateRef.current
+      const currentStep = getCurrentTutorialStep(tutorialState)
+      if (currentStep) {
+        eventName = `Step ${tutorialState.currentStep + 1}/${tutorialSteps.length}`
+      }
     } else if (gameData.state === 'cataclysm' && gameData.cataclysm) {
       mode = 'Event'
       eventTimeLeft = gameData.cataclysm.timeLeft
@@ -121,15 +143,52 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     )
   }
 
+  const resetTutorial = () => {
+    const w = canvasWidthRef.current
+    const h = canvasHeightRef.current
+    const tutorialState = tutorialStateRef.current
+    const currentStep = getCurrentTutorialStep(tutorialState)
+    
+    if (currentStep) {
+      const setup = currentStep.setup(w, h, playerRef.current!)
+      tutorialStateRef.current = restartCurrentStep(tutorialState)
+      
+      // Set player position if specified
+      if (setup.playerStart) {
+        playerRef.current!.x = setup.playerStart.x
+        playerRef.current!.y = setup.playerStart.y
+        playerRef.current!.vx = 0
+        playerRef.current!.vy = 0
+      }
+      
+      // Set enemies and goals
+      enemiesRef.current = setup.enemies || []
+      tutorialGoalsRef.current = setup.goals || []
+      tutorialStateRef.current.totalGoalsInStep = tutorialGoalsRef.current.length
+      
+      // Clear regular goal to avoid conflicts
+      goalRef.current = null
+    }
+  }
+
   const resetGame = (options?: { spawnEnemies?: boolean }) => {
     const w = canvasWidthRef.current
     const h = canvasHeightRef.current
     playerRef.current = createPlayer(w / 2, h / 2)
-    // Default: clear enemies on reset, but always spawn initial green goals.
-    const spawnEnemies = options?.spawnEnemies ?? (props.gameMode === 'survival')
-    enemiesRef.current = spawnEnemies ? [spawnEnemy(w, h, 1, 1)] : []
-    // Always spawn at least one goal on reset so the game shows green goals.
-    goalRef.current = spawnCataclysmGoals(w, h, playerRef.current.x, playerRef.current.y)[0]
+    
+    if (props.gameMode === 'tutorial') {
+      // Initialize tutorial state
+      tutorialStateRef.current = createTutorialState()
+      resetTutorial()
+    } else {
+      // Default: clear enemies on reset, but always spawn initial green goals.
+      const spawnEnemies = options?.spawnEnemies ?? (props.gameMode === 'survival')
+      enemiesRef.current = spawnEnemies ? [spawnEnemy(w, h, 1, 1)] : []
+      // Always spawn at least one goal on reset so the game shows green goals.
+      goalRef.current = spawnCataclysmGoals(w, h, playerRef.current.x, playerRef.current.y)[0]
+      tutorialGoalsRef.current = []
+    }
+    
     gameDataRef.current = {
       score: 0,
       stage: 1,
@@ -141,6 +200,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     shakeIntensityRef.current = 0
     collisionFlashRef.current = 0
     particlesRef.current = []
+    lastMovementTimeRef.current = 0
     updateGameState()
   }
 
@@ -234,6 +294,10 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
     function onClick(e: MouseEvent) {
       if (!playerRef.current || gameDataRef.current.state === 'gameOver') return
+      
+      // Disable all input when tutorial is complete
+      if (props.gameMode === 'tutorial' && tutorialStateRef.current.isComplete) return
+      
       const rect = canvas.getBoundingClientRect()
       const tx = e.clientX - rect.left
       const ty = e.clientY - rect.top
@@ -250,6 +314,16 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
     function onKeyDown(e: KeyboardEvent) {
       if (!playerRef.current) return
+      
+      // Disable all input when tutorial is complete
+      if (props.gameMode === 'tutorial' && tutorialStateRef.current.isComplete) return
+
+      // Handle Space key restart when dead in tutorial
+      if (props.gameMode === 'tutorial' && tutorialStateRef.current.isDead && e.code === 'Space') {
+        tutorialStateRef.current = restartCurrentStep(tutorialStateRef.current)
+        resetTutorial()
+        return
+      }
 
       if (e.code === 'Space') {
         if (gameDataRef.current.state === 'gameOver') {
@@ -257,6 +331,9 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           return
         }
       }
+
+      // Disable movement when dead in tutorial
+      if (props.gameMode === 'tutorial' && tutorialStateRef.current.isDead) return
 
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         activeKeysRef.current.add(e.key)
@@ -297,23 +374,26 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       const h = canvasHeightRef.current
 
       // ===== MOMENTUM-BASED MOVEMENT =====
-      const acceleration = 1000
-      if (activeKeysRef.current.has('ArrowRight')) applyAcceleration(player, acceleration * dt, 0)
-      if (activeKeysRef.current.has('ArrowLeft')) applyAcceleration(player, -acceleration * dt, 0)
-      if (activeKeysRef.current.has('ArrowDown')) applyAcceleration(player, 0, acceleration * dt)
-      if (activeKeysRef.current.has('ArrowUp')) applyAcceleration(player, 0, -acceleration * dt)
+      // Disable movement when dead in tutorial OR during instructions
+      if (!(props.gameMode === 'tutorial' && (tutorialStateRef.current.isDead || tutorialStateRef.current.showInstruction))) {
+        const acceleration = 1000
+        if (activeKeysRef.current.has('ArrowRight')) applyAcceleration(player, acceleration * dt, 0)
+        if (activeKeysRef.current.has('ArrowLeft')) applyAcceleration(player, -acceleration * dt, 0)
+        if (activeKeysRef.current.has('ArrowDown')) applyAcceleration(player, 0, acceleration * dt)
+        if (activeKeysRef.current.has('ArrowUp')) applyAcceleration(player, 0, -acceleration * dt)
 
-      applyDamping(player, 0.99)
+        applyDamping(player, 0.99)
 
-      const maxVel = 500
-      const velMag = Math.hypot(player.vx, player.vy)
-      if (velMag > maxVel) {
-        const scale = maxVel / velMag
-        player.vx *= scale
-        player.vy *= scale
+        const maxVel = 500
+        const velMag = Math.hypot(player.vx, player.vy)
+        if (velMag > maxVel) {
+          const scale = maxVel / velMag
+          player.vx *= scale
+          player.vy *= scale
+        }
+
+        integrate(player, dt)
       }
-
-      integrate(player, dt)
 
       if (isOutOfBounds(player, w, h)) {
         if (props.gameMode === 'zen') {
@@ -322,6 +402,15 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           if (player.x + player.radius > w) player.x = player.radius
           if (player.y - player.radius < 0) player.y = h - player.radius
           if (player.y + player.radius > h) player.y = player.radius
+        } else if (props.gameMode === 'tutorial') {
+          // In tutorial mode, mark as dead to restart current step
+          console.log('Tutorial death detected - setting isDead = true')
+          tutorialStateRef.current.isDead = true
+          player.vx = 0
+          player.vy = 0
+          shakeIntensityRef.current = 20
+          collisionFlashRef.current = 0.5
+          return
         } else {
           gameData.state = 'gameOver'
           player.vx = 0
@@ -334,6 +423,109 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
       for (const enemy of enemiesRef.current) {
         integrate(enemy, dt)
+      }
+
+      // ===== TUTORIAL MODE LOGIC =====
+      if (props.gameMode === 'tutorial') {
+        const tutorialState = tutorialStateRef.current
+        
+        // Handle death in tutorial - show respawn popup
+        if (tutorialState.isDead) {
+          // Don't auto-revive, instead show death popup
+          return // Exit early when dead
+        }
+        
+        // Handle Step 8 (congratulations) - auto-advance after 3 seconds
+        if (tutorialState.currentStep === 7) {
+          const timeInStep = Date.now() - tutorialState.stepStartTime
+          tutorialState.movementTime = timeInStep / 1000
+          
+          if (timeInStep >= 3000 && canProgressToNextStep(tutorialState)) {
+            console.log('Step 8 completed, returning to menu')
+            window.dispatchEvent(new CustomEvent('returnToMenu'))
+          }
+          return // Exit after handling Step 8
+        }
+        
+        // Guard against multiple advances in same frame
+        if (tutorialState.stepCompleted || tutorialState.isComplete) return
+        
+        // Track movement time for step 1 (15 seconds total)
+        if (tutorialState.currentStep === 0) { // Step 1 (index 0)
+          const timeInStep = Date.now() - tutorialState.stepStartTime
+          tutorialState.movementTime = timeInStep / 1000 // Convert to seconds for display
+          
+          // Advance after 15 seconds
+          if (timeInStep >= 15000) {
+            advanceStep(tutorialState, () => resetTutorial())
+          }
+        }
+        
+        // Check if instruction should be shown and auto-fade
+        if (shouldShowInstruction(tutorialState)) {
+          tutorialState.hasShownInstruction = true
+          tutorialState.showInstruction = true
+          tutorialState.instructionStartTime = Date.now()
+        }
+        
+        // Auto-fade instruction after 3 seconds
+        if (tutorialState.showInstruction) {
+          const timeSinceInstruction = Date.now() - tutorialState.instructionStartTime
+          if (timeSinceInstruction >= 3500) { // 3s + 500ms fade out
+            tutorialState.showInstruction = false
+          }
+        }
+        
+        // Border behavior - match Survival Mode proximity detection
+        const proximityThreshold = 120
+        const minDistToBoundary = Math.min(
+          player.x - player.radius,
+          player.y - player.radius,
+          w - (player.x + player.radius),
+          h - (player.y + player.radius)
+        )
+        
+        const rawFactor = Math.max(0, Math.min(1, 1 - minDistToBoundary / proximityThreshold))
+        const dangerFactor = rawFactor * rawFactor * (3 - 2 * rawFactor)
+        
+        // One-time border warning
+        if (!tutorialState.hasShownBorderWarning && dangerFactor > 0.3) {
+          tutorialState.hasShownBorderWarning = true
+          borderWarningStartTime.current = Date.now()
+        }
+        
+        // Check if current step objective is completed (for goal-based steps)
+        if (tutorialState.currentStep >= 1 && tutorialState.currentStep <= 6) {
+          // Steps 2-7 are goal-based (indices 1-6)
+          const goalsRemaining = tutorialGoalsRef.current.length
+          const goalsCollected = tutorialState.goalsCollected
+          const canProgress = canProgressToNextStep(tutorialState)
+          
+          console.log(`Step ${tutorialState.currentStep + 1} status: goalsCollected=${goalsCollected}, goalsRemaining=${goalsRemaining}, canProgress=${canProgress}`)
+          
+          if (goalsRemaining === 0) {
+            // For Step 7, advance immediately when goals are collected
+            const isFinalStep = tutorialState.currentStep === 6 // Step 7 (index 6)
+            console.log(`Step ${tutorialState.currentStep + 1} completed, isFinalStep: ${isFinalStep}`)
+            console.log('Calling advanceStep...')
+            advanceStep(tutorialState, () => {
+              console.log('advanceStep callback executed')
+              // Always reset to set up the next step (including Step 8)
+              console.log('Resetting tutorial for next step')
+              resetTutorial()
+              
+              // DEBUG: Force Step 8 to show immediately
+              if (isFinalStep) {
+                console.log('DEBUG: Forcing Step 8 to show')
+                tutorialStateRef.current.currentStep = 7
+                tutorialStateRef.current.stepStartTime = Date.now()
+                tutorialStateRef.current.hasShownInstruction = false
+                tutorialStateRef.current.showInstruction = true
+                tutorialStateRef.current.instructionStartTime = Date.now()
+              }
+            })
+          }
+        }
       }
 
       // Difficulty multiplier now factors stage and completed cataclysms
@@ -394,6 +586,24 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
             goalRef.current = goals[0]
           }
           updateGameState()
+        }
+      }
+
+      // ===== TUTORIAL MODE: GOAL COLLECTION =====
+      if (props.gameMode === 'tutorial') {
+        const tutorialState = tutorialStateRef.current
+        
+        for (let i = 0; i < tutorialGoalsRef.current.length; i++) {
+          const goal = tutorialGoalsRef.current[i]
+          if (puckCollideGoal(player, goal)) {
+            spawnBurst(goal.x, goal.y)
+            tutorialGoalsRef.current.splice(i, 1)
+            tutorialState.goalsCollected++
+            gameData.score++
+            console.log(`Goal collected! Total: ${tutorialState.goalsCollected}, Remaining: ${tutorialGoalsRef.current.length}`)
+            i--
+            updateGameState()
+          }
         }
       }
 
@@ -512,11 +722,17 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         if (circlesCollide(player, enemy)) {
           // Don't die during overlay grace period (fairness - transition from intro to gameplay)
           if (!isInEventOverlay) {
-            gameData.state = 'gameOver'
-            player.vx = 0
-            player.vy = 0
-            shakeIntensityRef.current = 20
-            collisionFlashRef.current = 0.5
+            if (props.gameMode === 'tutorial') {
+              // In tutorial mode, mark as dead to restart current step
+              console.log('Tutorial enemy collision detected - setting isDead = true')
+              tutorialStateRef.current.isDead = true
+            } else {
+              gameData.state = 'gameOver'
+              player.vx = 0
+              player.vy = 0
+              shakeIntensityRef.current = 20
+              collisionFlashRef.current = 0.5
+            }
             return
           }
         }
@@ -596,6 +812,16 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         }
       }
 
+      // ===== DRAW TUTORIAL GOALS =====
+      if (props.gameMode === 'tutorial') {
+        for (const goal of tutorialGoalsRef.current) {
+          const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.7
+          const glowSize = goal.radius + 8 + pulse * 4
+          drawGlowCircle(goal.x, goal.y, glowSize, '#22c55e', 20, 0.3)
+          drawGradientPuck(goal.x, goal.y, goal.radius, '#4ade80', '#22c55e')
+        }
+      }
+
       // ===== DRAW SHRINKING ARENA =====
       if (gameData.state === 'cataclysm' && gameData.cataclysm?.eventType === 'shrinkingArena' && gameData.cataclysm) {
         const arenaSize = calculateArenaSize(
@@ -662,9 +888,16 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
       // Raw factor 0..1 (0 far, 1 touching)
       const rawFactor = Math.max(0, Math.min(1, 1 - minDistToBoundary / proximityThreshold))
-      // Smoothstep for nicer curve
-      const eased = rawFactor * rawFactor * (3 - 2 * rawFactor)
-      const dangerFactor = eased
+      const dangerFactor = rawFactor * rawFactor * (3 - 2 * rawFactor)
+
+      // One-time border warning (only in tutorial mode)
+      if (props.gameMode === 'tutorial') {
+        const tutorialState = tutorialStateRef.current
+        if (!tutorialState.hasShownBorderWarning && dangerFactor > 0.3) {
+          tutorialState.hasShownBorderWarning = true
+          borderWarningStartTime.current = Date.now()
+        }
+      }
 
       // Default subtle border (used for Zen or safe state)
       let outerLine = 6
@@ -674,8 +907,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       let shadowColor = 'transparent'
       let shadowBlur = 0
 
-      if (props.gameMode === 'survival' && dangerFactor > 0) {
-        // Amplify for survival mode
+      if ((props.gameMode === 'survival' || props.gameMode === 'tutorial') && dangerFactor > 0) {
+        // Amplify for survival and tutorial mode
         const of = Math.min(1, 0.15 + dangerFactor * 0.95)
         outerLine = 12 + dangerFactor * 16
         innerLine = 2 + dangerFactor * 6
@@ -809,6 +1042,181 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           
           ctx.shadowColor = 'transparent'
           ctx.shadowBlur = 0
+        }
+      }
+
+      // ===== TUTORIAL INSTRUCTION OVERLAY =====
+      if (props.gameMode === 'tutorial') {
+        const tutorialState = tutorialStateRef.current
+        
+        // ===== TUTORIAL DEATH POPUP =====
+        if (tutorialState.isDead) {
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'
+          ctx.fillRect(0, 0, w, h)
+          
+          // Title
+          ctx.fillStyle = '#ef4444'
+          ctx.font = 'bold 64px sans-serif'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.shadowColor = 'rgba(239, 68, 68, 0.5)'
+          ctx.shadowBlur = 30
+          ctx.fillText('You Died!', w / 2, h / 2 - 80)
+          
+          // Subtitle
+          ctx.fillStyle = '#e6eef8'
+          ctx.font = 'bold 28px sans-serif'
+          ctx.shadowColor = 'rgba(230, 238, 248, 0.3)'
+          ctx.shadowBlur = 15
+          ctx.fillText(`Step ${tutorialState.currentStep + 1} Restart`, w / 2, h / 2 - 20)
+          
+          // Instructions
+          ctx.fillStyle = '#a0aec0'
+          ctx.font = 'bold 20px sans-serif'
+          ctx.shadowColor = 'transparent'
+          ctx.shadowBlur = 0
+          ctx.fillText('Press SPACE to respawn at this step', w / 2, h / 2 + 20)
+          
+          ctx.restore()
+          return // Don't render anything else when dead
+        }
+        
+        // ===== BORDER WARNING POP-UP =====
+        if (tutorialState.hasShownBorderWarning) {
+          const timeSinceWarning = Date.now() - borderWarningStartTime.current
+          const warningDuration = 2500 // Show for ~2.5 seconds
+          
+          if (timeSinceWarning < warningDuration) {
+            const alpha = Math.max(0, 1 - timeSinceWarning / warningDuration)
+            
+            ctx.save()
+            ctx.globalAlpha = alpha * 0.8
+            
+            // Warning box
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.95)'
+            ctx.strokeStyle = 'rgba(252, 165, 165, 0.8)'
+            ctx.lineWidth = 2
+            ctx.shadowColor = 'rgba(239, 68, 68, 0.4)'
+            ctx.shadowBlur = 20
+            
+            const boxWidth = 400
+            const boxHeight = 80
+            const boxX = (w - boxWidth) / 2
+            const boxY = (h - boxHeight) / 2
+            
+            // Draw rounded rectangle
+            ctx.beginPath()
+            ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 12)
+            ctx.fill()
+            ctx.stroke()
+            
+            // Warning text
+            ctx.fillStyle = '#ffffff'
+            ctx.font = 'bold 20px sans-serif'
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            ctx.shadowColor = 'transparent'
+            ctx.shadowBlur = 0
+            ctx.fillText('The wall is dangerous.', w / 2, boxY + 25)
+            ctx.fillText('The red glow means you\'re close to death.', w / 2, boxY + 50)
+            
+            ctx.restore()
+          }
+        }
+        
+        const currentStep = getCurrentTutorialStep(tutorialState)
+        
+        if (currentStep && tutorialState.showInstruction) {
+          const timeSinceInstruction = Date.now() - tutorialState.instructionStartTime
+          const fadeInDuration = 300
+          const fadeOutDuration = 500
+          const totalDuration = 3000 // Show for 3 seconds
+          
+          let alpha = 0
+          if (timeSinceInstruction < fadeInDuration) {
+            // Fade in
+            alpha = Math.min(1, timeSinceInstruction / fadeInDuration)
+          } else if (timeSinceInstruction < totalDuration) {
+            // Fully visible
+            alpha = 1
+          } else if (timeSinceInstruction < totalDuration + fadeOutDuration) {
+            // Fade out
+            const fadeProgress = (timeSinceInstruction - totalDuration) / fadeOutDuration
+            alpha = Math.max(0, 1 - fadeProgress)
+          } else {
+            // Hidden
+            tutorialState.showInstruction = false
+          }
+          
+          if (alpha > 0) {
+            // Dark background overlay
+            ctx.save()
+            ctx.globalAlpha = alpha * 0.4
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.9)'
+            ctx.fillRect(0, 0, w, h)
+            ctx.restore()
+            
+            // Instruction box - perfectly centered
+            ctx.save()
+            ctx.globalAlpha = alpha
+            ctx.fillStyle = 'rgba(12, 18, 30, 0.95)'
+            ctx.strokeStyle = 'rgba(6, 182, 212, 0.5)'
+            ctx.lineWidth = 2
+            ctx.shadowColor = 'rgba(6, 182, 212, 0.3)'
+            ctx.shadowBlur = 20
+            
+            const boxWidth = Math.min(600, w - 100)
+            const boxHeight = 120
+            const boxX = (w - boxWidth) / 2
+            const boxY = (h - boxHeight) / 2 // Perfect vertical centering
+            
+            // Draw rounded rectangle
+            ctx.beginPath()
+            ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 12)
+            ctx.fill()
+            ctx.stroke()
+            
+            // Instruction text
+            ctx.fillStyle = '#e6eef8'
+            ctx.font = 'bold 24px sans-serif'
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            ctx.shadowColor = 'transparent'
+            ctx.shadowBlur = 0
+            
+            // Word wrap for long instructions
+            const words = currentStep.instruction.split(' ')
+            const lines: string[] = []
+            let currentLine = ''
+            const maxWidth = boxWidth - 40
+            
+            for (const word of words) {
+              const testLine = currentLine + (currentLine ? ' ' : '') + word
+              const metrics = ctx.measureText(testLine)
+              if (metrics.width > maxWidth && currentLine) {
+                lines.push(currentLine)
+                currentLine = word
+              } else {
+                currentLine = testLine
+              }
+            }
+            if (currentLine) lines.push(currentLine)
+            
+            const lineHeight = 28 // Slightly smaller line height for better centering
+            const totalTextHeight = lines.length * lineHeight
+            const startY = boxY + (boxHeight - totalTextHeight) / 2 + lineHeight / 2 // Add half line height for perfect centering
+            
+            lines.forEach((line, index) => {
+              ctx.fillText(line, w / 2, startY + index * lineHeight)
+            })
+            
+            // Step indicator
+            ctx.fillStyle = '#67e8f9'
+            ctx.font = 'bold 18px sans-serif'
+            ctx.fillText(`Step ${tutorialState.currentStep + 1} / ${tutorialSteps.length}`, w / 2, boxY - 20)
+            
+            ctx.restore()
+          }
         }
       }
 
