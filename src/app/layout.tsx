@@ -1,6 +1,13 @@
 import './globals.css'
 import React from 'react'
 import { Analytics } from '@vercel/analytics/react'
+import { Nunito } from 'next/font/google'
+
+const nunito = Nunito({
+  subsets: ['latin'],
+  weight: ['400', '600', '700', '800'],
+  variable: '--font-nunito',
+})
 
 export const metadata = {
   title: 'Motus',
@@ -12,8 +19,8 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" className={nunito.variable}>
+      <body className={nunito.className}>
         {children}
         <Analytics />
       </body>

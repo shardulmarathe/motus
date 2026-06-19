@@ -82,8 +82,8 @@ export default function ParticleBackground() {
       dots.push({
         x: Math.random() * dimensions.width,
         y: Math.random() * dimensions.height,
-        baseOpacity: 0.1 + Math.random() * 0.2, // 0.1 to 0.3
-        currentOpacity: 0.1 + Math.random() * 0.2,
+        baseOpacity: 0.13 + Math.random() * 0.22, // slightly brighter for visibility
+        currentOpacity: 0.13 + Math.random() * 0.22,
         twinkleSpeed: 0.001 + Math.random() * 0.002, // Very slow
         twinklePhase: Math.random() * Math.PI * 2
       })
@@ -159,11 +159,11 @@ export default function ParticleBackground() {
         // Very subtle twinkle effect
         dot.twinklePhase += dot.twinkleSpeed
         const twinkle = Math.sin(dot.twinklePhase) * 0.05 // ±5% variation
-        dot.currentOpacity = Math.max(0.05, Math.min(0.25, dot.baseOpacity + twinkle))
+        dot.currentOpacity = Math.max(0.08, Math.min(0.32, dot.baseOpacity + twinkle))
         
         ctx.beginPath()
         ctx.arc(dot.x, dot.y, 1.5, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(80, 120, 160, ${dot.currentOpacity})` // Darker, less blue
+        ctx.fillStyle = `rgba(90, 130, 175, ${dot.currentOpacity})`
         ctx.fill()
       })
       

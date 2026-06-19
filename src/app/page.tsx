@@ -47,44 +47,48 @@ export default function Home() {
       {/* HUD only visible while actively playing or paused (no HUD on title/rules) */}
       {(uiState === 'playing' || uiState === 'paused') && (
         <header className="hud-overlay">
-          <>
+          <div className="hud-left">
             <div className="hud-box score-box">
               <div className="box-label">Score</div>
               <div className="box-value">{hud.score}</div>
             </div>
 
-            {gameMode !== 'tutorial' && (
+            {gameMode === 'survival' && (
               <div className="hud-box score-box">
                 <div className="box-label">Next</div>
                 <div className="box-value">{hud.eventProgress}/10</div>
               </div>
             )}
+          </div>
 
+          <div className="hud-center">
             {gameMode === 'survival' && (
-              <div className="center-status">
-                {hud.mode === 'Event' ? (
-                  <div className="status-text event-name">{hud.eventName}</div>
-                ) : (
-                  <div className="status-text">Stage {hud.stage}</div>
-                )}
-              </div>
+              hud.mode === 'Event' ? (
+                <div className="status-text event-name">{hud.eventName}</div>
+              ) : (
+                <div className="status-text">Stage {hud.stage}</div>
+              )
             )}
 
             {gameMode === 'tutorial' && (
-              <div className="center-status">
-                <div className="status-text">{hud.eventName}</div>
-              </div>
+              <div className="status-text status-text-tutorial">{hud.eventName}</div>
             )}
+          </div>
 
+          <div className="hud-right">
             <button
               className="menu-button"
               onClick={() => setUiState('paused')}
               aria-label="Menu"
+              title="Menu"
             >
-              <div className="menu-icon">☰</div>
-              <div className="menu-text">Menu</div>
+              <span className="menu-icon" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
             </button>
-          </>
+          </div>
         </header>
       )}
 
@@ -98,82 +102,34 @@ export default function Home() {
 
         {/* Title Screen (clean, minimal - no game HUD, no boundaries) */}
         {uiState === 'title' && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto', zIndex: 50 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 36, transform: 'translateY(-6vh)' }}>
-              <h1 className="glow-text" style={{ fontSize: 110, color: '#06b6d4', margin: 0 }}>
+          <div className="title-screen-center">
+            <div className="title-screen-inner">
+              <h1 className="glow-text title-logo" style={{ fontSize: 110, color: '#06b6d4', margin: 0 }}>
                 Motus
               </h1>
-              <div style={{ display: 'flex', gap: 18, marginTop: 12 }}>
+              <div className="mode-btn-row">
                 <button
+                  className="mode-btn"
                   onClick={() => { setGameMode('tutorial'); setUiState('rules') }}
-                  style={{
-                    width: 360, // Increased width for single-line descriptions
-                    height: 120, // Fixed height for consistency
-                    background: 'rgba(6,182,212,0.08)',
-                    border: '1px solid rgba(6,182,212,0.25)',
-                    color: '#e6eef8',
-                    padding: '24px 28px',
-                    borderRadius: 12,
-                    cursor: 'pointer',
-                    transition: 'transform 0.24s ease, box-shadow 240ms',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                 >
-                  <div style={{ fontSize: 24, fontWeight: 700, color: '#67e8f9' }}>Tutorial Mode</div>
-                  <div style={{ fontSize: 18, color: '#cbd5e1', marginTop: 6 }}>Learn the basics of gameplay step-by-step.</div>
+                  <div className="mode-btn-title">Tutorial Mode</div>
+                  <div className="mode-btn-desc">Learn the basics of gameplay step-by-step.</div>
                 </button>
 
                 <button
+                  className="mode-btn"
                   onClick={() => { setGameMode('survival'); setUiState('rules') }}
-                  style={{
-                    width: 360, // Increased width for single-line descriptions
-                    height: 120, // Fixed height for consistency
-                    background: 'rgba(6,182,212,0.08)', // Same as tutorial
-                    border: '1px solid rgba(6,182,212,0.25)', // Same as tutorial
-                    color: '#e6eef8',
-                    padding: '24px 28px',
-                    borderRadius: 12,
-                    cursor: 'pointer',
-                    transition: 'transform 0.24s ease, box-shadow 240ms',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                 >
-                  <div style={{ fontSize: 24, fontWeight: 700, color: '#67e8f9' }}>Survival Mode</div>
-                  <div style={{ fontSize: 18, color: '#cbd5e1', marginTop: 6 }}>Avoid enemies and score points. Be the Best!</div>
+                  <div className="mode-btn-title">Survival Mode</div>
+                  <div className="mode-btn-desc">Avoid enemies and score points. Be the Best!</div>
                 </button>
 
                 <button
+                  className="mode-btn"
                   onClick={() => { setGameMode('zen'); setUiState('rules') }}
-                  style={{
-                    width: 360, // Increased width for single-line descriptions
-                    height: 120, // Fixed height for consistency
-                    background: 'rgba(6,182,212,0.08)', // Same as tutorial
-                    border: '1px solid rgba(6,182,212,0.25)', // Same as tutorial
-                    color: '#e6eef8',
-                    padding: '24px 28px',
-                    borderRadius: 12,
-                    cursor: 'pointer',
-                    transition: 'transform 0.24s ease, box-shadow 240ms',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                 >
-                  <div style={{ fontSize: 24, fontWeight: 700, color: '#67e8f9' }}>Practice Mode</div>
-                  <div style={{ fontSize: 18, color: '#cbd5e1', marginTop: 6 }}>There are no enemies; only good vibes!</div>
+                  <div className="mode-btn-title">Practice Mode</div>
+                  <div className="mode-btn-desc">There are no enemies; only good vibes!</div>
                 </button>
               </div>
             </div>
@@ -182,31 +138,31 @@ export default function Home() {
 
         {/* Dark blur overlay + Rules modal */}
         {uiState === 'rules' && (
-          <div style={{ position: 'absolute', inset: 0, zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', transition: 'opacity 220ms', zIndex: 10, pointerEvents: 'auto' }} />
-            <div style={{ position: 'relative', zIndex: 20, width: 560, background: 'rgba(12,18,30,0.78)', borderRadius: 14, padding: 28, boxShadow: '0 8px 40px rgba(0,0,0,0.6)', color: '#e6eef8', textAlign: 'center', transform: 'translateY(0)', transition: 'all 240ms' }}>
-              <h2 className="glow-text" style={{ fontSize: 28, color: '#67e8f9', marginBottom: 10 }}>
-                {gameMode === 'zen' ? 'Practice Mode – Rules' : 
-                 gameMode === 'tutorial' ? 'Tutorial Mode – Rules' : 
+          <div className="overlay-center" style={{ position: 'absolute', inset: 0, zIndex: 80 }}>
+            <div className="overlay-backdrop" />
+            <div className="rules-modal">
+              <h2 className="glow-text">
+                {gameMode === 'zen' ? 'Practice Mode – Rules' :
+                 gameMode === 'tutorial' ? 'Tutorial Mode – Rules' :
                  'Survival Mode – Rules'}
               </h2>
-              <div style={{ color: '#cbd5e1', marginBottom: 18 }}>
+              <div>
                 {gameMode === 'zen' ? (
-                  <ul style={{ textAlign: 'left', paddingLeft: 18, lineHeight: 1.7 }}>
+                  <ul>
                     <li>No enemies</li>
                     <li>No death — you cannot lose</li>
                     <li>Wrap-around borders (teleport to opposite side)</li>
                     <li>Focus on collecting green orbs and movement</li>
                   </ul>
                 ) : gameMode === 'tutorial' ? (
-                  <ul style={{ textAlign: 'left', paddingLeft: 18, lineHeight: 1.7 }}>
+                  <ul>
                     <li>Learn the game mechanics step-by-step</li>
                     <li>Follow instructions to complete each tutorial step</li>
                     <li>Practice movement and goal collection</li>
                     <li>Learn to avoid enemies in a safe environment</li>
                   </ul>
                 ) : (
-                  <ul style={{ textAlign: 'left', paddingLeft: 18, lineHeight: 1.7 }}>
+                  <ul>
                     <li>Move with arrow keys or click to boost toward the cursor.</li>
                     <li>Avoid red enemies; touch green goals to score.</li>
                     <li>Every few goals triggers a short challenge event.</li>
@@ -216,19 +172,8 @@ export default function Home() {
               </div>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                 <button
+                  className="rules-modal-play"
                   onClick={() => setUiState('playing')}
-                  style={{
-                    background: '#06b6d4',
-                    color: '#042027',
-                    padding: '12px 28px',
-                    borderRadius: 10,
-                    fontWeight: 800,
-                    boxShadow: '0 6px 18px rgba(6,182,212,0.18)',
-                    transition: 'transform 200ms',
-                    cursor: 'pointer',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.03)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                 >
                   Play
                 </button>
@@ -239,31 +184,31 @@ export default function Home() {
 
         {/* Pause Modal */}
         {uiState === 'paused' && (
-          <div style={{ position: 'absolute', inset: 0, zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', transition: 'opacity 220ms', zIndex: 10, pointerEvents: 'auto' }} />
-            <div style={{ position: 'relative', zIndex: 20, width: 420, background: 'rgba(12,18,30,0.78)', borderRadius: 12, padding: 24, textAlign: 'center', boxShadow: '0 8px 30px rgba(6,182,212,0.08)', transition: 'transform 240ms, opacity 240ms' }}>
-              <div style={{ fontSize: 44, fontWeight: 800, color: '#06b6d4', marginBottom: 12 }} className="glow-text">Paused</div>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 12 }}>
+          <div className="overlay-center" style={{ position: 'absolute', inset: 0, zIndex: 90 }}>
+            <div className="overlay-backdrop" />
+            <div className="pause-modal">
+              <div className="pause-modal-title glow-text">Paused</div>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
                 <button
+                  className="pause-modal-btn pause-modal-btn-resume"
                   onClick={() => setUiState('playing')}
-                  style={{ padding: '10px 20px', borderRadius: 10, background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.3)', color: '#e6eef8', cursor: 'pointer', fontWeight: 700 }}
                 >
                   Resume
                 </button>
                 <button
+                  className="pause-modal-btn pause-modal-btn-restart"
                   onClick={() => {
                     setGameMode(gameMode);
                     setUiState('rules');
                   }}
-                  style={{ padding: '10px 20px', borderRadius: 10, background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', color: '#fef3c7', cursor: 'pointer', fontWeight: 700 }}
                 >
                   Restart
                 </button>
                 <button
+                  className="pause-modal-btn pause-modal-btn-menu"
                   onClick={() => setUiState('title')}
-                  style={{ padding: '10px 20px', borderRadius: 10, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#ffdddd', cursor: 'pointer', fontWeight: 700 }}
                 >
-                  Exit to Menu
+                  Menu
                 </button>
               </div>
             </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, forwardRef } from 'react'
-import { Puck, Goal, Enemy, integrate, applyAcceleration, applyDamping, circlesCollide, puckCollideGoal, isOutOfBounds, integrateGoal, isOutOfArena, getShakeOffset, repositionGoalInBounds } from '../lib/physics'
+import { Puck, Goal, Enemy, integrate, applyAcceleration, applyDamping, circlesCollide, puckCollideGoal, isOutOfBounds, integrateGoal, isOutOfArena, getShakeOffset, repositionGoalInBounds, clampGoalToCanvas } from '../lib/physics'
 import {
   createPlayer,
   spawnEnemy,
@@ -25,6 +25,178 @@ import {
   advanceStep,
   restartCurrentStep,
 } from '../lib/tutorialLogic'
+import { FONT_UI_BODY, FONT_UI_DISPLAY, FONT_GAME } from '../lib/fonts'
+
+function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const words = text.split(' ')
+  const lines: string[] = []
+  let currentLine = ''
+
+  for (const word of words) {
+    const testLine = currentLine + (currentLine ? ' ' : '') + word
+    if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+      lines.push(currentLine)
+      currentLine = word
+    } else {
+      currentLine = testLine
+    }
+  }
+  if (currentLine) lines.push(currentLine)
+  return lines
+}
+
+function drawRoundedTextBox(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  lines: string[],
+  options: {
+    boxWidth: number
+    fontSize: number
+    lineHeight: number
+    paddingY: number
+    fillStyle: string
+    strokeStyle: string
+    textColor: string
+    fontWeight?: string
+    globalAlpha?: number
+  }
+) {
+  const {
+    boxWidth,
+    fontSize,
+    lineHeight,
+    paddingY,
+    fillStyle,
+    strokeStyle,
+    textColor,
+    fontWeight = '600',
+    globalAlpha = 1,
+  } = options
+
+  const boxHeight = paddingY * 2 + lines.length * lineHeight
+  const boxX = (w - boxWidth) / 2
+  const boxY = (h - boxHeight) / 2
+
+  ctx.save()
+  ctx.globalAlpha = globalAlpha
+  ctx.fillStyle = fillStyle
+  ctx.strokeStyle = strokeStyle
+  ctx.lineWidth = 2
+  ctx.shadowColor = 'rgba(6, 182, 212, 0.3)'
+  ctx.shadowBlur = 20
+
+  ctx.beginPath()
+  ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 12)
+  ctx.fill()
+  ctx.stroke()
+
+  ctx.fillStyle = textColor
+  ctx.font = `${fontWeight} ${fontSize}px ${FONT_UI_BODY}`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.shadowColor = 'transparent'
+  ctx.shadowBlur = 0
+
+  const startY = boxY + paddingY + lineHeight / 2
+  lines.forEach((line, index) => {
+    ctx.fillText(line, w / 2, startY + index * lineHeight)
+  })
+
+  ctx.restore()
+  return { boxX, boxY, boxHeight }
+}
+
+/** Rules-modal style card for tutorial step instructions */
+function drawInstructionCard(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  stepLabel: string,
+  lines: string[],
+  options: { boxWidth: number; globalAlpha: number; topOffset?: number }
+) {
+  const boxWidth = options.boxWidth
+  const padX = 28
+  const padTop = 24
+  const padBottom = 24
+  const titleBlock = 38
+  const bodyFontSize = 16
+  const bodyLineHeight = Math.round(bodyFontSize * 1.7) // matches .rules-modal ul line-height
+  const bodyHeight = lines.length * bodyLineHeight
+  const boxHeight = padTop + titleBlock + bodyHeight + padBottom
+  const boxX = (w - boxWidth) / 2
+  const boxY = options.topOffset ?? 48
+
+  ctx.save()
+  ctx.globalAlpha = options.globalAlpha
+
+  // Match .rules-modal panel
+  ctx.fillStyle = 'rgba(12, 18, 30, 0.78)'
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.45)'
+  ctx.shadowBlur = 24
+  ctx.beginPath()
+  ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 14)
+  ctx.fill()
+  ctx.shadowBlur = 0
+
+  // Match .rules-modal h2
+  ctx.fillStyle = '#67e8f9'
+  ctx.font = `700 22px ${FONT_UI_DISPLAY}`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.shadowColor = 'rgba(6, 182, 212, 0.35)'
+  ctx.shadowBlur = 12
+  ctx.fillText(stepLabel, w / 2, boxY + padTop + titleBlock / 2 - 4)
+  ctx.shadowBlur = 0
+
+  // Match .rules-modal ul — left-aligned body copy
+  ctx.fillStyle = '#cbd5e1'
+  ctx.font = `600 ${bodyFontSize}px ${FONT_UI_BODY}`
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  const textStartY = boxY + padTop + titleBlock + bodyLineHeight / 2
+  lines.forEach((line, index) => {
+    ctx.fillText(line, boxX + padX, textStartY + index * bodyLineHeight)
+  })
+
+  ctx.restore()
+}
+
+/** Survival game-over arcade overlay (also used for tutorial death) */
+function drawArcadeGameOverOverlay(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  config: {
+    title: string
+    middle: string
+    hint: string
+  }
+) {
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'
+  ctx.fillRect(0, 0, w, h)
+
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+
+  ctx.fillStyle = '#ef4444'
+  ctx.font = `bold 72px ${FONT_GAME}`
+  ctx.shadowColor = 'rgba(239, 68, 68, 0.8)'
+  ctx.shadowBlur = 30
+  ctx.fillText(config.title, w / 2, h / 2 - 60)
+
+  ctx.fillStyle = '#fbbf24'
+  ctx.font = `bold 48px ${FONT_GAME}`
+  ctx.shadowColor = 'rgba(251, 191, 36, 0.6)'
+  ctx.shadowBlur = 20
+  ctx.fillText(config.middle, w / 2, h / 2)
+
+  ctx.fillStyle = '#a0aec0'
+  ctx.font = `bold 24px ${FONT_GAME}`
+  ctx.shadowColor = 'transparent'
+  ctx.shadowBlur = 0
+  ctx.fillText(config.hint, w / 2, h / 2 + 60)
+}
 
 interface Particle {
   x: number
@@ -125,7 +297,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       const tutorialState = tutorialStateRef.current
       const currentStep = getCurrentTutorialStep(tutorialState)
       if (currentStep) {
-        eventName = `Step ${tutorialState.currentStep + 1}/${tutorialSteps.length}`
+        eventName = `Step ${tutorialState.currentStep + 1} of ${tutorialSteps.length}`
       }
     } else if (gameData.state === 'cataclysm' && gameData.cataclysm) {
       mode = 'Event'
@@ -174,7 +346,11 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       
       // Set enemies and goals
       enemiesRef.current = (setup.enemies || []) as Enemy[]
-      tutorialGoalsRef.current = setup.goals || []
+      tutorialGoalsRef.current = (setup.goals || []).map((goal) => {
+        const clamped = { ...goal }
+        clampGoalToCanvas(clamped, w, h)
+        return clamped
+      })
       tutorialStateRef.current.totalGoalsInStep = tutorialGoalsRef.current.length
       
       // Clear regular goal to avoid conflicts
@@ -197,6 +373,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       enemiesRef.current = spawnEnemies ? [spawnEnemy(w, h, 1, 1) as Enemy] : []
       // Always spawn at least one goal on reset so the game shows green goals.
       goalRef.current = spawnCataclysmGoals(w, h, playerRef.current.x, playerRef.current.y)[0]
+      if (goalRef.current) clampGoalToCanvas(goalRef.current, w, h)
       tutorialGoalsRef.current = []
     }
     
@@ -635,6 +812,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           } else {
             const goals = spawnCataclysmGoals(w, h, player.x, player.y)
             goalRef.current = goals[0]
+            if (goalRef.current) clampGoalToCanvas(goalRef.current, w, h)
           }
           updateGameState()
         }
@@ -753,6 +931,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
               
               const goals = spawnCataclysmGoals(w, h, player.x, player.y)
               goalRef.current = goals[0]
+              if (goalRef.current) clampGoalToCanvas(goalRef.current, w, h)
               updateGameState()
             }
           }
@@ -1058,7 +1237,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           
           // Event name (large, bold, RED glow)
           ctx.fillStyle = '#ef4444'
-          ctx.font = 'bold 56px monospace'
+          ctx.font = `bold 56px ${FONT_GAME}`
           ctx.shadowColor = 'rgba(239, 68, 68, 0.85)'
           ctx.shadowBlur = 30
           ctx.fillText(cat.eventName, w / 2, h / 2 - 40)
@@ -1066,7 +1245,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           // Event objective (smaller, gray)
           const objective = getCataclysmObjective(cat.eventType)
           ctx.fillStyle = '#a0aec0'
-          ctx.font = '24px monospace'
+          ctx.font = `24px ${FONT_GAME}`
           ctx.shadowColor = 'rgba(160, 174, 192, 0.5)'
           ctx.shadowBlur = 15
           ctx.fillText(objective, w / 2, h / 2 + 30)
@@ -1089,7 +1268,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
             ctx.shadowColor = 'rgba(239, 68, 68, 1)'
           }
           
-          ctx.font = 'bold 48px monospace'
+          ctx.font = `bold 48px ${FONT_GAME}`
           ctx.textAlign = 'center'
           ctx.textBaseline = 'top'
           ctx.shadowBlur = 20
@@ -1119,33 +1298,11 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         
         // ===== TUTORIAL DEATH POPUP =====
         if (tutorialState.isDead) {
-          ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'
-          ctx.fillRect(0, 0, w, h)
-          
-          // Title
-          ctx.fillStyle = '#ef4444'
-          ctx.font = 'bold 64px sans-serif'
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'middle'
-          ctx.shadowColor = 'rgba(239, 68, 68, 0.5)'
-          ctx.shadowBlur = 30
-          ctx.fillText('You Died!', w / 2, h / 2 - 80)
-          
-          // Subtitle
-          ctx.fillStyle = '#e6eef8'
-          ctx.font = 'bold 28px sans-serif'
-          ctx.shadowColor = 'rgba(230, 238, 248, 0.3)'
-          ctx.shadowBlur = 15
-          ctx.fillText(`Step ${tutorialState.currentStep + 1} Restart`, w / 2, h / 2 - 20)
-          
-          // Instructions
-          ctx.fillStyle = '#a0aec0'
-          ctx.font = 'bold 20px sans-serif'
-          ctx.shadowColor = 'transparent'
-          ctx.shadowBlur = 0
-          ctx.fillText('Press SPACE to respawn at this step', w / 2, h / 2 + 20)
-          
-          ctx.restore()
+          drawArcadeGameOverOverlay(ctx, w, h, {
+            title: 'YOU DIED!',
+            middle: `Step ${tutorialState.currentStep + 1} Restart`,
+            hint: 'Press SPACE to respawn at this step',
+          })
           return // Don't render anything else when dead
         }
         
@@ -1156,39 +1313,22 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           
           if (timeSinceWarning < warningDuration) {
             const alpha = Math.max(0, 1 - timeSinceWarning / warningDuration)
-            
-            ctx.save()
-            ctx.globalAlpha = alpha * 0.8
-            
-            // Warning box
-            ctx.fillStyle = 'rgba(239, 68, 68, 0.95)'
-            ctx.strokeStyle = 'rgba(252, 165, 165, 0.8)'
-            ctx.lineWidth = 2
-            ctx.shadowColor = 'rgba(239, 68, 68, 0.4)'
-            ctx.shadowBlur = 20
-            
-            const boxWidth = 400
-            const boxHeight = 80
-            const boxX = (w - boxWidth) / 2
-            const boxY = (h - boxHeight) / 2
-            
-            // Draw rounded rectangle
-            ctx.beginPath()
-            ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 12)
-            ctx.fill()
-            ctx.stroke()
-            
-            // Warning text
-            ctx.fillStyle = '#ffffff'
-            ctx.font = 'bold 20px sans-serif'
-            ctx.textAlign = 'center'
-            ctx.textBaseline = 'middle'
-            ctx.shadowColor = 'transparent'
-            ctx.shadowBlur = 0
-            ctx.fillText('The wall is dangerous.', w / 2, boxY + 25)
-            ctx.fillText('The red glow means you\'re close to death.', w / 2, boxY + 50)
-            
-            ctx.restore()
+            const boxWidth = Math.min(440, w - 80)
+            const warningText = 'The wall is dangerous. The red glow means you\'re close to death.'
+            ctx.font = `500 18px ${FONT_UI_BODY}`
+            const warningLines = wrapCanvasText(ctx, warningText, boxWidth - 48)
+
+            drawRoundedTextBox(ctx, w, h, warningLines, {
+              boxWidth,
+              fontSize: 18,
+              lineHeight: 26,
+              paddingY: 20,
+              fillStyle: 'rgba(239, 68, 68, 0.95)',
+              strokeStyle: 'rgba(252, 165, 165, 0.8)',
+              textColor: '#ffffff',
+              fontWeight: '600',
+              globalAlpha: alpha * 0.95,
+            })
           }
         }
         
@@ -1217,101 +1357,33 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           }
           
           if (alpha > 0) {
-            // Dark background overlay
             ctx.save()
-            ctx.globalAlpha = alpha * 0.4
-            ctx.fillStyle = 'rgba(15, 23, 42, 0.9)'
+            ctx.globalAlpha = alpha * 0.35
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'
             ctx.fillRect(0, 0, w, h)
             ctx.restore()
-            
-            // Instruction box - perfectly centered
-            ctx.save()
-            ctx.globalAlpha = alpha
-            ctx.fillStyle = 'rgba(12, 18, 30, 0.95)'
-            ctx.strokeStyle = 'rgba(6, 182, 212, 0.5)'
-            ctx.lineWidth = 2
-            ctx.shadowColor = 'rgba(6, 182, 212, 0.3)'
-            ctx.shadowBlur = 20
-            
-            const boxWidth = Math.min(600, w - 100)
-            const boxHeight = 120
-            const boxX = (w - boxWidth) / 2
-            const boxY = (h - boxHeight) / 2 // Perfect vertical centering
-            
-            // Draw rounded rectangle
-            ctx.beginPath()
-            ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 12)
-            ctx.fill()
-            ctx.stroke()
-            
-            // Instruction text
-            ctx.fillStyle = '#e6eef8'
-            ctx.font = 'bold 24px sans-serif'
-            ctx.textAlign = 'center'
-            ctx.textBaseline = 'middle'
-            ctx.shadowColor = 'transparent'
-            ctx.shadowBlur = 0
-            
-            // Word wrap for long instructions
-            const words = currentStep.instruction.split(' ')
-            const lines: string[] = []
-            let currentLine = ''
-            const maxWidth = boxWidth - 40
-            
-            for (const word of words) {
-              const testLine = currentLine + (currentLine ? ' ' : '') + word
-              const metrics = ctx.measureText(testLine)
-              if (metrics.width > maxWidth && currentLine) {
-                lines.push(currentLine)
-                currentLine = word
-              } else {
-                currentLine = testLine
-              }
-            }
-            if (currentLine) lines.push(currentLine)
-            
-            const lineHeight = 28 // Slightly smaller line height for better centering
-            const totalTextHeight = lines.length * lineHeight
-            const startY = boxY + (boxHeight - totalTextHeight) / 2 + lineHeight / 2 // Add half line height for perfect centering
-            
-            lines.forEach((line, index) => {
-              ctx.fillText(line, w / 2, startY + index * lineHeight)
+
+            const boxWidth = Math.min(560, w - 64)
+            ctx.font = `600 16px ${FONT_UI_BODY}`
+            const lines = wrapCanvasText(ctx, currentStep.instruction, boxWidth - 56)
+            const stepLabel = `Step ${tutorialState.currentStep + 1} of ${tutorialSteps.length}`
+
+            drawInstructionCard(ctx, w, stepLabel, lines, {
+              boxWidth,
+              globalAlpha: alpha,
+              topOffset: Math.max(40, h * 0.1),
             })
-            
-            // Step indicator
-            ctx.fillStyle = '#67e8f9'
-            ctx.font = 'bold 18px sans-serif'
-            ctx.fillText(`Step ${tutorialState.currentStep + 1} / ${tutorialSteps.length}`, w / 2, boxY - 20)
-            
-            ctx.restore()
           }
         }
       }
 
       // ===== GAME OVER SCREEN =====
       if (gameData.state === 'gameOver') {
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'
-        ctx.fillRect(0, 0, w, h)
-
-        ctx.fillStyle = '#ef4444'
-        ctx.font = 'bold 72px monospace'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.shadowColor = 'rgba(239, 68, 68, 0.8)'
-        ctx.shadowBlur = 30
-        ctx.fillText('GAME OVER', w / 2, h / 2 - 60) // Moved up 20px
-
-        ctx.fillStyle = '#fbbf24'
-        ctx.font = 'bold 48px monospace'
-        ctx.shadowColor = 'rgba(251, 191, 36, 0.6)'
-        ctx.shadowBlur = 20
-        ctx.fillText(`Score: ${gameData.score}`, w / 2, h / 2) // Stay centered
-
-        ctx.fillStyle = '#a0aec0'
-        ctx.font = 'bold 24px monospace'
-        ctx.shadowColor = 'transparent'
-        ctx.shadowBlur = 0
-        ctx.fillText('Press SPACE to restart', w / 2, h / 2 + 60) // Moved up 20px
+        drawArcadeGameOverOverlay(ctx, w, h, {
+          title: 'GAME OVER',
+          middle: `Score: ${gameData.score}`,
+          hint: 'Press SPACE to restart',
+        })
       }
     }
 

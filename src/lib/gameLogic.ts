@@ -1,4 +1,4 @@
-import { Puck, Goal, normalize } from './physics'
+import { Puck, Goal, normalize, clampGoalToCanvas } from './physics'
 import { Enemy } from './physics'
 
 // Event types for Cataclysm mode
@@ -77,24 +77,33 @@ export function spawnGoal(
   playerY: number,
   isMoving: boolean = false
 ): Goal {
-  const minMargin = 60 // desired safe pixels from edge
-  // Ensure margin fits within current canvas. If canvas is very small,
-  // reduce margin to avoid negative spawn ranges.
-  const effMarginX = Math.max(8, Math.min(minMargin, Math.floor(width * 0.25)))
-  const effMarginY = Math.max(8, Math.min(minMargin, Math.floor(height * 0.25)))
-  const minDistanceFromPlayer = 120 // pixels from player
+  const radius = 12
+  const desiredMargin = 60
+  // Margin must fit the full goal circle inside the canvas
+  const effMarginX = Math.max(
+    radius + 8,
+    Math.min(desiredMargin, Math.floor(width * 0.25))
+  )
+  const effMarginY = Math.max(
+    radius + 8,
+    Math.min(desiredMargin, Math.floor(height * 0.25))
+  )
+  const minDistanceFromPlayer = Math.min(120, Math.max(40, Math.min(width, height) * 0.25))
 
-  let x = 0
-  let y = 0
+  let x = width / 2
+  let y = height / 2
   let tooCloseToPlayer = true
   let attempts = 0
 
+  const minX = effMarginX
+  const maxX = Math.max(effMarginX, width - effMarginX)
+  const minY = effMarginY
+  const maxY = Math.max(effMarginY, height - effMarginY)
+
   // Keep trying until we find a safe spot
   while (tooCloseToPlayer && attempts < 40) {
-    const rangeX = Math.max(0, width - 2 * effMarginX)
-    const rangeY = Math.max(0, height - 2 * effMarginY)
-    x = effMarginX + (rangeX > 0 ? Math.random() * rangeX : width / 2)
-    y = effMarginY + (rangeY > 0 ? Math.random() * rangeY : height / 2)
+    x = maxX > minX ? minX + Math.random() * (maxX - minX) : width / 2
+    y = maxY > minY ? minY + Math.random() * (maxY - minY) : height / 2
 
     const dist = Math.hypot(x - playerX, y - playerY)
     tooCloseToPlayer = dist < minDistanceFromPlayer
@@ -104,8 +113,10 @@ export function spawnGoal(
   const goal: Goal = {
     x,
     y,
-    radius: 12,
+    radius,
   }
+
+  clampGoalToCanvas(goal, width, height, Math.max(effMarginX, effMarginY) - radius)
 
   // For moving goals, add velocity with variation per goal
   if (isMoving) {

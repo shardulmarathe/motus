@@ -196,6 +196,23 @@ export function getShakeOffset(intensity: number): { x: number; y: number } {
 }
 
 /**
+ * Clamp a goal so its full circle stays inside the canvas
+ */
+export function clampGoalToCanvas(
+  goal: Goal,
+  width: number,
+  height: number,
+  extraPadding = 8
+): void {
+  if (width <= 0 || height <= 0) return
+  const margin = goal.radius + extraPadding
+  const maxX = Math.max(margin, width - margin)
+  const maxY = Math.max(margin, height - margin)
+  goal.x = Math.max(margin, Math.min(maxX, goal.x))
+  goal.y = Math.max(margin, Math.min(maxY, goal.y))
+}
+
+/**
  * Reposition a goal to be inside a rectangular boundary if it's outside
  * Used for shrinking arena to ensure goals remain reachable
  */

@@ -110,7 +110,7 @@ export default function WaterDistortion() {
       })
       
       // Render dots
-      ctx.fillStyle = 'rgba(120, 160, 200, 0.25)' // More visible, soft blue
+      ctx.fillStyle = 'rgba(130, 170, 210, 0.28)'
       
       dotsRef.current.forEach(dot => {
         ctx.beginPath()
