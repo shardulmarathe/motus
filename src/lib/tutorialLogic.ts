@@ -31,7 +31,7 @@ export interface TutorialGameState {
 export const tutorialSteps: TutorialStep[] = [
   {
     id: 1,
-    instruction: "Use arrow keys to move. Your puck has momentum - it will continue moving after you release the keys. Practice for 15 seconds.",
+    instruction: "Use arrow keys or WASD to move. Your puck has momentum - it will continue moving after you release the keys. Practice for 15 seconds.",
     setup: (w: number, h: number, player: Puck) => ({
       enemies: [],
       goals: [],

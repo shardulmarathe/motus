@@ -10,8 +10,7 @@ npm run dev
 ```
 
 Controls:
-- Mouse click: set velocity towards clicked point
-- Arrow keys: set velocity in direction
+- Arrow keys or WASD: move the puck
 - Space: restart after game over
 
 Project structure:

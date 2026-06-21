@@ -163,7 +163,7 @@ export default function Home() {
                   </ul>
                 ) : (
                   <ul>
-                    <li>Move with arrow keys or click to boost toward the cursor.</li>
+                    <li>Move with arrow keys or WASD.</li>
                     <li>Avoid red enemies; touch green goals to score.</li>
                     <li>Every few goals triggers a short challenge event.</li>
                     <li>Stay inside the field — edges will warn you.</li>

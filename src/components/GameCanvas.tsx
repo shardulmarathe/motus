@@ -116,7 +116,6 @@ function drawInstructionCard(
   options: { boxWidth: number; globalAlpha: number; topOffset?: number }
 ) {
   const boxWidth = options.boxWidth
-  const padX = 28
   const padTop = 24
   const padBottom = 24
   const titleBlock = 38
@@ -149,14 +148,14 @@ function drawInstructionCard(
   ctx.fillText(stepLabel, w / 2, boxY + padTop + titleBlock / 2 - 4)
   ctx.shadowBlur = 0
 
-  // Match .rules-modal ul — left-aligned body copy
+  // Instruction body — centered
   ctx.fillStyle = '#cbd5e1'
   ctx.font = `600 ${bodyFontSize}px ${FONT_UI_BODY}`
-  ctx.textAlign = 'left'
+  ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   const textStartY = boxY + padTop + titleBlock + bodyLineHeight / 2
   lines.forEach((line, index) => {
-    ctx.fillText(line, boxX + padX, textStartY + index * bodyLineHeight)
+    ctx.fillText(line, w / 2, textStartY + index * bodyLineHeight)
   })
 
   ctx.restore()
@@ -490,25 +489,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
   useEffect(() => {
     const canvas = canvasRef.current!
 
-    function onClick(e: MouseEvent) {
-      if (!playerRef.current || gameDataRef.current.state === 'gameOver') return
-      
-      // Disable all input when tutorial is complete
-      if (props.gameMode === 'tutorial' && tutorialStateRef.current.isComplete) return
-      
-      const rect = canvas.getBoundingClientRect()
-      const tx = e.clientX - rect.left
-      const ty = e.clientY - rect.top
-      const dx = tx - playerRef.current.x
-      const dy = ty - playerRef.current.y
-      const mag = Math.hypot(dx, dy)
-      const maxSpeed = 350
-      const speed = Math.min(maxSpeed, mag * 2.5)
-      if (mag > 0) {
-        playerRef.current.vx = (dx / mag) * speed
-        playerRef.current.vy = (dy / mag) * speed
-      }
-    }
+    const movementKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD']
 
     function onKeyDown(e: KeyboardEvent) {
       if (!playerRef.current) return
@@ -533,25 +514,23 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       // Disable movement when dead in tutorial
       if (props.gameMode === 'tutorial' && tutorialStateRef.current.isDead) return
 
-      if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-        activeKeysRef.current.add(e.key)
+      if (movementKeys.includes(e.code)) {
+        activeKeysRef.current.add(e.code)
         e.preventDefault()
       }
     }
 
     function onKeyUp(e: KeyboardEvent) {
-      if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-        activeKeysRef.current.delete(e.key)
+      if (movementKeys.includes(e.code)) {
+        activeKeysRef.current.delete(e.code)
         e.preventDefault()
       }
     }
 
-    canvas.addEventListener('mousedown', onClick)
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
 
     return () => {
-      canvas.removeEventListener('mousedown', onClick)
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
     }
@@ -575,10 +554,10 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       // Disable movement when dead in tutorial OR during instructions
       if (!(props.gameMode === 'tutorial' && (tutorialStateRef.current.isDead || tutorialStateRef.current.showInstruction))) {
         const acceleration = 1000
-        if (activeKeysRef.current.has('ArrowRight')) applyAcceleration(player, acceleration * dt, 0)
-        if (activeKeysRef.current.has('ArrowLeft')) applyAcceleration(player, -acceleration * dt, 0)
-        if (activeKeysRef.current.has('ArrowDown')) applyAcceleration(player, 0, acceleration * dt)
-        if (activeKeysRef.current.has('ArrowUp')) applyAcceleration(player, 0, -acceleration * dt)
+        if (activeKeysRef.current.has('ArrowRight') || activeKeysRef.current.has('KeyD')) applyAcceleration(player, acceleration * dt, 0)
+        if (activeKeysRef.current.has('ArrowLeft') || activeKeysRef.current.has('KeyA')) applyAcceleration(player, -acceleration * dt, 0)
+        if (activeKeysRef.current.has('ArrowDown') || activeKeysRef.current.has('KeyS')) applyAcceleration(player, 0, acceleration * dt)
+        if (activeKeysRef.current.has('ArrowUp') || activeKeysRef.current.has('KeyW')) applyAcceleration(player, 0, -acceleration * dt)
 
         applyDamping(player, 0.99)
 

@@ -12,7 +12,7 @@ export default function Rules() {
           <ul className="text-left text-gray-300 space-y-2">
             <li>• Practice Mode: No enemies, no death, wrap-around borders.</li>
             <li>• Practice Mode: Focus on collecting green orbs and movement.</li>
-            <li>• Survival Mode: Move using arrow keys or mouse boost.</li>
+            <li>• Survival Mode: Move using arrow keys or WASD.</li>
             <li>• Survival Mode: Avoid red enemies and collect green goals to score.</li>
             <li>• Survival Mode: Every 10 goals may trigger a challenge.</li>
           </ul>
