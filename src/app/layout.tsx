@@ -1,7 +1,10 @@
 import './globals.css'
 import React from 'react'
+import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/react'
 import { Nunito } from 'next/font/google'
+
+const siteUrl = 'https://playmotus.vercel.app'
 
 const nunito = Nunito({
   subsets: ['latin'],
@@ -9,9 +12,32 @@ const nunito = Nunito({
   variable: '--font-nunito',
 })
 
-export const metadata = {
+export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: 'Motus',
-  description: 'Fast-paced physics survival game',
+  description: 'A momentum-based platformer where precision and movement are everything.',
+  alternates: {
+    canonical: siteUrl,
+  },
+  openGraph: {
+    title: 'Motus',
+    description: 'A momentum-based platformer where precision and movement are everything.',
+    url: siteUrl,
+    type: 'website',
+    siteName: 'Motus',
+    images: [
+      {
+        url: '/Motus.png',
+        alt: 'Motus',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Motus',
+    description: 'A momentum-based platformer where precision and movement are everything.',
+    images: ['/Motus.png'],
+  },
   icons: {
     icon: '/favicon.svg',
   },
