@@ -25,18 +25,11 @@ export const metadata: Metadata = {
     url: siteUrl,
     type: 'website',
     siteName: 'Motus',
-    images: [
-      {
-        url: '/Motus.png',
-        alt: 'Motus',
-      },
-    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Motus',
     description: 'A momentum-based platformer where precision and movement are everything.',
-    images: ['/Motus.png'],
   },
   icons: {
     icon: '/favicon.svg',
