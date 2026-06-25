@@ -325,7 +325,7 @@ export default function Home() {
                   className="mode-btn"
                   onClick={() => setLeaderboardOpen(true)}
                 >
-                  <div className="mode-btn-title">Leadership</div>
+                  <div className="mode-btn-title">Leaderboard</div>
                   <div className="mode-btn-desc">See who is on top.</div>
                 </button>
               </div>
