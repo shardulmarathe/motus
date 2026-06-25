@@ -235,7 +235,17 @@ interface GameData {
 }
 
 interface GameCanvasProps {
-  onStateChange?: (state: { score: number; stage: number; mode: string; eventTimeLeft?: number; inEvent?: boolean; eventName?: string }) => void
+  onStateChange?: (state: {
+    score: number
+    stage: number
+    mode: string
+    eventTimeLeft?: number
+    inEvent?: boolean
+    eventName?: string
+    eventProgress?: number
+    gameOver?: boolean
+  }) => void
+  onSurvivalGameOver?: (score: number) => void
   isPaused?: boolean
   uiState?: 'title' | 'rules' | 'playing' | 'paused'
   gameMode?: 'survival' | 'zen' | 'tutorial'
@@ -269,6 +279,40 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
   const tutorialGoalsRef = useRef<Goal[]>([])
   const lastMovementTimeRef = useRef<number>(0)
   const borderWarningStartTime = useRef<number>(0)
+  const uiStateRef = useRef(props.uiState)
+  const gameModeRef = useRef(props.gameMode)
+  const lastGameOverNotifiedRef = useRef(false)
+
+  useEffect(() => {
+    uiStateRef.current = props.uiState
+  }, [props.uiState])
+
+  useEffect(() => {
+    gameModeRef.current = props.gameMode
+  }, [props.gameMode])
+
+  useEffect(() => {
+    if (props.uiState !== 'playing') {
+      activeKeysRef.current.clear()
+    }
+  }, [props.uiState])
+
+  function isTypingTarget(target: EventTarget | null): boolean {
+    if (!target || !(target instanceof HTMLElement)) return false
+    const tag = target.tagName
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable
+  }
+
+  function notifySurvivalGameOverIfNeeded() {
+    const gameData = gameDataRef.current
+    const isGameOver = gameData.state === 'gameOver'
+    if (isGameOver && !lastGameOverNotifiedRef.current) {
+      if (gameModeRef.current === 'survival' && props.onSurvivalGameOver) {
+        props.onSurvivalGameOver(gameData.score)
+      }
+    }
+    lastGameOverNotifiedRef.current = isGameOver
+  }
 
   // Expose canvas ref
   useEffect(() => {
@@ -313,11 +357,14 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       inEvent,
       eventName,
       eventProgress: gameData.eventProgress,
+      gameOver: gameData.state === 'gameOver',
     }
 
     if (props.onStateChange) {
       props.onStateChange(state)
     }
+
+    notifySurvivalGameOverIfNeeded()
 
     // Also emit as event for backward compatibility
     window.dispatchEvent(
@@ -389,6 +436,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     collisionFlashRef.current = 0
     particlesRef.current = []
     lastMovementTimeRef.current = 0
+    lastGameOverNotifiedRef.current = false
     updateGameState()
   }
 
@@ -493,6 +541,9 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
     function onKeyDown(e: KeyboardEvent) {
       if (!playerRef.current) return
+
+      if (isTypingTarget(e.target)) return
+      if (uiStateRef.current !== 'playing') return
       
       // Disable all input when tutorial is complete
       if (props.gameMode === 'tutorial' && tutorialStateRef.current.isComplete) return
@@ -521,6 +572,9 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     }
 
     function onKeyUp(e: KeyboardEvent) {
+      if (isTypingTarget(e.target)) return
+      if (uiStateRef.current !== 'playing') return
+
       if (movementKeys.includes(e.code)) {
         activeKeysRef.current.delete(e.code)
         e.preventDefault()

@@ -1,20 +1,154 @@
 "use client"
 
-import React, { useCallback, useState, useEffect } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import GameCanvas from '../components/GameCanvas'
 import ParticleBackground from '../components/ParticleBackground'
 import WaterDistortion from '../components/WaterDistortion'
+import {
+  isUsernameTakenOnLeaderboard,
+  isValidUsername,
+  loadRegisteredPlayerName,
+  normalizeUsername,
+  saveRegisteredPlayerName,
+  type LeaderboardEntry,
+} from '../lib/leaderboard'
+
+const LeaderboardModal = dynamic(() => import('../components/LeaderboardModal'), { ssr: false })
+
+type HudState = {
+  score: number
+  stage: number
+  mode: string
+  eventName?: string
+  eventProgress?: number
+  gameOver?: boolean
+}
 
 export default function Home() {
   const [uiState, setUiState] = useState<'title' | 'rules' | 'playing' | 'paused'>('title')
-  const [hud, setHud] = useState({ score: 0, stage: 1, mode: 'Normal', eventName: '', eventProgress: 0 })
+  const [hud, setHud] = useState<HudState>({
+    score: 0,
+    stage: 1,
+    mode: 'Normal',
+    eventName: '',
+    eventProgress: 0,
+  })
   const [gameMode, setGameMode] = useState<'survival' | 'zen' | 'tutorial'>('survival')
+  const [sessionBest, setSessionBest] = useState(0)
+  const [registeredName, setRegisteredName] = useState<string | null>(null)
+  const [draftName, setDraftName] = useState('')
+  const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([])
+  const [leaderboardNamesLoading, setLeaderboardNamesLoading] = useState(false)
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false)
+  const [startingSession, setStartingSession] = useState(false)
+  const submittedDeathRef = useRef(false)
+  const gameSessionTokenRef = useRef<string | null>(null)
 
-  const handleStateUpdate = useCallback((s: any) => {
-    setHud({ score: s.score ?? 0, stage: s.stage ?? 1, mode: s.mode ?? 'Normal', eventName: s.eventName ?? '', eventProgress: s.eventProgress ?? 0 })
+  useEffect(() => {
+    setRegisteredName(loadRegisteredPlayerName())
+    try {
+      const savedBest = sessionStorage.getItem('motus-session-best')
+      if (savedBest) setSessionBest(Number(savedBest) || 0)
+    } catch {
+      // storage unavailable
+    }
   }, [])
 
-  // Handle tutorial completion
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('motus-session-best', String(sessionBest))
+    } catch {
+      // storage unavailable
+    }
+  }, [sessionBest])
+
+  // Fetch top-7 names when a new player needs to pick a username
+  useEffect(() => {
+    if (uiState !== 'rules' || gameMode !== 'survival' || registeredName) return
+
+    let cancelled = false
+    setLeaderboardNamesLoading(true)
+
+    fetch('/api/leaderboard')
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => {
+        if (!cancelled) setLeaderboardEntries(data.entries ?? [])
+      })
+      .catch(() => {
+        if (!cancelled) setLeaderboardEntries([])
+      })
+      .finally(() => {
+        if (!cancelled) setLeaderboardNamesLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [uiState, gameMode, registeredName])
+
+  const submitLeaderboardScore = useCallback(
+    async (score: number) => {
+      if (gameMode !== 'survival' || submittedDeathRef.current || !registeredName) return
+
+      const sessionToken = gameSessionTokenRef.current
+      if (!sessionToken) return
+
+      submittedDeathRef.current = true
+      const username = registeredName
+
+      try {
+        const res = await fetch('/api/leaderboard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, score, sessionToken }),
+        })
+        if (!res.ok) {
+          submittedDeathRef.current = false
+        }
+      } catch {
+        submittedDeathRef.current = false
+      } finally {
+        gameSessionTokenRef.current = null
+      }
+    },
+    [gameMode, registeredName]
+  )
+
+  const handleSurvivalGameOver = useCallback(
+    (score: number) => {
+      void submitLeaderboardScore(score)
+    },
+    [submitLeaderboardScore]
+  )
+
+  const handleStateUpdate = useCallback(
+    (s: HudState) => {
+      setHud({
+        score: s.score ?? 0,
+        stage: s.stage ?? 1,
+        mode: s.mode ?? 'Normal',
+        eventName: s.eventName ?? '',
+        eventProgress: s.eventProgress ?? 0,
+        gameOver: s.gameOver,
+      })
+
+      if (gameMode === 'survival' && typeof s.score === 'number') {
+        setSessionBest((prev) => Math.max(prev, s.score))
+      }
+    },
+    [gameMode]
+  )
+
+  useEffect(() => {
+    if (uiState === 'playing') {
+      submittedDeathRef.current = false
+    }
+    if (uiState === 'title') {
+      gameSessionTokenRef.current = null
+    }
+  }, [uiState])
+
   useEffect(() => {
     const handleSwitchToSurvival = () => {
       setGameMode('survival')
@@ -33,9 +167,56 @@ export default function Home() {
     }
   }, [])
 
+  const draftNameInvalid = draftName.length > 0 && !isValidUsername(draftName)
+  const draftNameTaken =
+    isValidUsername(draftName) &&
+    isUsernameTakenOnLeaderboard(draftName, leaderboardEntries, null)
+
+  const canPlaySurvival =
+    gameMode !== 'survival' ||
+    (!startingSession &&
+      (registeredName
+        ? true
+        : isValidUsername(draftName) && !draftNameTaken && !leaderboardNamesLoading))
+
+  const handleStartPlaying = async () => {
+    let survivalName = registeredName
+
+    if (gameMode === 'survival') {
+      if (!survivalName) {
+        if (!isValidUsername(draftName) || draftNameTaken) return
+        survivalName = normalizeUsername(draftName)
+        setRegisteredName(survivalName)
+        saveRegisteredPlayerName(survivalName)
+      }
+
+      setStartingSession(true)
+      gameSessionTokenRef.current = null
+
+      try {
+        const res = await fetch('/api/leaderboard/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: survivalName }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (typeof data.sessionToken === 'string') {
+            gameSessionTokenRef.current = data.sessionToken
+          }
+        }
+      } catch {
+        // Play without leaderboard submit if session service is unavailable
+      } finally {
+        setStartingSession(false)
+      }
+    }
+
+    setUiState('playing')
+  }
+
   return (
     <div className="page">
-      {/* Only show animated background on home screen */}
       {uiState === 'title' && (
         <>
           <div className="home-background" />
@@ -43,8 +224,7 @@ export default function Home() {
           <ParticleBackground />
         </>
       )}
-      
-      {/* HUD only visible while actively playing or paused (no HUD on title/rules) */}
+
       {(uiState === 'playing' || uiState === 'paused') && (
         <header className="hud-overlay">
           <div className="hud-left">
@@ -76,6 +256,12 @@ export default function Home() {
           </div>
 
           <div className="hud-right">
+            {gameMode === 'survival' && (
+              <div className="hud-box score-box">
+                <div className="box-label">Best</div>
+                <div className="box-value">{sessionBest}</div>
+              </div>
+            )}
             <button
               className="menu-button"
               onClick={() => setUiState('paused')}
@@ -92,15 +278,17 @@ export default function Home() {
         </header>
       )}
 
-
-      {/* Canvas area: only initialize/render game when not on the main title screen.
-          For "rules" we render a paused/dimmed game behind the overlay. */}
       <main className="canvas-wrap game-area">
         {uiState !== 'title' && (
-          <GameCanvas gameMode={gameMode} uiState={uiState} isPaused={uiState !== 'playing'} onStateChange={handleStateUpdate} />
+          <GameCanvas
+            gameMode={gameMode}
+            uiState={uiState}
+            isPaused={uiState !== 'playing'}
+            onStateChange={handleStateUpdate}
+            onSurvivalGameOver={handleSurvivalGameOver}
+          />
         )}
 
-        {/* Title Screen (clean, minimal - no game HUD, no boundaries) */}
         {uiState === 'title' && (
           <div className="title-screen-center">
             <div className="title-screen-inner">
@@ -131,12 +319,20 @@ export default function Home() {
                   <div className="mode-btn-title">Practice Mode</div>
                   <div className="mode-btn-desc">There are no enemies; only good vibes!</div>
                 </button>
+
+                <button
+                  type="button"
+                  className="mode-btn"
+                  onClick={() => setLeaderboardOpen(true)}
+                >
+                  <div className="mode-btn-title">Leadership</div>
+                  <div className="mode-btn-desc">See who is on top.</div>
+                </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Dark blur overlay + Rules modal */}
         {uiState === 'rules' && (
           <div className="overlay-center" style={{ position: 'absolute', inset: 0, zIndex: 80 }}>
             <div className="overlay-backdrop" />
@@ -170,19 +366,54 @@ export default function Home() {
                   </ul>
                 )}
               </div>
+
+              {gameMode === 'survival' && registeredName && (
+                <p className="username-registered">
+                  Playing as <strong>{registeredName}</strong>
+                </p>
+              )}
+
+              {gameMode === 'survival' && !registeredName && (
+                <div className="username-field">
+                  <label htmlFor="player-name" className="username-label">
+                    Choose your display name
+                  </label>
+                  <input
+                    id="player-name"
+                    className="username-input"
+                    type="text"
+                    maxLength={16}
+                    placeholder="Pick a name not on the leaderboard"
+                    value={draftName}
+                    onChange={(e) => setDraftName(e.target.value)}
+                    autoComplete="off"
+                    autoFocus
+                  />
+                  {draftNameInvalid && (
+                    <p className="username-hint">2–16 characters: letters, numbers, spaces, - or _</p>
+                  )}
+                  {!draftNameInvalid && draftNameTaken && (
+                    <p className="username-hint">That name is already on the leaderboard — pick another.</p>
+                  )}
+                  {leaderboardNamesLoading && (
+                    <p className="username-hint" style={{ color: '#94a3b8' }}>Checking leaderboard names…</p>
+                  )}
+                </div>
+              )}
+
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                 <button
                   className="rules-modal-play"
-                  onClick={() => setUiState('playing')}
+                  disabled={!canPlaySurvival}
+                  onClick={() => void handleStartPlaying()}
                 >
-                  Play
+                  {startingSession ? 'Starting…' : 'Play'}
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Pause Modal */}
         {uiState === 'paused' && (
           <div className="overlay-center" style={{ position: 'absolute', inset: 0, zIndex: 90 }}>
             <div className="overlay-backdrop" />
@@ -197,10 +428,7 @@ export default function Home() {
                 </button>
                 <button
                   className="pause-modal-btn pause-modal-btn-restart"
-                  onClick={() => {
-                    setGameMode(gameMode);
-                    setUiState('rules');
-                  }}
+                  onClick={() => setUiState('rules')}
                 >
                   Restart
                 </button>
@@ -215,7 +443,8 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      <LeaderboardModal open={leaderboardOpen} onClose={() => setLeaderboardOpen(false)} />
     </div>
   )
 }
-
