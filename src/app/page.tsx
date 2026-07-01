@@ -6,13 +6,16 @@ import GameCanvas from '../components/GameCanvas'
 import ParticleBackground from '../components/ParticleBackground'
 import WaterDistortion from '../components/WaterDistortion'
 import {
+  filterPublicLeaderboardEntries,
+  getUsernameValidationIssue,
   isAllowedUsername,
-  isAppropriateUsername,
   isUsernameTakenOnLeaderboard,
-  isValidUsername,
   loadRegisteredPlayerName,
   normalizeUsername,
   saveRegisteredPlayerName,
+  sanitizeUsernameInput,
+  USERNAME_MAX_LENGTH,
+  USERNAME_MIN_LENGTH,
   type LeaderboardEntry,
 } from '../lib/leaderboard'
 
@@ -75,7 +78,7 @@ export default function Home() {
     fetch('/api/leaderboard')
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => {
-        if (!cancelled) setLeaderboardEntries(data.entries ?? [])
+        if (!cancelled) setLeaderboardEntries(filterPublicLeaderboardEntries(data.entries ?? []))
       })
       .catch(() => {
         if (!cancelled) setLeaderboardEntries([])
@@ -169,26 +172,28 @@ export default function Home() {
     }
   }, [])
 
-  const draftNameInvalid = draftName.length > 0 && !isValidUsername(draftName)
-  const draftNameInappropriate =
-    isValidUsername(draftName) && !isAppropriateUsername(draftName)
-  const draftNameTaken =
+  const draftNameIssue = getUsernameValidationIssue(
+    draftName,
     isAllowedUsername(draftName) &&
-    isUsernameTakenOnLeaderboard(draftName, leaderboardEntries, null)
+      isUsernameTakenOnLeaderboard(draftName, leaderboardEntries, null)
+  )
 
   const canPlaySurvival =
     gameMode !== 'survival' ||
     (!startingSession &&
       (registeredName
         ? true
-        : isAllowedUsername(draftName) && !draftNameTaken && !leaderboardNamesLoading))
+        : draftNameIssue === null && draftName.trim().length >= USERNAME_MIN_LENGTH && !leaderboardNamesLoading))
 
   const handleStartPlaying = async () => {
     let survivalName = registeredName
 
     if (gameMode === 'survival') {
       if (!survivalName) {
-        if (!isAllowedUsername(draftName) || draftNameTaken) return
+        if (!isAllowedUsername(draftName) || getUsernameValidationIssue(
+          draftName,
+          isUsernameTakenOnLeaderboard(draftName, leaderboardEntries, null)
+        )) return
         survivalName = normalizeUsername(draftName)
         setRegisteredName(survivalName)
         saveRegisteredPlayerName(survivalName)
@@ -384,22 +389,39 @@ export default function Home() {
                   </label>
                   <input
                     id="player-name"
-                    className="username-input"
+                    className={`username-input${draftNameIssue ? ' username-input-invalid' : ''}`}
                     type="text"
-                    maxLength={16}
+                    maxLength={USERNAME_MAX_LENGTH}
                     placeholder="Pick a name not on the leaderboard"
                     value={draftName}
-                    onChange={(e) => setDraftName(e.target.value)}
+                    onChange={(e) => setDraftName(sanitizeUsernameInput(e.target.value))}
                     autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    aria-invalid={draftNameIssue !== null}
+                    aria-describedby={draftNameIssue ? 'player-name-hint' : undefined}
                     autoFocus
                   />
-                  {draftNameInvalid && (
-                    <p className="username-hint">2–16 characters: letters, numbers, spaces, - or _</p>
+                  <p
+                    id="player-name-hint"
+                    className="username-meta"
+                    aria-live="polite"
+                  >
+                    {draftName.trim().length}/{USERNAME_MAX_LENGTH} characters
+                  </p>
+                  {draftNameIssue === 'too_short' && (
+                    <p className="username-hint">At least {USERNAME_MIN_LENGTH} characters required.</p>
                   )}
-                  {!draftNameInvalid && draftNameInappropriate && (
+                  {draftNameIssue === 'invalid_chars' && (
+                    <p className="username-hint">
+                      {USERNAME_MIN_LENGTH}–{USERNAME_MAX_LENGTH} characters: letters, numbers, spaces, - or _
+                    </p>
+                  )}
+                  {draftNameIssue === 'inappropriate' && (
                     <p className="username-hint">That username isn&apos;t allowed — please pick another.</p>
                   )}
-                  {!draftNameInvalid && !draftNameInappropriate && draftNameTaken && (
+                  {draftNameIssue === 'taken' && (
                     <p className="username-hint">That name is already on the leaderboard — pick another.</p>
                   )}
                   {leaderboardNamesLoading && (

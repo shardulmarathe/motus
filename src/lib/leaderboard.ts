@@ -9,7 +9,42 @@ export type LeaderboardEntry = {
 
 export const LEADERBOARD_TOP_N = 7
 
-const USERNAME_RE = /^[a-zA-Z0-9 _-]{2,16}$/
+export const USERNAME_MIN_LENGTH = 2
+export const USERNAME_MAX_LENGTH = 16
+
+const USERNAME_RE = new RegExp(
+  `^[a-zA-Z0-9 _-]{${USERNAME_MIN_LENGTH},${USERNAME_MAX_LENGTH}}$`
+)
+
+/** Strip unsafe chars and enforce max length while the user types. */
+export function sanitizeUsernameInput(raw: string): string {
+  const normalized = raw.normalize('NFKC')
+  const stripped = normalized
+    .replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200D\uFEFF]/g, '')
+    .replace(/[^a-zA-Z0-9 _-]/g, '')
+  return stripped.slice(0, USERNAME_MAX_LENGTH)
+}
+
+export type UsernameValidationIssue =
+  | 'too_short'
+  | 'too_long'
+  | 'invalid_chars'
+  | 'inappropriate'
+  | 'taken'
+
+export function getUsernameValidationIssue(
+  name: string,
+  takenOnLeaderboard: boolean
+): UsernameValidationIssue | null {
+  const trimmed = normalizeUsername(name)
+  if (trimmed.length === 0) return null
+  if (trimmed.length < USERNAME_MIN_LENGTH) return 'too_short'
+  if (trimmed.length > USERNAME_MAX_LENGTH) return 'too_long'
+  if (!isAppropriateUsername(trimmed)) return 'inappropriate'
+  if (!isValidUsername(trimmed)) return 'invalid_chars'
+  if (takenOnLeaderboard) return 'taken'
+  return null
+}
 
 export function isValidUsername(name: string): boolean {
   const trimmed = name.trim()
@@ -23,7 +58,12 @@ export function isAllowedUsername(name: string): boolean {
 export { isAppropriateUsername }
 
 export function normalizeUsername(name: string): string {
-  return name.trim()
+  return sanitizeUsernameInput(name).trim()
+}
+
+/** Hide legacy or bypass entries from public leaderboard views. */
+export function filterPublicLeaderboardEntries(entries: LeaderboardEntry[]): LeaderboardEntry[] {
+  return entries.filter((entry) => isAllowedUsername(entry.username))
 }
 
 export function usernamesMatch(a: string, b: string): boolean {

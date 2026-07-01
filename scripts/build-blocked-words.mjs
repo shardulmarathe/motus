@@ -86,6 +86,16 @@ for (const url of SOURCES) {
 
 for (const w of CUSTOM_WORDS) addWord(words, w)
 
+// Keep original spellings for high-priority roots (collapse would turn "goon" → "gon").
+const CRITICAL_PRESERVE = [
+  'goon', 'gooner', 'gooning', 'goons', 'goontok', 'goonhub', 'goonette', 'goonbait',
+  'g00n', 'g00ner',
+]
+for (const w of CRITICAL_PRESERVE) {
+  const plain = w.toLowerCase().replace(/[^a-z0-9]/g, '')
+  if (plain.length >= 2) words.add(plain)
+}
+
 // Generate leet variants for words 4+ chars (limited substitutions)
 function leetVariants(word) {
   const subs = [

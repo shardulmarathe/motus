@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server'
 import { maxScoreForDuration, verifyGameSession } from '../../../lib/game-session'
 import {
+  filterPublicLeaderboardEntries,
   findLeaderboardEntry,
   isAppropriateUsername,
   isValidScore,
   isValidUsername,
   isUsernameTakenOnTopLeaderboard,
   normalizeUsername,
+  USERNAME_MIN_LENGTH,
+  USERNAME_MAX_LENGTH,
   usernamesMatch,
   type LeaderboardEntry,
 } from '../../../lib/leaderboard'
@@ -24,14 +27,15 @@ export async function GET() {
       .select('username, score, updated_at')
       .order('score', { ascending: false })
       .order('updated_at', { ascending: true })
-      .limit(TOP_N)
+      .limit(TOP_N * 4)
 
     if (error) {
       console.error('leaderboard GET:', error)
       return NextResponse.json({ error: 'Failed to fetch leaderboard' }, { status: 500 })
     }
 
-    return NextResponse.json({ entries: (data ?? []) as LeaderboardEntry[] })
+    const entries = filterPublicLeaderboardEntries((data ?? []) as LeaderboardEntry[]).slice(0, TOP_N)
+    return NextResponse.json({ entries })
   } catch (e) {
     console.error('leaderboard GET:', e)
     return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
@@ -46,7 +50,10 @@ export async function POST(request: Request) {
     const sessionToken = typeof body.sessionToken === 'string' ? body.sessionToken : ''
 
     if (!isValidUsername(username)) {
-      return NextResponse.json({ error: 'Invalid username (2–16 letters, numbers, spaces, - or _)' }, { status: 400 })
+      return NextResponse.json(
+        { error: `Invalid username (${USERNAME_MIN_LENGTH}–${USERNAME_MAX_LENGTH} letters, numbers, spaces, - or _)` },
+        { status: 400 }
+      )
     }
     if (!isAppropriateUsername(username)) {
       return NextResponse.json({ error: 'Username not allowed' }, { status: 400 })
@@ -155,6 +162,6 @@ async function fetchTop(supabase: ReturnType<typeof createServiceSupabaseClient>
     .select('username, score, updated_at')
     .order('score', { ascending: false })
     .order('updated_at', { ascending: true })
-    .limit(TOP_N)
-  return (data ?? []) as LeaderboardEntry[]
+    .limit(TOP_N * 4)
+  return filterPublicLeaderboardEntries((data ?? []) as LeaderboardEntry[]).slice(0, TOP_N)
 }

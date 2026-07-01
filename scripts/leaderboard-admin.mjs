@@ -1,10 +1,11 @@
 /**
- * One-off admin script — run with: node scripts/leaderboard-admin.mjs
+ * One-off admin script — run with: npx tsx scripts/leaderboard-admin.mjs
  * Requires .env.local with Supabase credentials.
  */
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
+import { isAppropriateUsername } from '../src/lib/profanity.ts'
 
 function loadEnvLocal() {
   const path = resolve(process.cwd(), '.env.local')
@@ -32,17 +33,15 @@ const supabase = createClient(url, key, {
   auth: { persistSession: false, autoRefreshToken: false },
 })
 
-const REMOVE_NAMES = new Set(['goon', 'gooner', 'goons', 'gooning', 'gooner'])
-
 const { data: rows, error: listError } = await supabase.from('leaderboard').select('username')
 if (listError) {
   console.error('List failed:', listError.message)
   process.exit(1)
 }
 
-const toRemove = (rows ?? []).filter((r) => REMOVE_NAMES.has(r.username.toLowerCase()))
+const toRemove = (rows ?? []).filter((r) => !isAppropriateUsername(r.username))
 if (toRemove.length === 0) {
-  console.log('No matching leaderboard rows to remove.')
+  console.log('No disallowed leaderboard rows to remove.')
 } else {
   for (const row of toRemove) {
     const { error } = await supabase.from('leaderboard').delete().eq('username', row.username)

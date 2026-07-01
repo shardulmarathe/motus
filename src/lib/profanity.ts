@@ -2,6 +2,21 @@ import BLOCKED_WORDS_LIST from './blocked-words.json'
 
 const BLOCKED_WORDS = new Set(BLOCKED_WORDS_LIST as string[])
 
+/** Collapse stretched spellings: goooon → goon */
+function collapseRepeats(s: string): string {
+  return s.replace(/(.)\1+/g, '$1')
+}
+
+/** Always substring-match these roots (stored collapsed + original spellings). */
+const CRITICAL_SUBSTRING_ROOTS = [
+  'goon', 'gooner', 'gooning', 'goons', 'simp', 'incel', 'coomer', 'hentai',
+  'nazi', 'hitler', 'kys', 'pedo', 'porn', 'nude', 'rape', 'kill',
+] as const
+
+const CRITICAL_ROOTS_NORMALIZED = new Set(
+  CRITICAL_SUBSTRING_ROOTS.flatMap((root) => [root, collapseRepeats(root)])
+)
+
 const LEET_MAP: Record<string, string> = {
   '@': 'a',
   '4': 'a',
@@ -24,9 +39,35 @@ const LEET_MAP: Record<string, string> = {
 /** Minimum length for glued-string detection (avoids "class" → "ass"). */
 const GLUED_MIN_LEN = 4
 
-/** Collapse stretched spellings: goooon → goon */
-function collapseRepeats(s: string): string {
-  return s.replace(/(.)\1+/g, '$1')
+/** Control chars, zero-width, and other non-displayable bytes. */
+const UNSAFE_CHAR_RE = /[\u0000-\u001F\u007F-\u009F\u200B-\u200D\uFEFF]/g
+
+/** Block prompt-injection / markup patterns in display names. */
+const INJECTION_PATTERNS = [
+  /ignore\s*(all\s*)?(previous|prior|above)\s*instructions/i,
+  /disregard\s*(all\s*)?(previous|prior)/i,
+  /system\s*prompt/i,
+  /you\s+are\s+now/i,
+  /jailbreak/i,
+  /<\s*script/i,
+  /javascript\s*:/i,
+  /\{\{|\}\}|<%|%>/,
+  /```/,
+] as const
+
+export function containsUnsafeUsernameChars(name: string): boolean {
+  return UNSAFE_CHAR_RE.test(name)
+}
+
+export function containsUsernameInjectionPattern(name: string): boolean {
+  return INJECTION_PATTERNS.some((re) => re.test(name))
+}
+
+function matchesCriticalRoot(normalized: string): boolean {
+  for (const root of CRITICAL_ROOTS_NORMALIZED) {
+    if (root.length >= 3 && normalized.includes(root)) return true
+  }
+  return false
 }
 
 /** Normalize for matching: leetspeak, strip separators, collapse repeats. */
@@ -64,12 +105,17 @@ function matchesBlocked(normalized: string): boolean {
 }
 
 export function isAppropriateUsername(name: string): boolean {
+  if (containsUnsafeUsernameChars(name)) return false
+  if (containsUsernameInjectionPattern(name)) return false
+
   const normalized = normalizeForProfanityCheck(name)
   if (normalized.length < 2) return false
 
+  if (matchesCriticalRoot(normalized)) return false
   if (matchesBlocked(normalized)) return false
 
   for (const token of tokenize(name)) {
+    if (matchesCriticalRoot(token)) return false
     if (matchesBlocked(token)) return false
   }
 

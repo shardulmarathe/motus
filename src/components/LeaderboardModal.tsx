@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react'
 import type { LeaderboardEntry } from '../lib/leaderboard'
+import { filterPublicLeaderboardEntries } from '../lib/leaderboard'
 import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js'
 
 interface LeaderboardModalProps {
@@ -19,7 +20,7 @@ export default function LeaderboardModal({ open, onClose }: LeaderboardModalProp
       const res = await fetch('/api/leaderboard')
       if (!res.ok) throw new Error('Failed to load leaderboard')
       const data = await res.json()
-      setEntries(data.entries ?? [])
+      setEntries(filterPublicLeaderboardEntries(data.entries ?? []))
       setError(null)
     } catch {
       setError('Could not load leaderboard.')
