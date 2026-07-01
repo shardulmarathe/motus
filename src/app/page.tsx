@@ -6,6 +6,8 @@ import GameCanvas from '../components/GameCanvas'
 import ParticleBackground from '../components/ParticleBackground'
 import WaterDistortion from '../components/WaterDistortion'
 import {
+  isAllowedUsername,
+  isAppropriateUsername,
   isUsernameTakenOnLeaderboard,
   isValidUsername,
   loadRegisteredPlayerName,
@@ -168,8 +170,10 @@ export default function Home() {
   }, [])
 
   const draftNameInvalid = draftName.length > 0 && !isValidUsername(draftName)
+  const draftNameInappropriate =
+    isValidUsername(draftName) && !isAppropriateUsername(draftName)
   const draftNameTaken =
-    isValidUsername(draftName) &&
+    isAllowedUsername(draftName) &&
     isUsernameTakenOnLeaderboard(draftName, leaderboardEntries, null)
 
   const canPlaySurvival =
@@ -177,14 +181,14 @@ export default function Home() {
     (!startingSession &&
       (registeredName
         ? true
-        : isValidUsername(draftName) && !draftNameTaken && !leaderboardNamesLoading))
+        : isAllowedUsername(draftName) && !draftNameTaken && !leaderboardNamesLoading))
 
   const handleStartPlaying = async () => {
     let survivalName = registeredName
 
     if (gameMode === 'survival') {
       if (!survivalName) {
-        if (!isValidUsername(draftName) || draftNameTaken) return
+        if (!isAllowedUsername(draftName) || draftNameTaken) return
         survivalName = normalizeUsername(draftName)
         setRegisteredName(survivalName)
         saveRegisteredPlayerName(survivalName)
@@ -392,7 +396,10 @@ export default function Home() {
                   {draftNameInvalid && (
                     <p className="username-hint">2–16 characters: letters, numbers, spaces, - or _</p>
                   )}
-                  {!draftNameInvalid && draftNameTaken && (
+                  {!draftNameInvalid && draftNameInappropriate && (
+                    <p className="username-hint">That username isn&apos;t allowed — please pick another.</p>
+                  )}
+                  {!draftNameInvalid && !draftNameInappropriate && draftNameTaken && (
                     <p className="username-hint">That name is already on the leaderboard — pick another.</p>
                   )}
                   {leaderboardNamesLoading && (

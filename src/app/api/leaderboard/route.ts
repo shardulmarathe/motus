@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server'
 import { maxScoreForDuration, verifyGameSession } from '../../../lib/game-session'
-import { isValidScore, isValidUsername, normalizeUsername, type LeaderboardEntry } from '../../../lib/leaderboard'
+import {
+  findLeaderboardEntry,
+  isAppropriateUsername,
+  isValidScore,
+  isValidUsername,
+  isUsernameTakenOnTopLeaderboard,
+  normalizeUsername,
+  usernamesMatch,
+  type LeaderboardEntry,
+} from '../../../lib/leaderboard'
 import { createAnonSupabaseClient, createServiceSupabaseClient } from '../../../lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
@@ -39,6 +48,9 @@ export async function POST(request: Request) {
     if (!isValidUsername(username)) {
       return NextResponse.json({ error: 'Invalid username (2–16 letters, numbers, spaces, - or _)' }, { status: 400 })
     }
+    if (!isAppropriateUsername(username)) {
+      return NextResponse.json({ error: 'Username not allowed' }, { status: 400 })
+    }
     if (!isValidScore(score)) {
       return NextResponse.json({ error: 'Invalid score' }, { status: 400 })
     }
@@ -51,16 +63,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid or expired game session' }, { status: 403 })
     }
 
-    const maxAllowed = maxScoreForDuration(session.iat)
-    if (score > maxAllowed) {
-      return NextResponse.json({ error: 'Score exceeds allowed maximum for run duration' }, { status: 400 })
-    }
-
     const supabase = createServiceSupabaseClient()
 
     const { data: gameSession, error: sessionError } = await supabase
       .from('game_sessions')
-      .select('id, username, consumed_at')
+      .select('id, username, started_at, consumed_at')
       .eq('id', session.sid)
       .maybeSingle()
 
@@ -74,31 +81,54 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Game session already used' }, { status: 403 })
     }
 
-    const { data: existing } = await supabase
-      .from('leaderboard')
-      .select('score')
-      .eq('username', username)
-      .maybeSingle()
-
-    if (existing && existing.score >= score) {
-      await markSessionConsumed(supabase, session.sid)
-      const top = await fetchTop(supabase)
-      return NextResponse.json({ entries: top, updated: false })
+    const runStartedAt = new Date(gameSession.started_at).getTime()
+    const maxAllowed = maxScoreForDuration(runStartedAt)
+    if (score > maxAllowed) {
+      return NextResponse.json({ error: 'Score exceeds allowed maximum for run duration' }, { status: 400 })
     }
 
-    const { error } = await supabase.from('leaderboard').upsert(
-      { username, score, updated_at: new Date().toISOString() },
-      { onConflict: 'username' }
-    )
+    const existing = await findLeaderboardEntry(supabase, username)
+    const top = await fetchTop(supabase)
 
-    if (error) {
-      console.error('leaderboard POST:', error)
-      return NextResponse.json({ error: 'Failed to save score' }, { status: 500 })
+    // Returning player already on the board (including top 7) — always allow personal-best update.
+    const boardRow =
+      existing ?? top.find((entry) => usernamesMatch(entry.username, username)) ?? null
+
+    if (boardRow) {
+      if (boardRow.score >= score) {
+        await markSessionConsumed(supabase, session.sid)
+        return NextResponse.json({ entries: top, updated: false })
+      }
+
+      const { error } = await supabase
+        .from('leaderboard')
+        .update({ score, updated_at: new Date().toISOString() })
+        .eq('username', boardRow.username)
+
+      if (error) {
+        console.error('leaderboard POST update:', error)
+        return NextResponse.json({ error: 'Failed to save score' }, { status: 500 })
+      }
+    } else {
+      if (isUsernameTakenOnTopLeaderboard(username, top)) {
+        return NextResponse.json({ error: 'Username is already on the leaderboard' }, { status: 400 })
+      }
+
+      const { error } = await supabase.from('leaderboard').insert({
+        username,
+        score,
+        updated_at: new Date().toISOString(),
+      })
+
+      if (error) {
+        console.error('leaderboard POST insert:', error)
+        return NextResponse.json({ error: 'Failed to save score' }, { status: 500 })
+      }
     }
 
     await markSessionConsumed(supabase, session.sid)
-    const top = await fetchTop(supabase)
-    return NextResponse.json({ entries: top, updated: true })
+    const updatedTop = await fetchTop(supabase)
+    return NextResponse.json({ entries: updatedTop, updated: true })
   } catch (e) {
     console.error('leaderboard POST:', e)
     return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
@@ -106,7 +136,7 @@ export async function POST(request: Request) {
 }
 
 function usernamesEqual(a: string, b: string): boolean {
-  return normalizeUsername(a).toLowerCase() === normalizeUsername(b).toLowerCase()
+  return usernamesMatch(a, b)
 }
 
 async function markSessionConsumed(

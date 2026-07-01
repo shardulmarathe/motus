@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSessionId, signGameSession } from '../../../../lib/game-session'
-import { isValidUsername, normalizeUsername } from '../../../../lib/leaderboard'
+import { isAllowedUsername, normalizeUsername } from '../../../../lib/leaderboard'
 import { createServiceSupabaseClient } from '../../../../lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
@@ -10,8 +10,8 @@ export async function POST(request: Request) {
     const body = await request.json()
     const username = typeof body.username === 'string' ? normalizeUsername(body.username) : ''
 
-    if (!isValidUsername(username)) {
-      return NextResponse.json({ error: 'Invalid username' }, { status: 400 })
+    if (!isAllowedUsername(username)) {
+      return NextResponse.json({ error: 'Invalid or disallowed username' }, { status: 400 })
     }
 
     const sessionId = createSessionId()

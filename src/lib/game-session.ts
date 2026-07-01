@@ -3,8 +3,8 @@ import { createHmac, randomUUID, timingSafeEqual } from 'crypto'
 /** Max survival run length before session expires. */
 export const MAX_SESSION_MS = 45 * 60 * 1000
 
-/** Minimum elapsed time per point (generous for skilled play). */
-export const MIN_MS_PER_POINT = 1200
+/** Minimum elapsed time per point (allows cataclysm bursts; still blocks instant fake scores). */
+export const MIN_MS_PER_POINT = 400
 
 /** Minimum run time before any score can be submitted. */
 export const MIN_RUN_MS = 2000

@@ -32,7 +32,7 @@ const supabase = createClient(url, key, {
   auth: { persistSession: false, autoRefreshToken: false },
 })
 
-const REMOVE_NAMES = new Set(['shardul', 'testplayer'])
+const REMOVE_NAMES = new Set(['goon', 'gooner', 'goons', 'gooning', 'gooner'])
 
 const { data: rows, error: listError } = await supabase.from('leaderboard').select('username')
 if (listError) {
