@@ -279,35 +279,25 @@ export function shouldShowInstruction(state: TutorialGameState): boolean {
 export function canProgressToNextStep(state: TutorialGameState): boolean {
   const currentStep = getCurrentTutorialStep(state)
   if (!currentStep) {
-    console.log('canProgressToNextStep: no current step found')
     return false
   }
-  
-  const result = currentStep.objective(state)
-  console.log(`canProgressToNextStep: objective result=${result}, goalsCollected=${state.goalsCollected}, movementTime=${state.movementTime}`)
-  return result
+
+  return currentStep.objective(state)
 }
 
 export function advanceStep(state: TutorialGameState, onAdvance?: () => void): void {
-  console.log(`advanceStep called: currentStep=${state.currentStep}, stepCompleted=${state.stepCompleted}, isComplete=${state.isComplete}`)
-  
   if (state.stepCompleted || state.isComplete) {
-    console.log('advanceStep blocked - step already completed or tutorial complete')
     return
   }
 
   state.stepCompleted = true
-  console.log('stepCompleted set to true, starting timeout...')
 
   setTimeout(() => {
-    console.log(`timeout executed: currentStep=${state.currentStep}, tutorialSteps.length=${tutorialSteps.length}`)
     if (state.currentStep >= tutorialSteps.length - 1) {
       // Tutorial complete (Step 8 completed - index 7)
-      console.log('All steps completed, returning to menu')
       // Let Step 8 handle the menu return
     } else {
       // Advance to next step
-      console.log('Advancing to next step')
       state.currentStep++
       state.stepStartTime = Date.now()
       state.movementTime = 0
@@ -318,9 +308,7 @@ export function advanceStep(state: TutorialGameState, onAdvance?: () => void): v
       state.isDead = false
       state.stepCompleted = false
       state.showInstruction = false
-      console.log(`Advanced to step ${state.currentStep + 1}`)
     }
-    console.log('Calling onAdvance callback')
     if (onAdvance) onAdvance()
   }, 500) // 500ms delay for UX
 }

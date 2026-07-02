@@ -3,8 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import GameCanvas from '../components/GameCanvas'
-import ParticleBackground from '../components/ParticleBackground'
-import WaterDistortion from '../components/WaterDistortion'
+import NeonBackground from '../components/NeonBackground'
 import {
   filterPublicLeaderboardEntries,
   getUsernameValidationIssue,
@@ -229,8 +228,7 @@ export default function Home() {
       {uiState === 'title' && (
         <>
           <div className="home-background" />
-          <WaterDistortion />
-          <ParticleBackground />
+          <NeonBackground />
         </>
       )}
 
@@ -301,7 +299,7 @@ export default function Home() {
         {uiState === 'title' && (
           <div className="title-screen-center">
             <div className="title-screen-inner">
-              <h1 className="glow-text title-logo" style={{ fontSize: 110, color: '#06b6d4', margin: 0 }}>
+              <h1 className="glow-text title-logo">
                 Motus
               </h1>
               <div className="mode-btn-row">

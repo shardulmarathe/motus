@@ -10,8 +10,12 @@ export type Puck = {
   id?: string
 }
 
+export type EnemyBehavior = 'linear' | 'homing'
+
 export type Enemy = Puck & {
   baseSpeed: number // Base speed before stage multiplier
+  behavior?: EnemyBehavior
+  hue?: 'red' | 'purple'
 }
 
 export type Goal = {
@@ -75,6 +79,29 @@ export function applyDamping(p: Puck, factor: number) {
 export function applyAcceleration(p: Puck, ax: number, ay: number) {
   p.vx += ax
   p.vy += ay
+}
+
+/**
+ * Turn an enemy toward a target without snapping instantly to the target vector.
+ */
+export function applySeek(
+  enemy: Enemy,
+  targetX: number,
+  targetY: number,
+  dt: number,
+  turnRate = 3.5
+) {
+  const currentSpeed = Math.max(60, Math.hypot(enemy.vx, enemy.vy) || enemy.baseSpeed)
+  const desired = normalize({ x: targetX - enemy.x, y: targetY - enemy.y })
+  const current = normalize({ x: enemy.vx, y: enemy.vy })
+  const blend = Math.min(1, turnRate * dt)
+  const steered = normalize({
+    x: current.x * (1 - blend) + desired.x * blend,
+    y: current.y * (1 - blend) + desired.y * blend,
+  })
+
+  enemy.vx = steered.x * currentSpeed
+  enemy.vy = steered.y * currentSpeed
 }
 
 /**

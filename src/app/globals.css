@@ -1,17 +1,24 @@
 /* Neon Arcade Style Game */
 
 :root {
-  --bg-primary: #0f172a;
-  --bg-secondary: #020617;
-  --glow-cyan: #06b6d4;
-  --glow-red: #ef4444;
-  --glow-green: #22c55e;
-  --glow-yellow: #fbbf24;
+  --bg-primary: #0c1220;
+  --bg-secondary: #05070f;
+  --glow-cyan: #2de2e6;
+  --glow-red: #ff4d6d;
+  --glow-green: #7bffb2;
+  --glow-yellow: #ffcf5c;
+  --glow-purple: #b06bff;
+  --text-primary: #e6eef8;
+  --text-muted: #9fb0c8;
+  --radius-card: 14px;
+  --radius-control: 10px;
+  --motion-fast: 160ms;
+  --motion-base: 240ms;
 
   /* Font roles — 3 standardized tiers */
   --font-ui-body: var(--font-nunito), system-ui, sans-serif;
-  --font-ui-display: var(--font-nunito), system-ui, sans-serif;
-  --font-game: ui-monospace, 'Courier New', monospace;
+  --font-ui-display: var(--font-sora), var(--font-nunito), system-ui, sans-serif;
+  --font-game: var(--font-space-mono), ui-monospace, 'Courier New', monospace;
 
   /* HUD bar — chips share one exact size; padding is equal above/below chips */
   --hud-bar-height: 80px;
@@ -37,10 +44,10 @@ body {
 }
 
 body {
-  background: #030816;
+  background: var(--bg-secondary);
   font-family: var(--font-ui-body);
   font-weight: 500;
-  color: #e6eef8;
+  color: var(--text-primary);
   overflow: hidden;
 }
 
@@ -75,6 +82,9 @@ body {
 }
 
 .title-logo {
+  margin: 0;
+  color: var(--glow-cyan);
+  font-size: clamp(72px, 10vw, 110px);
   font-weight: 800;
   letter-spacing: 0.04em;
 }
@@ -163,6 +173,15 @@ body {
   );
 }
 
+.neon-background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
 /* HUD Overlay Styles - Fixed header */
 .hud-overlay {
   position: relative;
@@ -219,12 +238,6 @@ body {
   overflow: hidden;
 }
 
-/* Visual boundary inside the game area to ensure all four sides have a border */
-.game-boundary {
-  /* Hidden by default; canvas draws a proximity-based border instead. */
-  display: none;
-}
-
 .canvas-wrap canvas {
   display: block;
   width: 100%;
@@ -269,17 +282,6 @@ body {
   pointer-events: auto;
   appearance: none;
   -webkit-appearance: none;
-}
-
-/* Center status area - true center via grid */
-
-.center-status {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 0 20px;
 }
 
 .status-text {
@@ -341,30 +343,6 @@ body {
   display: none;
 }
 
-/* Event Display Area - Between HUD and canvas */
-
-.event-display-area {
-  display: none;
-}
-
-.event-title-display {
-  display: none;
-}
-
-.timer-bar {
-  display: none;
-}
-
-/* Bottom Timer - Large display during events only */
-
-.bottom-timer {
-  display: none;
-}
-
-.timer-display {
-  display: none;
-}
-
 /* Pause Overlay */
 
 .pause-overlay {
@@ -411,12 +389,6 @@ body {
   color: #a0aec0;
   opacity: 0.8;
   letter-spacing: 1px;
-}
-
-/* Controls overlay - HIDDEN (no longer needed) */
-
-.controls-overlay {
-  display: none;
 }
 
 /* Title screen mode buttons */
@@ -688,6 +660,16 @@ body {
   border-color: #ef4444;
 }
 
+.mode-btn:focus-visible,
+.menu-button:focus-visible,
+.rules-modal-play:focus-visible,
+.pause-modal-btn:focus-visible,
+.username-input:focus-visible {
+  outline: 2px solid var(--glow-cyan);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.16), 0 0 24px rgba(6, 182, 212, 0.28);
+}
+
 .username-meta {
   margin: 4px 0 0;
   font-size: 12px;
@@ -791,10 +773,6 @@ body {
   .menu-icon {
     width: 16px;
     height: 10px;
-  }
-
-  .bottom-timer {
-    bottom: 30px;
   }
 }
 

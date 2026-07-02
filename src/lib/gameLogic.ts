@@ -2,7 +2,7 @@ import { Puck, Goal, normalize, clampGoalToCanvas } from './physics'
 import { Enemy } from './physics'
 
 // Event types for Cataclysm mode
-export type CataclysmEventType = 'staticGoals' | 'movingGoals' | 'shakeMode' | 'shrinkingArena'
+export type CataclysmEventType = 'staticGoals' | 'movingGoals' | 'shrinkingArena' | 'hunt' | 'swap'
 
 /**
  * Create the player puck centered at (cx, cy)
@@ -63,6 +63,8 @@ export function spawnEnemy(width: number, height: number, stage: number, diffMul
     radius: 12,
     id: `enemy-${Date.now()}-${Math.random()}`,
     baseSpeed: baseSpeed, // Store base speed for dynamic updates
+    behavior: 'linear',
+    hue: 'red',
   } as Enemy
 }
 
@@ -156,7 +158,7 @@ export function spawnCataclysmGoals(
 let lastEventType: CataclysmEventType | null = null
 
 export function getEventType(): CataclysmEventType {
-  const types: CataclysmEventType[] = ['staticGoals', 'movingGoals', 'shrinkingArena'] // Removed 'shakeMode'
+  const types: CataclysmEventType[] = ['staticGoals', 'movingGoals', 'shrinkingArena', 'hunt', 'swap']
   // Filter out the last event type to avoid immediate repeats
   const availableTypes = lastEventType ? types.filter(t => t !== lastEventType) : types
   const selected = availableTypes[Math.floor(Math.random() * availableTypes.length)]
@@ -173,10 +175,12 @@ export function getEventName(eventType: CataclysmEventType): string {
       return 'Precision Run'
     case 'movingGoals':
       return 'Chase Sequence'
-    case 'shakeMode':
-      return 'System Overload'
     case 'shrinkingArena':
       return 'Last Stand'
+    case 'hunt':
+      return 'The Hunt'
+    case 'swap':
+      return 'Trickster'
     default:
       return 'Event'
   }
@@ -191,10 +195,12 @@ export function getCataclysmObjective(eventType: CataclysmEventType): string {
       return 'Collect all 7 goals'
     case 'movingGoals':
       return 'Collect all 7 moving goals'
-    case 'shakeMode':
-      return 'Collect all 7 goals before time runs out'
     case 'shrinkingArena':
       return 'Stay inside the shrinking area'
+    case 'hunt':
+      return 'Collect all 7 goals while hunters chase you'
+    case 'swap':
+      return 'Collect all 7 goals before the swap catches you'
     default:
       return 'Complete the objective'
   }
