@@ -43,34 +43,38 @@ export default function Page() {
     <main className="page page-transition">
       {/* Top Header - Score | Stage | Center Status | Menu */}
       <div className="hud-overlay">
-        {/* Score Box */}
-        <div className="hud-box score-box">
-          <div className="box-label">SCORE</div>
-          <div className="box-value">{gameState.score.toString().padStart(3, '0')}</div>
-        </div>
+        <div className="hud-left">
+          {/* Score Box */}
+          <div className="hud-box score-box">
+            <div className="box-label">SCORE</div>
+            <div className="box-value">{gameState.score.toString().padStart(3, '0')}</div>
+          </div>
 
-        {/* Stage Box */}
-        <div className="hud-box stage-box">
-          <div className="box-label">STAGE</div>
-          <div className="box-value">{gameState.stage}</div>
+          {/* Stage Box */}
+          <div className="hud-box stage-box">
+            <div className="box-label">STAGE</div>
+            <div className="box-value">{gameState.stage}</div>
+          </div>
         </div>
 
         {/* Center Status Area - Shows event name during event */}
-        <div className="center-status">
+        <div className="hud-center center-status">
           {gameState.inEvent && gameState.eventName ? (
             <div className="status-text event-name">{gameState.eventName}</div>
           ) : null}
         </div>
 
-        {/* Menu Button (Pause) */}
-        <button 
-          className="menu-button"
-          onClick={handlePauseClick}
-          title={isPaused ? 'Resume' : 'Pause'}
-        >
-          <span className="menu-icon">{isPaused ? '▶' : '⏸'}</span>
-          <span className="menu-text">{isPaused ? 'RESUME' : 'PAUSE'}</span>
-        </button>
+        <div className="hud-right">
+          {/* Menu Button (Pause) */}
+          <button
+            className="menu-button"
+            onClick={handlePauseClick}
+            title={isPaused ? 'Resume' : 'Pause'}
+          >
+            <span className="menu-icon">{isPaused ? '▶' : '⏸'}</span>
+            <span className="menu-text">{isPaused ? 'RESUME' : 'PAUSE'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Gameplay Area - Canvas positioned below HUD */}

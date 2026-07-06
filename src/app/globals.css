@@ -20,15 +20,20 @@
   --font-ui-display: var(--font-sora), var(--font-nunito), system-ui, sans-serif;
   --font-game: var(--font-space-mono), ui-monospace, 'Courier New', monospace;
 
-  /* HUD bar — chips share one exact size; padding is equal above/below chips */
-  --hud-bar-height: 80px;
-  --hud-bar-pad-y: 14px;
-  --hud-bar-pad-x: 20px;
+  /* HUD bar — chips share one exact size; padding is equal above/below chips.
+     Sizes are fluid so the bar never overflows on narrow phones. */
+  --hud-bar-height: clamp(60px, 11vw, 80px);
+  --hud-bar-pad-y: clamp(8px, 1.6vw, 14px);
+  --hud-bar-pad-x: clamp(10px, 3vw, 20px);
   --hud-bar-border: 2px;
-  --hud-chip-width: 85px;
+  --hud-chip-width: clamp(58px, 18vw, 85px);
   --hud-chip-height: calc(
     var(--hud-bar-height) - (2 * var(--hud-bar-pad-y)) - var(--hud-bar-border)
   );
+
+  /* Dynamic viewport height that accounts for mobile browser chrome */
+  --app-height: 100vh;
+  --app-height: 100dvh;
 }
 
 * {
@@ -41,6 +46,8 @@ html,
 body {
   height: 100%;
   width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -49,6 +56,8 @@ body {
   font-weight: 500;
   color: var(--text-primary);
   overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* ── Font tier 1: UI body (descriptions, lists, modal copy) ── */
@@ -84,9 +93,10 @@ body {
 .title-logo {
   margin: 0;
   color: var(--glow-cyan);
-  font-size: clamp(72px, 10vw, 110px);
+  font-size: clamp(52px, 13vw, 110px);
   font-weight: 800;
   letter-spacing: 0.04em;
+  line-height: 1;
 }
 
 .mode-btn-title {
@@ -104,7 +114,7 @@ body {
 
 .box-value {
   font-weight: 800;
-  font-size: 19px;
+  font-size: clamp(15px, 4.5vw, 19px);
   line-height: 1.1;
   color: var(--glow-cyan);
   text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
@@ -152,7 +162,9 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  width: 100vw;
+  height: var(--app-height);
+  width: 100%;
+  max-width: 100%;
   padding: 0;
   gap: 0;
   position: relative;
@@ -185,13 +197,17 @@ body {
 /* HUD Overlay Styles - Fixed header */
 .hud-overlay {
   position: relative;
-  height: var(--hud-bar-height);
+  min-height: var(--hud-bar-height);
   width: 100%;
+  max-width: 100%;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   padding: var(--hud-bar-pad-y) var(--hud-bar-pad-x);
-  gap: 12px;
+  padding-top: max(var(--hud-bar-pad-y), env(safe-area-inset-top));
+  padding-left: max(var(--hud-bar-pad-x), env(safe-area-inset-left));
+  padding-right: max(var(--hud-bar-pad-x), env(safe-area-inset-right));
+  gap: clamp(6px, 2vw, 12px);
   box-sizing: border-box;
   background: linear-gradient(to bottom, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.8));
   border-bottom: var(--hud-bar-border) solid rgba(6, 182, 212, 0.2);
@@ -203,8 +219,9 @@ body {
 .hud-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: clamp(6px, 2vw, 12px);
   justify-self: start;
+  min-width: 0;
 }
 
 .hud-center {
@@ -214,6 +231,14 @@ body {
   justify-self: center;
   text-align: center;
   min-width: 0;
+  overflow: hidden;
+}
+
+.hud-center .status-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .hud-right {
@@ -221,7 +246,8 @@ body {
   align-items: center;
   justify-content: flex-end;
   justify-self: end;
-  gap: 12px;
+  gap: clamp(6px, 2vw, 12px);
+  min-width: 0;
 }
 
 /* Canvas wrapper - takes remaining space BELOW HUD */
@@ -285,7 +311,7 @@ body {
 }
 
 .status-text {
-  font-size: 30px;
+  font-size: clamp(15px, 4.5vw, 30px);
   font-weight: 700;
   letter-spacing: 0.04em;
   color: #fbbf24;
@@ -294,7 +320,7 @@ body {
 
 .status-text.status-text-tutorial {
   color: #fbbf24;
-  font-size: 25px;
+  font-size: clamp(14px, 4vw, 25px);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-shadow: 0 0 14px rgba(251, 191, 36, 0.5);
@@ -305,9 +331,9 @@ body {
   color: #ef4444; /* Red for cataclysm event name */
   text-shadow: 0 0 22px rgba(239, 68, 68, 0.9), 0 0 44px rgba(239, 68, 68, 0.45);
   text-transform: uppercase;
-  font-size: 34px; /* slightly larger for event emphasis */
+  font-size: clamp(15px, 4.8vw, 34px); /* slightly larger for event emphasis */
   font-weight: 900;
-  letter-spacing: 2px;
+  letter-spacing: clamp(0.5px, 0.5vw, 2px);
 }
 
 /* Menu button — icon-only, shares .hud-box chip dimensions via shared rule above */
@@ -376,7 +402,7 @@ body {
 }
 
 .pause-text {
-  font-size: 72px;
+  font-size: clamp(44px, 12vw, 72px);
   font-weight: bold;
   color: var(--glow-cyan);
   text-shadow: 0 0 30px rgba(6, 182, 212, 0.8);
@@ -393,12 +419,14 @@ body {
 
 /* Title screen mode buttons */
 .mode-btn {
-  width: 360px;
-  height: 120px;
+  flex: 1 1 280px;
+  width: 100%;
+  max-width: 360px;
+  min-height: clamp(92px, 22vw, 120px);
   background: rgba(6, 182, 212, 0.08);
   border: 1px solid rgba(6, 182, 212, 0.25);
   color: #e6eef8;
-  padding: 24px 28px;
+  padding: clamp(16px, 4vw, 24px) clamp(18px, 5vw, 28px);
   border-radius: 12px;
   cursor: pointer;
   transition: transform 0.24s ease, box-shadow 240ms;
@@ -413,13 +441,13 @@ body {
 }
 
 .mode-btn-title {
-  font-size: 24px;
+  font-size: clamp(19px, 5vw, 24px);
   font-weight: 700;
   color: #67e8f9;
 }
 
 .mode-btn-desc {
-  font-size: 17px;
+  font-size: clamp(14px, 3.8vw, 17px);
   font-weight: 600;
   color: #cbd5e1;
   margin-top: 6px;
@@ -430,17 +458,20 @@ body {
   position: relative;
   z-index: 20;
   width: 560px;
-  max-width: calc(100vw - 48px);
+  max-width: min(560px, calc(100vw - 32px));
+  max-height: calc(var(--app-height) - 32px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: rgba(12, 18, 30, 0.78);
   border-radius: 14px;
-  padding: 28px;
+  padding: clamp(18px, 4vw, 28px);
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
   color: #e6eef8;
   text-align: center;
 }
 
 .rules-modal h2 {
-  font-size: 28px;
+  font-size: clamp(21px, 5.5vw, 28px);
   font-weight: 700;
   color: #67e8f9;
   margin-bottom: 10px;
@@ -460,6 +491,7 @@ body {
   background: #06b6d4;
   color: #042027;
   padding: 12px 28px;
+  min-height: 44px;
   border-radius: 10px;
   font-weight: 800;
   box-shadow: 0 6px 18px rgba(6, 182, 212, 0.18);
@@ -484,23 +516,27 @@ body {
   position: relative;
   z-index: 20;
   width: 420px;
-  max-width: calc(100vw - 48px);
+  max-width: min(420px, calc(100vw - 32px));
+  max-height: calc(var(--app-height) - 32px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: rgba(12, 18, 30, 0.78);
   border-radius: 12px;
-  padding: 24px;
+  padding: clamp(18px, 4vw, 24px);
   text-align: center;
   box-shadow: 0 8px 30px rgba(6, 182, 212, 0.08);
 }
 
 .pause-modal-title {
-  font-size: 44px;
+  font-size: clamp(32px, 9vw, 44px);
   font-weight: 800;
   color: #06b6d4;
   margin-bottom: 12px;
 }
 
 .pause-modal-btn {
-  padding: 10px 20px;
+  padding: 12px 20px;
+  min-height: 44px;
   border-radius: 10px;
   cursor: pointer;
   font-weight: 700;
@@ -536,17 +572,20 @@ body {
   position: relative;
   z-index: 20;
   width: 420px;
-  max-width: calc(100vw - 48px);
+  max-width: min(420px, calc(100vw - 32px));
+  max-height: calc(var(--app-height) - 32px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: rgba(12, 18, 30, 0.88);
   border-radius: 14px;
-  padding: 28px;
+  padding: clamp(18px, 4vw, 28px);
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
   color: #e6eef8;
   text-align: center;
 }
 
 .leaderboard-modal-title {
-  font-size: 28px;
+  font-size: clamp(22px, 6vw, 28px);
   font-weight: 700;
   color: #67e8f9;
   margin-bottom: 4px;
@@ -713,6 +752,9 @@ body {
   align-items: center;
   justify-content: center;
   pointer-events: auto;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  box-sizing: border-box;
 }
 
 .title-screen-center {
@@ -723,6 +765,10 @@ body {
   justify-content: center;
   pointer-events: auto;
   z-index: 50;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+  box-sizing: border-box;
 }
 
 .title-screen-inner {
@@ -730,49 +776,123 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 36px;
-  transform: translateY(-6vh);
+  gap: clamp(20px, 5vh, 36px);
+  width: 100%;
+  max-width: 800px;
+  margin: auto;
 }
 
 .mode-btn-row {
   display: flex;
-  gap: 18px;
+  gap: clamp(12px, 2.5vw, 18px);
   margin-top: 12px;
   flex-wrap: wrap;
   justify-content: center;
+  width: 100%;
 }
 
-@media (max-width: 768px) {
-  :root {
-    --hud-bar-height: 72px;
-    --hud-bar-pad-y: 12px;
-    --hud-bar-pad-x: 12px;
-    --hud-chip-width: 70px;
+/* On landscape phones (short viewports) keep the menu tight and legible */
+@media (orientation: landscape) and (max-height: 500px) {
+  .title-screen-inner {
+    gap: clamp(12px, 3vh, 20px);
   }
 
-  .hud-overlay {
-    gap: 8px;
+  .title-logo {
+    font-size: clamp(40px, 9vh, 72px);
   }
 
-  .box-value {
-    font-size: 17px;
+  .mode-btn {
+    min-height: clamp(76px, 26vh, 110px);
   }
+}
 
-  .status-text {
-    font-size: 18px;
-  }
+/* ── On-screen touch controls (phones / coarse pointers) ── */
+.touch-joystick {
+  position: absolute;
+  z-index: 60;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  width: clamp(104px, 30vw, 148px);
+  height: clamp(104px, 30vw, 148px);
+  border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(45, 226, 230, 0.10), rgba(15, 23, 42, 0.55));
+  border: 2px solid rgba(45, 226, 230, 0.35);
+  box-shadow: 0 0 24px rgba(45, 226, 230, 0.18), inset 0 0 20px rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;
+}
 
-  .status-text.status-text-tutorial {
-    font-size: 16px;
-  }
+.touch-joystick-thumb {
+  width: 42%;
+  height: 42%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #7ff2f5, var(--glow-cyan));
+  box-shadow: 0 0 16px rgba(45, 226, 230, 0.6);
+  will-change: transform;
+  pointer-events: none;
+}
 
-  .status-text.event-name {
-    font-size: 18px;
-  }
+/* Touch restart / respawn button (bottom-right, opposite the joystick) */
+.touch-action-btn {
+  position: absolute;
+  z-index: 60;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  min-width: 64px;
+  min-height: 64px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: rgba(6, 182, 212, 0.16);
+  border: 2px solid rgba(6, 182, 212, 0.45);
+  color: #c9fbff;
+  font-family: var(--font-ui-display);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 22px rgba(6, 182, 212, 0.25);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;
+}
 
-  .menu-icon {
-    width: 16px;
-    height: 10px;
+.touch-action-btn:active {
+  transform: scale(0.96);
+}
+
+/* Non-blocking "rotate for more room" hint — only on touch devices in portrait */
+.rotate-hint {
+  position: absolute;
+  z-index: 55;
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  max-width: min(92vw, 420px);
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(12, 18, 30, 0.7);
+  border: 1px solid rgba(45, 226, 230, 0.25);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: center;
+  pointer-events: none;
+}
+
+@media (pointer: coarse) and (orientation: portrait) {
+  .rotate-hint {
+    display: block;
   }
 }
 
