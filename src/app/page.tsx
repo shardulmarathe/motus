@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import GameCanvas from '../components/GameCanvas'
 import NeonBackground from '../components/NeonBackground'
+import TouchControls from '../components/TouchControls'
 import {
   filterPublicLeaderboardEntries,
   getUsernameValidationIssue,
@@ -46,8 +47,24 @@ export default function Home() {
   const [leaderboardNamesLoading, setLeaderboardNamesLoading] = useState(false)
   const [leaderboardOpen, setLeaderboardOpen] = useState(false)
   const [startingSession, setStartingSession] = useState(false)
+  const [isTouch, setIsTouch] = useState(false)
   const submittedDeathRef = useRef(false)
   const gameSessionTokenRef = useRef<string | null>(null)
+
+  // Detect coarse-pointer (touch) devices to surface on-screen controls
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(pointer: coarse)')
+    const update = () => setIsTouch(mq.matches)
+    update()
+    mq.addEventListener?.('change', update)
+    return () => mq.removeEventListener?.('change', update)
+  }, [])
+
+  const dispatchSpace = useCallback(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }))
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space', bubbles: true }))
+  }, [])
 
   useEffect(() => {
     setRegisteredName(loadRegisteredPlayerName())
@@ -294,6 +311,23 @@ export default function Home() {
             onStateChange={handleStateUpdate}
             onSurvivalGameOver={handleSurvivalGameOver}
           />
+        )}
+
+        {uiState === 'playing' && isTouch && (
+          <>
+            <TouchControls />
+            <div className="rotate-hint">Rotate your device for a bigger play area</div>
+            {(hud.gameOver || gameMode === 'tutorial') && (
+              <button
+                type="button"
+                className="touch-action-btn"
+                onClick={dispatchSpace}
+                aria-label={gameMode === 'tutorial' ? 'Respawn' : 'Restart'}
+              >
+                {gameMode === 'tutorial' ? 'Respawn' : 'Restart'}
+              </button>
+            )}
+          </>
         )}
 
         {uiState === 'title' && (
