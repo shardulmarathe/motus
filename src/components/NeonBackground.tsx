@@ -115,8 +115,10 @@ export default function NeonBackground() {
       m.vy += (rawVy - m.vy) * 0.22
       const mouseSpeed = Math.hypot(m.vx, m.vy)
 
-      // Motion-blur fade — leaves streaks; darker = longer trails.
-      ctx.fillStyle = 'rgba(4, 6, 12, 0.22)'
+      // Fully repaint the base each frame — NO trail accumulation. (The old
+      // partial fade smeared fast streaks into ghost lines that looked glitchy
+      // and left a faint full-width grid.) Each streak draws its own tail below.
+      ctx.fillStyle = '#04060c'
       ctx.fillRect(0, 0, W, H)
 
       // Soft cool vignette toward the top so the wordmark reads.
@@ -126,8 +128,8 @@ export default function NeonBackground() {
       ctx.fillStyle = g
       ctx.fillRect(0, 0, W, H)
 
-      const influence = 220
-      const MAX_SPEED = 7 // hard cap so streaks never whip into glitchy lines
+      const influence = 190
+      const MAX_SPEED = 6 // hard cap so streaks never whip into glitchy lines
       for (const s of streaksRef.current) {
         // Cursor nudges nearby streaks along its (smoothed) motion vector.
         if (mouseSpeed > 0.4) {
@@ -135,7 +137,7 @@ export default function NeonBackground() {
           const dy = s.y - m.y
           const d = Math.hypot(dx, dy)
           if (d < influence) {
-            const force = (1 - d / influence) * 0.16
+            const force = (1 - d / influence) * 0.13
             s.vx += m.vx * force
             s.vy += m.vy * force
           }
@@ -153,8 +155,6 @@ export default function NeonBackground() {
           s.vy = (s.vy / sp) * MAX_SPEED
         }
 
-        const px = s.x
-        const py = s.y
         s.x += s.vx * dt * 60
         s.y += s.vy * dt * 60
 
@@ -164,26 +164,32 @@ export default function NeonBackground() {
         if (s.y < -20) s.y = H + 20
         if (s.y > H + 20) s.y = -20
 
-        // Line from the previous position to the head; length scales gently with
-        // speed (capped) so faster streaks read as trails without flickering.
+        // Draw a comet: gradient tail (transparent -> head) plus a bright head.
+        // Fully redrawn each frame — nothing accumulates, so no ghost lines.
         const speed = Math.hypot(s.vx, s.vy)
-        const len = Math.min(24, 3 + speed * 1.7)
+        const len = Math.min(20, 3 + speed * 1.6)
         const nx = speed > 0.01 ? s.vx / speed : 0
         const ny = speed > 0.01 ? s.vy / speed : 0
         const r = Math.round(90 + s.hue * 90)
         const gg = Math.round(200 - s.hue * 40)
         const b = 240
-        const alpha = Math.min(0.36, 0.1 + speed * 0.02)
+        const alpha = Math.min(0.42, 0.14 + speed * 0.025)
 
-        ctx.strokeStyle = `rgba(${r}, ${gg}, ${b}, ${alpha})`
+        const tailX = s.x - nx * len
+        const tailY = s.y - ny * len
+        const grad = ctx.createLinearGradient(tailX, tailY, s.x, s.y)
+        grad.addColorStop(0, `rgba(${r}, ${gg}, ${b}, 0)`)
+        grad.addColorStop(1, `rgba(${r}, ${gg}, ${b}, ${alpha})`)
+        ctx.strokeStyle = grad
         ctx.lineWidth = s.weight
+        ctx.lineCap = 'round'
         ctx.beginPath()
-        ctx.moveTo(px - nx * len, py - ny * len)
+        ctx.moveTo(tailX, tailY)
         ctx.lineTo(s.x, s.y)
         ctx.stroke()
 
         // Bright head.
-        ctx.fillStyle = `rgba(200, 240, 255, ${alpha + 0.15})`
+        ctx.fillStyle = `rgba(210, 244, 255, ${Math.min(0.6, alpha + 0.18)})`
         ctx.beginPath()
         ctx.arc(s.x, s.y, s.weight * 0.9, 0, Math.PI * 2)
         ctx.fill()
