@@ -25,14 +25,14 @@ export default function AchievementToast({ queue, onDrained }: AchievementToastP
   useEffect(() => {
     if (queue.length === 0 || index >= queue.length) return
     setVisible(true)
-    const hide = setTimeout(() => setVisible(false), 2600)
+    const hide = setTimeout(() => setVisible(false), 3600)
     const next = setTimeout(() => {
       if (index + 1 >= queue.length) {
         onDrained()
       } else {
         setIndex((i) => i + 1)
       }
-    }, 3000)
+    }, 4000)
     return () => {
       clearTimeout(hide)
       clearTimeout(next)
@@ -43,12 +43,19 @@ export default function AchievementToast({ queue, onDrained }: AchievementToastP
   const a = queue[index]
 
   return (
-    <div className={`achv-toast${visible ? ' show' : ''}`} role="status" aria-live="polite">
-      <span className="achv-toast-icon">{a.icon}</span>
-      <span className="achv-toast-text">
-        <span className="achv-toast-label">Achievement Unlocked</span>
-        <span className="achv-toast-name">{a.name}</span>
-      </span>
+    <div className="achv-banner-wrap" role="status" aria-live="polite">
+      <div className={`achv-banner${visible ? ' show' : ''}`}>
+        <span className="achv-banner-shine" />
+        <span className="achv-banner-icon">{a.icon}</span>
+        <span className="achv-banner-text">
+          <span className="achv-banner-label">Achievement Unlocked</span>
+          <span className="achv-banner-name">{a.name}</span>
+          <span className="achv-banner-desc">{a.description}</span>
+        </span>
+        {queue.length > 1 && (
+          <span className="achv-banner-count">{index + 1}/{queue.length}</span>
+        )}
+      </div>
     </div>
   )
 }
