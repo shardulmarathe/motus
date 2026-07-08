@@ -29,6 +29,54 @@ import {
 } from '../lib/tutorialLogic'
 import { FONT_UI_BODY, FONT_UI_DISPLAY, FONT_GAME } from '../lib/fonts'
 import { palette, withAlpha } from '../lib/palette'
+import type { RunSummary } from '../lib/stats'
+import { resolveActiveTheme, activeTrailStyle, type ResolvedTheme, type TrailStyle } from '../lib/customization'
+import type { Challenge } from '../lib/challenges'
+
+// ── V2 tuning constants ──
+const COMBO_WINDOW = 2.2 // seconds allowed between orbs to keep a combo alive
+const COMBO_MAX = 5 // multiplier cap (x5)
+const NEAR_MISS_BAND = 24 // px of clearance beyond a collision that still counts as a near miss
+const NEAR_MISS_BONUS = 25 // points per near miss
+const NEAR_MISS_COOLDOWN = 0.8 // seconds before the same enemy can trigger another near miss
+
+interface FloatingText {
+  x: number
+  y: number
+  text: string
+  color: string
+  life: number
+  maxLife: number
+  vy: number
+}
+
+interface RunStats {
+  elapsed: number // seconds of active play (pause-safe: accumulated from dt)
+  orbs: number
+  distance: number
+  topSpeed: number
+  longestDrift: number
+  currentDrift: number
+  cataclysms: number
+  nearMisses: number
+  highestCombo: number
+  wallTouched: boolean
+}
+
+function freshRunStats(): RunStats {
+  return {
+    elapsed: 0,
+    orbs: 0,
+    distance: 0,
+    topSpeed: 0,
+    longestDrift: 0,
+    currentDrift: 0,
+    cataclysms: 0,
+    nearMisses: 0,
+    highestCombo: 0,
+    wallTouched: false,
+  }
+}
 
 function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
   const words = text.split(' ')
@@ -244,9 +292,13 @@ interface GameCanvasProps {
     gameOver?: boolean
   }) => void
   onSurvivalGameOver?: (score: number) => void
+  /** Emitted once when a survival/challenge run ends, with the full run summary. */
+  onRunEnd?: (summary: RunSummary, perf: { wallTouched: boolean; timeRemaining: number; timeLimit: number }) => void
   isPaused?: boolean
   uiState?: 'title' | 'rules' | 'playing' | 'paused'
-  gameMode?: 'survival' | 'zen' | 'tutorial'
+  gameMode?: 'survival' | 'zen' | 'tutorial' | 'challenge'
+  /** Active challenge config when gameMode === 'challenge'. */
+  challenge?: Challenge | null
 }
 
 const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) => {
@@ -282,6 +334,17 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
   const gameModeRef = useRef(props.gameMode)
   const lastGameOverNotifiedRef = useRef(false)
 
+  // ── V2 progression refs ──
+  const runStatsRef = useRef<RunStats>(freshRunStats())
+  const comboRef = useRef<{ count: number; timer: number }>({ count: 0, timer: 0 })
+  const floatingTextsRef = useRef<FloatingText[]>([])
+  const nearMissCooldownRef = useRef<Map<string, number>>(new Map())
+  const themeRef = useRef<ResolvedTheme>(resolveActiveTheme())
+  const trailStyleRef = useRef<TrailStyle>(activeTrailStyle())
+  const challengeDoneRef = useRef(false) // guards one-shot challenge completion
+  const propsRef = useRef(props)
+  propsRef.current = props
+
   useEffect(() => {
     uiStateRef.current = props.uiState
   }, [props.uiState])
@@ -302,13 +365,46 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable
   }
 
+  /** Build the run summary from accumulated stats and emit it once. */
+  const finalizeRun = (won: boolean) => {
+    const p = propsRef.current
+    const mode = p.gameMode
+    if (mode !== 'survival' && mode !== 'challenge') return
+
+    const gameData = gameDataRef.current
+    const rs = runStatsRef.current
+    const timeLimit = p.challenge?.timeLimit ?? 0
+    const timeRemaining = timeLimit > 0 ? Math.max(0, timeLimit - rs.elapsed) : 0
+
+    const summary: RunSummary = {
+      mode: mode === 'challenge' ? 'challenge' : 'survival',
+      score: gameData.score,
+      timeSurvived: rs.elapsed,
+      orbsCollected: rs.orbs,
+      distanceTraveled: rs.distance,
+      longestDrift: rs.longestDrift,
+      averageSpeed: rs.elapsed > 0 ? rs.distance / rs.elapsed : 0,
+      highestSpeed: rs.topSpeed,
+      cataclysmsTriggered: rs.cataclysms,
+      nearMisses: rs.nearMisses,
+      highestCombo: rs.highestCombo,
+      won,
+      challengeId: p.challenge?.id,
+    }
+    p.onRunEnd?.(summary, { wallTouched: rs.wallTouched, timeRemaining, timeLimit })
+  }
+
   function notifySurvivalGameOverIfNeeded() {
     const gameData = gameDataRef.current
     const isGameOver = gameData.state === 'gameOver'
     if (isGameOver && !lastGameOverNotifiedRef.current) {
       if (gameModeRef.current === 'survival' && props.onSurvivalGameOver) {
-        props.onSurvivalGameOver(gameData.score)
+        // Leaderboard ranks by orbs collected (its historical metric + anti-cheat
+        // contract); the combo/near-miss-boosted arcade score is local only.
+        props.onSurvivalGameOver(runStatsRef.current.orbs)
       }
+      // A game-over is always a loss; challenge wins call finalizeRun(true) directly.
+      finalizeRun(false)
     }
     lastGameOverNotifiedRef.current = isGameOver
   }
@@ -437,6 +533,16 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     playerTrailRef.current = []
     lastMovementTimeRef.current = 0
     lastGameOverNotifiedRef.current = false
+
+    // V2: reset run-scoped progression state and re-resolve cosmetics for this run
+    runStatsRef.current = freshRunStats()
+    comboRef.current = { count: 0, timer: 0 }
+    floatingTextsRef.current = []
+    nearMissCooldownRef.current.clear()
+    challengeDoneRef.current = false
+    themeRef.current = resolveActiveTheme()
+    trailStyleRef.current = activeTrailStyle()
+
     updateGameState()
   }
 
@@ -463,6 +569,37 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         radiusGrowth: radiusGrowth
       })
     }
+  }
+
+  /**
+   * Register an orb pickup: advances the combo, tracks run stats, spawns a
+   * floating multiplier label, and returns the points earned (= multiplier).
+   */
+  const registerOrb = (x: number, y: number): number => {
+    const combo = comboRef.current
+    combo.count = Math.min(COMBO_MAX, combo.count + 1)
+    combo.timer = COMBO_WINDOW
+    const multiplier = combo.count
+
+    const rs = runStatsRef.current
+    rs.orbs++
+    if (multiplier > rs.highestCombo) rs.highestCombo = multiplier
+
+    spawnBurst(x, y)
+    floatingTextsRef.current.push({
+      x,
+      y: y - 12,
+      text: multiplier > 1 ? `+${multiplier}  x${multiplier}` : '+1',
+      color: multiplier >= 4 ? themeRef.current.palette.warn : themeRef.current.palette.orb,
+      life: 0.85,
+      maxLife: 0.85,
+      vy: -46,
+    })
+    return multiplier
+  }
+
+  const addFloatingText = (x: number, y: number, text: string, color: string) => {
+    floatingTextsRef.current.push({ x, y, text, color, life: 0.9, maxLife: 0.9, vy: -40 })
   }
 
   // Handle pause events
@@ -604,16 +741,33 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       const w = canvasWidthRef.current
       const h = canvasHeightRef.current
 
+      // ===== V2: per-frame progression accumulators =====
+      const rs = runStatsRef.current
+      rs.elapsed += dt
+      if (comboRef.current.timer > 0) {
+        comboRef.current.timer -= dt
+        if (comboRef.current.timer <= 0) comboRef.current.count = 0
+      }
+      for (let i = floatingTextsRef.current.length - 1; i >= 0; i--) {
+        const ft = floatingTextsRef.current[i]
+        ft.y += ft.vy * dt
+        ft.life -= dt
+        if (ft.life <= 0) floatingTextsRef.current.splice(i, 1)
+      }
+
+      const mods = propsRef.current.challenge?.modifiers ?? {}
+
       // ===== MOMENTUM-BASED MOVEMENT =====
       // Disable movement when dead in tutorial OR during instructions
       if (!(props.gameMode === 'tutorial' && (tutorialStateRef.current.isDead || tutorialStateRef.current.showInstruction))) {
-        const acceleration = 1000
-        if (activeKeysRef.current.has('ArrowRight') || activeKeysRef.current.has('KeyD')) applyAcceleration(player, acceleration * dt, 0)
-        if (activeKeysRef.current.has('ArrowLeft') || activeKeysRef.current.has('KeyA')) applyAcceleration(player, -acceleration * dt, 0)
-        if (activeKeysRef.current.has('ArrowDown') || activeKeysRef.current.has('KeyS')) applyAcceleration(player, 0, acceleration * dt)
-        if (activeKeysRef.current.has('ArrowUp') || activeKeysRef.current.has('KeyW')) applyAcceleration(player, 0, -acceleration * dt)
+        const acceleration = mods.acceleration ?? 1000
+        const rev = mods.reverseControls ? -1 : 1
+        if (activeKeysRef.current.has('ArrowRight') || activeKeysRef.current.has('KeyD')) applyAcceleration(player, rev * acceleration * dt, 0)
+        if (activeKeysRef.current.has('ArrowLeft') || activeKeysRef.current.has('KeyA')) applyAcceleration(player, rev * -acceleration * dt, 0)
+        if (activeKeysRef.current.has('ArrowDown') || activeKeysRef.current.has('KeyS')) applyAcceleration(player, 0, rev * acceleration * dt)
+        if (activeKeysRef.current.has('ArrowUp') || activeKeysRef.current.has('KeyW')) applyAcceleration(player, 0, rev * -acceleration * dt)
 
-        applyDamping(player, 0.99)
+        applyDamping(player, mods.friction ?? 0.99)
 
         const maxVel = 500
         const velMag = Math.hypot(player.vx, player.vy)
@@ -624,6 +778,17 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         }
 
         integrate(player, dt)
+
+        // Run-stat tracking: distance, top speed, and longest no-input glide (drift)
+        const speed = Math.hypot(player.vx, player.vy)
+        rs.distance += speed * dt
+        if (speed > rs.topSpeed) rs.topSpeed = speed
+        if (activeKeysRef.current.size === 0 && speed > 40) {
+          rs.currentDrift += speed * dt
+          if (rs.currentDrift > rs.longestDrift) rs.longestDrift = rs.currentDrift
+        } else {
+          rs.currentDrift = 0
+        }
 
         if (velMag > 60) {
           playerTrailRef.current.push({
@@ -637,8 +802,9 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       }
 
       if (isOutOfBounds(player, w, h)) {
-        if (props.gameMode === 'zen') {
-          // Wrap-around teleport to opposite side in Practice Mode
+        runStatsRef.current.wallTouched = true
+        if (props.gameMode === 'zen' || mods.wraparound === true) {
+          // Wrap-around teleport to opposite side (Practice + wraparound challenges)
           if (player.x - player.radius < 0) player.x = w - player.radius
           if (player.x + player.radius > w) player.x = player.radius
           if (player.y - player.radius < 0) player.y = h - player.radius
@@ -810,9 +976,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       // ===== NORMAL MODE: GOAL COLLECTION =====
       if (gameData.state === 'playing' && goalRef.current) {
         if (puckCollideGoal(player, goalRef.current)) {
-          gameData.score++
+          gameData.score += registerOrb(goalRef.current.x, goalRef.current.y)
           gameData.eventProgress++
-          spawnBurst(goalRef.current.x, goalRef.current.y)
 
           if (
             props.gameMode === 'survival' &&
@@ -821,6 +986,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           ) {
             gameData.state = 'cataclysm'
             gameData.eventProgress = 0
+            runStatsRef.current.cataclysms++
             const eventType = getEventType()
             gameData.cataclysm = createCataclysm(
               eventType,
@@ -891,8 +1057,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           const goal = cat.goals[i]
           if (puckCollideGoal(player, goal) && !isInOverlay) {
             cat.goalsCollected++
-            gameData.score++
-            spawnBurst(goal.x, goal.y)
+            gameData.score += registerOrb(goal.x, goal.y)
             cat.goals.splice(i, 1)
             i--
 
@@ -929,8 +1094,30 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         (gameData.cataclysm.enterTime ?? 0) < 1.5
       
       const eventEnemies = gameData.cataclysm?.eventEnemies ?? []
+      const canNearMiss =
+        !isInEventOverlay && (props.gameMode === 'survival' || props.gameMode === 'challenge')
       for (const enemy of [...enemiesRef.current, ...eventEnemies]) {
-        if (circlesCollide(player, enemy)) {
+        if (!circlesCollide(player, enemy)) {
+          // ===== NEAR MISS: an enemy grazes past without landing a hit =====
+          if (canNearMiss) {
+            const gap = Math.hypot(player.x - enemy.x, player.y - enemy.y) - (player.radius + enemy.radius)
+            if (gap > 0 && gap < NEAR_MISS_BAND) {
+              const eid = enemy.id ?? 'e'
+              const last = nearMissCooldownRef.current.get(eid) ?? -999
+              const enemySpeed = Math.hypot(enemy.vx, enemy.vy)
+              const playerSpeed = Math.hypot(player.vx, player.vy)
+              if (rs.elapsed - last > NEAR_MISS_COOLDOWN && (enemySpeed > 60 || playerSpeed > 60)) {
+                nearMissCooldownRef.current.set(eid, rs.elapsed)
+                if (nearMissCooldownRef.current.size > 256) nearMissCooldownRef.current.clear()
+                rs.nearMisses++
+                gameData.score += NEAR_MISS_BONUS
+                addFloatingText(player.x, player.y - player.radius - 8, `NEAR MISS +${NEAR_MISS_BONUS}`, themeRef.current.palette.warn)
+              }
+            }
+          }
+          continue
+        }
+        {
           // Don't die during overlay grace period (fairness - transition from intro to gameplay)
           if (!isInEventOverlay) {
             if (props.gameMode === 'tutorial') {
@@ -1017,9 +1204,26 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       const h = canvasHeightRef.current
       const gameData = gameDataRef.current
       const shake = getShakeOffset(shakeIntensityRef.current)
+      // Active-theme palette shadows the base import so all entity colors below
+      // pick up the player's selected arena theme with no per-call changes.
+      const theme = themeRef.current
+      const palette = theme.palette
 
       // Clear canvas completely to prevent motion trails/streaking
       ctx.clearRect(0, 0, w, h)
+
+      // ===== THEMED ARENA BACKGROUND (radial wash + faint grid) =====
+      const bgGrad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.75)
+      bgGrad.addColorStop(0, theme.bgInner)
+      bgGrad.addColorStop(1, theme.bgOuter)
+      ctx.fillStyle = bgGrad
+      ctx.fillRect(0, 0, w, h)
+      ctx.strokeStyle = theme.grid
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      for (let gx = 48; gx < w; gx += 48) { ctx.moveTo(gx, 0); ctx.lineTo(gx, h) }
+      for (let gy = 48; gy < h; gy += 48) { ctx.moveTo(0, gy); ctx.lineTo(w, gy) }
+      ctx.stroke()
 
       ctx.save()
       ctx.translate(shake.x, shake.y)
@@ -1091,11 +1295,12 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         ctx.fill()
       }
 
+      const trail = trailStyleRef.current
       for (const point of playerTrailRef.current) {
         const alpha = Math.max(0, point.life / 0.42)
-        ctx.fillStyle = withAlpha(palette.player, alpha * 0.14)
+        ctx.fillStyle = withAlpha(palette.player, alpha * trail.opacity)
         ctx.beginPath()
-        ctx.arc(point.x, point.y, point.radius * (1.15 + (1 - alpha) * 0.8), 0, Math.PI * 2)
+        ctx.arc(point.x, point.y, point.radius * trail.width * (1.15 + (1 - alpha) * 0.8), 0, Math.PI * 2)
         ctx.fill()
       }
 
@@ -1111,6 +1316,38 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       ctx.beginPath()
       ctx.arc(player.x - 4, player.y - 4, player.radius * 0.4, 0, Math.PI * 2)
       ctx.fill()
+
+      // ===== COMBO INDICATOR (floats above the player) =====
+      const combo = comboRef.current
+      if (combo.count >= 2) {
+        const fade = Math.min(1, combo.timer / 0.6)
+        const c = combo.count >= 4 ? palette.warn : palette.playerLight
+        ctx.save()
+        ctx.globalAlpha = 0.5 + 0.5 * fade
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.font = `800 ${18 + combo.count * 2}px ${FONT_GAME}`
+        ctx.fillStyle = c
+        ctx.shadowColor = withAlpha(c, 0.85)
+        ctx.shadowBlur = 14
+        ctx.fillText(`x${combo.count}`, player.x, player.y - player.radius - 22)
+        ctx.restore()
+      }
+
+      // ===== FLOATING TEXTS (combo pops, near misses) =====
+      for (const ft of floatingTextsRef.current) {
+        const a = Math.max(0, ft.life / ft.maxLife)
+        ctx.save()
+        ctx.globalAlpha = a
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.font = `700 14px ${FONT_GAME}`
+        ctx.fillStyle = ft.color
+        ctx.shadowColor = withAlpha(ft.color, 0.7)
+        ctx.shadowBlur = 8
+        ctx.fillText(ft.text, ft.x, ft.y)
+        ctx.restore()
+      }
 
       ctx.restore()
 
@@ -1376,7 +1613,9 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       }
 
       // ===== GAME OVER SCREEN =====
-      if (gameData.state === 'gameOver') {
+      // Survival + challenge deaths are handled by the React end screen; only
+      // fall back to the canvas overlay for any other mode.
+      if (gameData.state === 'gameOver' && props.gameMode !== 'survival' && props.gameMode !== 'challenge') {
         drawArcadeGameOverOverlay(ctx, w, h, {
           title: 'GAME OVER',
           middle: `Score: ${gameData.score}`,
