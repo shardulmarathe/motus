@@ -95,12 +95,12 @@ const archetypes = [
     key: 'chaos',
     build: (tier, t) => ({
       title: `Chaos ${ROMAN[tier]}`,
-      description: `Survive ${18 + tier * 10}s as Cataclysms strike back to back.`,
+      description: `Survive ${18 + tier * 10}s against relentless, fast waves.`,
       goal: { type: 'survive', target: 18 + tier * 10 },
       timeLimit: 18 + tier * 10,
-      enemyCount: 3 + tier,
-      enemySpeed: 1.2 + t * 0.4,
-      modifiers: { frequentCataclysms: true, randomCataclysm: true },
+      enemyCount: 6 + tier * 2,
+      enemySpeed: 1.4 + t * 0.5,
+      modifiers: {},
     }),
   },
   {
