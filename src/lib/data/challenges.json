@@ -131,18 +131,15 @@
       "mode": "clear"
     },
     "title": "Chaos I",
-    "description": "Survive 18s as Cataclysms strike back to back.",
+    "description": "Survive 18s against relentless, fast waves.",
     "goal": {
       "type": "survive",
       "target": 18
     },
     "timeLimit": 18,
-    "enemyCount": 3,
-    "enemySpeed": 1.2242424242424241,
-    "modifiers": {
-      "frequentCataclysms": true,
-      "randomCataclysm": true
-    }
+    "enemyCount": 6,
+    "enemySpeed": 1.4303030303030302,
+    "modifiers": {}
   },
   {
     "id": 8,
@@ -431,18 +428,15 @@
       "mode": "clear"
     },
     "title": "Chaos II",
-    "description": "Survive 28s as Cataclysms strike back to back.",
+    "description": "Survive 28s against relentless, fast waves.",
     "goal": {
       "type": "survive",
       "target": 28
     },
     "timeLimit": 28,
-    "enemyCount": 4,
-    "enemySpeed": 1.2808080808080808,
-    "modifiers": {
-      "frequentCataclysms": true,
-      "randomCataclysm": true
-    }
+    "enemyCount": 8,
+    "enemySpeed": 1.501010101010101,
+    "modifiers": {}
   },
   {
     "id": 22,
@@ -731,18 +725,15 @@
       "mode": "clear"
     },
     "title": "Chaos III",
-    "description": "Survive 38s as Cataclysms strike back to back.",
+    "description": "Survive 38s against relentless, fast waves.",
     "goal": {
       "type": "survive",
       "target": 38
     },
     "timeLimit": 38,
-    "enemyCount": 5,
-    "enemySpeed": 1.3373737373737373,
-    "modifiers": {
-      "frequentCataclysms": true,
-      "randomCataclysm": true
-    }
+    "enemyCount": 10,
+    "enemySpeed": 1.5717171717171716,
+    "modifiers": {}
   },
   {
     "id": 36,
@@ -1031,18 +1022,15 @@
       "mode": "clear"
     },
     "title": "Chaos IV",
-    "description": "Survive 48s as Cataclysms strike back to back.",
+    "description": "Survive 48s against relentless, fast waves.",
     "goal": {
       "type": "survive",
       "target": 48
     },
     "timeLimit": 48,
-    "enemyCount": 6,
-    "enemySpeed": 1.393939393939394,
-    "modifiers": {
-      "frequentCataclysms": true,
-      "randomCataclysm": true
-    }
+    "enemyCount": 12,
+    "enemySpeed": 1.6424242424242423,
+    "modifiers": {}
   },
   {
     "id": 50,
@@ -1331,18 +1319,15 @@
       "mode": "clear"
     },
     "title": "Chaos V",
-    "description": "Survive 58s as Cataclysms strike back to back.",
+    "description": "Survive 58s against relentless, fast waves.",
     "goal": {
       "type": "survive",
       "target": 58
     },
     "timeLimit": 58,
-    "enemyCount": 7,
-    "enemySpeed": 1.4505050505050505,
-    "modifiers": {
-      "frequentCataclysms": true,
-      "randomCataclysm": true
-    }
+    "enemyCount": 14,
+    "enemySpeed": 1.713131313131313,
+    "modifiers": {}
   },
   {
     "id": 64,
@@ -1549,18 +1534,15 @@
       "mode": "clear"
     },
     "title": "Chaos — Finale -24",
-    "description": "Survive 58s as Cataclysms strike back to back.",
+    "description": "Survive 58s against relentless, fast waves.",
     "goal": {
       "type": "survive",
       "target": 58
     },
     "timeLimit": 58,
-    "enemyCount": 7,
-    "enemySpeed": 1.5309090909090908,
-    "modifiers": {
-      "frequentCataclysms": true,
-      "randomCataclysm": true
-    }
+    "enemyCount": 14,
+    "enemySpeed": 1.8136363636363635,
+    "modifiers": {}
   },
   {
     "id": 74,
@@ -1634,18 +1616,15 @@
       "mode": "clear"
     },
     "title": "Chaos — Finale -20",
-    "description": "Survive 58s as Cataclysms strike back to back.",
+    "description": "Survive 58s against relentless, fast waves.",
     "goal": {
       "type": "survive",
       "target": 58
     },
     "timeLimit": 58,
-    "enemyCount": 7,
-    "enemySpeed": 1.547070707070707,
-    "modifiers": {
-      "frequentCataclysms": true,
-      "randomCataclysm": true
-    }
+    "enemyCount": 14,
+    "enemySpeed": 1.8338383838383838,
+    "modifiers": {}
   },
   {
     "id": 78,
@@ -1719,18 +1698,15 @@
       "mode": "clear"
     },
     "title": "Chaos — Finale -16",
-    "description": "Survive 58s as Cataclysms strike back to back.",
+    "description": "Survive 58s against relentless, fast waves.",
     "goal": {
       "type": "survive",
       "target": 58
     },
     "timeLimit": 58,
-    "enemyCount": 7,
-    "enemySpeed": 1.5632323232323233,
-    "modifiers": {
-      "frequentCataclysms": true,
-      "randomCataclysm": true
-    }
+    "enemyCount": 14,
+    "enemySpeed": 1.854040404040404,
+    "modifiers": {}
   },
   {
     "id": 82,
@@ -1804,18 +1780,15 @@
       "mode": "clear"
     },
     "title": "Chaos — Finale -12",
-    "description": "Survive 58s as Cataclysms strike back to back.",
+    "description": "Survive 58s against relentless, fast waves.",
     "goal": {
       "type": "survive",
       "target": 58
     },
     "timeLimit": 58,
-    "enemyCount": 7,
-    "enemySpeed": 1.5793939393939394,
-    "modifiers": {
-      "frequentCataclysms": true,
-      "randomCataclysm": true
-    }
+    "enemyCount": 14,
+    "enemySpeed": 1.874242424242424,
+    "modifiers": {}
   },
   {
     "id": 86,
@@ -1889,18 +1862,15 @@
       "mode": "clear"
     },
     "title": "Chaos — Finale -8",
-    "description": "Survive 58s as Cataclysms strike back to back.",
+    "description": "Survive 58s against relentless, fast waves.",
     "goal": {
       "type": "survive",
       "target": 58
     },
     "timeLimit": 58,
-    "enemyCount": 7,
-    "enemySpeed": 1.5955555555555554,
-    "modifiers": {
-      "frequentCataclysms": true,
-      "randomCataclysm": true
-    }
+    "enemyCount": 14,
+    "enemySpeed": 1.8944444444444444,
+    "modifiers": {}
   },
   {
     "id": 90,
@@ -1974,18 +1944,15 @@
       "mode": "clear"
     },
     "title": "Chaos — Finale -4",
-    "description": "Survive 58s as Cataclysms strike back to back.",
+    "description": "Survive 58s against relentless, fast waves.",
     "goal": {
       "type": "survive",
       "target": 58
     },
     "timeLimit": 58,
-    "enemyCount": 7,
-    "enemySpeed": 1.6,
-    "modifiers": {
-      "frequentCataclysms": true,
-      "randomCataclysm": true
-    }
+    "enemyCount": 14,
+    "enemySpeed": 1.9,
+    "modifiers": {}
   },
   {
     "id": 94,
@@ -2059,18 +2026,15 @@
       "mode": "clear"
     },
     "title": "Chaos — Finale 0",
-    "description": "Survive 58s as Cataclysms strike back to back.",
+    "description": "Survive 58s against relentless, fast waves.",
     "goal": {
       "type": "survive",
       "target": 58
     },
     "timeLimit": 58,
-    "enemyCount": 7,
-    "enemySpeed": 1.6,
-    "modifiers": {
-      "frequentCataclysms": true,
-      "randomCataclysm": true
-    }
+    "enemyCount": 14,
+    "enemySpeed": 1.9,
+    "modifiers": {}
   },
   {
     "id": 98,

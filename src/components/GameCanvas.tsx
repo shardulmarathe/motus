@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, forwardRef } from 'react'
-import { Puck, Goal, Enemy, integrate, applyAcceleration, applyDamping, circlesCollide, puckCollideGoal, isOutOfBounds, getShakeOffset, clampGoalToCanvas } from '../lib/physics'
+import { Puck, Goal, Enemy, integrate, applyAcceleration, applyDamping, circlesCollide, puckCollideGoal, isOutOfBounds, isOutOfArena, getShakeOffset, clampGoalToCanvas, repositionGoalInBounds } from '../lib/physics'
 import {
   createPlayer,
   spawnEnemy,
@@ -76,6 +76,29 @@ function freshRunStats(): RunStats {
     highestCombo: 0,
     wallTouched: false,
   }
+}
+
+/** Centered play rectangle for challenges that shrink the arena (arenaScale < 1). */
+function challengeArena(w: number, h: number, ch?: Challenge | null) {
+  const s = ch?.modifiers?.arenaScale
+  if (!s || s >= 1) return null
+  const aw = w * s
+  const ah = h * s
+  return { x: (w - aw) / 2, y: (h - ah) / 2, width: aw, height: ah }
+}
+
+/** Spawn a world enemy scaled to a challenge's enemy-speed multiplier. */
+function makeChallengeEnemy(w: number, h: number, ch: Challenge): Enemy {
+  const e = spawnEnemy(w, h, 1, 1) as Enemy
+  e.vx *= ch.enemySpeed
+  e.vy *= ch.enemySpeed
+  return e
+}
+
+/** Whether a challenge's win condition is met given current run progress. */
+function challengeWon(ch: Challenge, orbs: number, elapsed: number): boolean {
+  if (ch.goal.type === 'survive') return elapsed >= ch.goal.target
+  return orbs >= ch.goal.target // 'orbs' and 'collectAll'
 }
 
 function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
@@ -342,6 +365,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
   const themeRef = useRef<ResolvedTheme>(resolveActiveTheme())
   const trailStyleRef = useRef<TrailStyle>(activeTrailStyle())
   const challengeDoneRef = useRef(false) // guards one-shot challenge completion
+  const runFinalizedRef = useRef(false) // guards one-shot run-summary emission
   const propsRef = useRef(props)
   propsRef.current = props
 
@@ -367,9 +391,11 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
   /** Build the run summary from accumulated stats and emit it once. */
   const finalizeRun = (won: boolean) => {
+    if (runFinalizedRef.current) return
     const p = propsRef.current
     const mode = p.gameMode
     if (mode !== 'survival' && mode !== 'challenge') return
+    runFinalizedRef.current = true
 
     const gameData = gameDataRef.current
     const rs = runStatsRef.current
@@ -437,6 +463,14 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       if (currentStep) {
         eventName = `Step ${tutorialState.currentStep + 1} of ${tutorialSteps.length}`
       }
+    } else if (props.gameMode === 'challenge' && props.challenge) {
+      mode = 'Challenge'
+      const ch = props.challenge
+      const rs = runStatsRef.current
+      eventName =
+        ch.goal.type === 'survive'
+          ? `Survive ${Math.max(0, Math.ceil(ch.goal.target - rs.elapsed))}s`
+          : `Orbs ${rs.orbs}/${ch.goal.target}`
     } else if (gameData.state === 'cataclysm' && gameData.cataclysm) {
       mode = 'Event'
       eventTimeLeft = gameData.cataclysm.timeLeft
@@ -508,6 +542,17 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       // Initialize tutorial state
       tutorialStateRef.current = createTutorialState()
       resetTutorial()
+    } else if (props.gameMode === 'challenge' && props.challenge) {
+      // Challenge: fixed enemy roster + a single orb, both kept inside the arena.
+      const ch = props.challenge
+      const arena = challengeArena(w, h, ch)
+      enemiesRef.current = Array.from({ length: ch.enemyCount }, () => makeChallengeEnemy(w, h, ch))
+      goalRef.current = spawnCataclysmGoals(w, h, playerRef.current.x, playerRef.current.y)[0]
+      if (goalRef.current) {
+        clampGoalToCanvas(goalRef.current, w, h)
+        if (arena) repositionGoalInBounds(goalRef.current, arena.x, arena.y, arena.width, arena.height)
+      }
+      tutorialGoalsRef.current = []
     } else {
       // Default: clear enemies on reset, but always spawn initial green goals.
       const spawnEnemies = options?.spawnEnemies ?? (props.gameMode === 'survival')
@@ -540,6 +585,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     floatingTextsRef.current = []
     nearMissCooldownRef.current.clear()
     challengeDoneRef.current = false
+    runFinalizedRef.current = false
     themeRef.current = resolveActiveTheme()
     trailStyleRef.current = activeTrailStyle()
 
@@ -801,7 +847,11 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         }
       }
 
-      if (isOutOfBounds(player, w, h)) {
+      const arena = props.gameMode === 'challenge' ? challengeArena(w, h, propsRef.current.challenge) : null
+      const outOfPlay = arena
+        ? isOutOfArena(player, arena.x, arena.y, arena.width, arena.height)
+        : isOutOfBounds(player, w, h)
+      if (outOfPlay) {
         runStatsRef.current.wallTouched = true
         if (props.gameMode === 'zen' || mods.wraparound === true) {
           // Wrap-around teleport to opposite side (Practice + wraparound challenges)
@@ -973,6 +1023,33 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         )
       })
 
+      // ===== CHALLENGE: maintain fixed roster + resolve win/lose =====
+      if (props.gameMode === 'challenge' && propsRef.current.challenge) {
+        const ch = propsRef.current.challenge
+        while (enemiesRef.current.length < ch.enemyCount) {
+          enemiesRef.current.push(makeChallengeEnemy(w, h, ch))
+        }
+
+        if (!challengeDoneRef.current && gameData.state === 'playing') {
+          const rsC = runStatsRef.current
+          if (challengeWon(ch, rsC.orbs, rsC.elapsed)) {
+            challengeDoneRef.current = true
+            gameData.state = 'gameOver'
+            player.vx = 0
+            player.vy = 0
+            finalizeRun(true)
+          } else if (ch.timeLimit > 0 && ch.goal.type !== 'survive' && rsC.elapsed >= ch.timeLimit) {
+            // Timed collect goal expired without finishing — a loss.
+            challengeDoneRef.current = true
+            gameData.state = 'gameOver'
+            player.vx = 0
+            player.vy = 0
+            shakeIntensityRef.current = 16
+            finalizeRun(false)
+          }
+        }
+      }
+
       // ===== NORMAL MODE: GOAL COLLECTION =====
       if (gameData.state === 'playing' && goalRef.current) {
         if (puckCollideGoal(player, goalRef.current)) {
@@ -998,7 +1075,11 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           } else {
             const goals = spawnCataclysmGoals(w, h, player.x, player.y)
             goalRef.current = goals[0]
-            if (goalRef.current) clampGoalToCanvas(goalRef.current, w, h)
+            if (goalRef.current) {
+              clampGoalToCanvas(goalRef.current, w, h)
+              const arenaC = props.gameMode === 'challenge' ? challengeArena(w, h, propsRef.current.challenge) : null
+              if (arenaC) repositionGoalInBounds(goalRef.current, arenaC.x, arenaC.y, arenaC.width, arenaC.height)
+            }
           }
           updateGameState()
         }
@@ -1224,6 +1305,18 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       for (let gx = 48; gx < w; gx += 48) { ctx.moveTo(gx, 0); ctx.lineTo(gx, h) }
       for (let gy = 48; gy < h; gy += 48) { ctx.moveTo(0, gy); ctx.lineTo(w, gy) }
       ctx.stroke()
+
+      // ===== CHALLENGE ARENA BOUNDARY (tiny-arena challenges) =====
+      const chArena = propsRef.current.gameMode === 'challenge' ? challengeArena(w, h, propsRef.current.challenge) : null
+      if (chArena) {
+        ctx.strokeStyle = withAlpha(palette.hostile, 0.5)
+        ctx.lineWidth = 2
+        ctx.shadowColor = palette.hostile
+        ctx.shadowBlur = 16
+        ctx.strokeRect(chArena.x, chArena.y, chArena.width, chArena.height)
+        ctx.shadowColor = 'transparent'
+        ctx.shadowBlur = 0
+      }
 
       ctx.save()
       ctx.translate(shake.x, shake.y)
