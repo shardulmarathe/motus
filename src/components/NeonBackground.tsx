@@ -7,6 +7,8 @@ type Streak = {
   y: number
   vx: number
   vy: number
+  bvx: number // baseline drift the streak always eases back toward
+  bvy: number
   hue: number // 0 = cyan, 1 = violet blend
   weight: number
 }
@@ -37,12 +39,16 @@ export default function NeonBackground() {
     const drift = 26 // base drift speed (px/s equivalent, scaled per frame)
     streaksRef.current = Array.from({ length: count }, () => {
       const angle = Math.PI * 0.72 + (Math.random() - 0.5) * 0.5 // mostly down-left flow
-      const speed = drift * (0.4 + Math.random() * 0.9)
+      const speed = (drift / 30) * (0.5 + Math.random() * 0.8) // gentle per-frame drift
+      const bvx = Math.cos(angle) * speed
+      const bvy = Math.sin(angle) * speed
       return {
         x: Math.random() * dimensions.width,
         y: Math.random() * dimensions.height,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
+        vx: bvx,
+        vy: bvy,
+        bvx,
+        bvy,
         hue: Math.random(),
         weight: 0.6 + Math.random() * 1.4,
       }
@@ -98,10 +104,15 @@ export default function NeonBackground() {
       last = now
 
       const m = mouseRef.current
-      m.vx = m.x - m.px
-      m.vy = m.y - m.py
+      // Low-pass + cap the cursor velocity so a fast flick reads as a gentle
+      // current rather than a whip that snaps every streak at once.
+      const CAP = 30
+      const rawVx = Math.max(-CAP, Math.min(CAP, m.x - m.px))
+      const rawVy = Math.max(-CAP, Math.min(CAP, m.y - m.py))
       m.px = m.x
       m.py = m.y
+      m.vx += (rawVx - m.vx) * 0.22
+      m.vy += (rawVy - m.vy) * 0.22
       const mouseSpeed = Math.hypot(m.vx, m.vy)
 
       // Motion-blur fade — leaves streaks; darker = longer trails.
@@ -116,22 +127,32 @@ export default function NeonBackground() {
       ctx.fillRect(0, 0, W, H)
 
       const influence = 220
+      const MAX_SPEED = 7 // hard cap so streaks never whip into glitchy lines
       for (const s of streaksRef.current) {
-        // Cursor combs nearby streaks along its own motion vector.
-        if (mouseSpeed > 0.5) {
+        // Cursor nudges nearby streaks along its (smoothed) motion vector.
+        if (mouseSpeed > 0.4) {
           const dx = s.x - m.x
           const dy = s.y - m.y
           const d = Math.hypot(dx, dy)
           if (d < influence) {
-            const force = (1 - d / influence) * 0.35
+            const force = (1 - d / influence) * 0.16
             s.vx += m.vx * force
             s.vy += m.vy * force
           }
         }
 
-        // Ease back toward the baseline flow speed so combs relax into drift.
-        s.vx *= 0.94
-        s.vy *= 0.94
+        // Ease back toward the persistent baseline drift so the field always
+        // keeps a calm current and combed streaks relax smoothly (no snap).
+        s.vx += (s.bvx - s.vx) * 0.05
+        s.vy += (s.bvy - s.vy) * 0.05
+
+        // Clamp speed to keep motion smooth on rapid cursor moves.
+        const sp = Math.hypot(s.vx, s.vy)
+        if (sp > MAX_SPEED) {
+          s.vx = (s.vx / sp) * MAX_SPEED
+          s.vy = (s.vy / sp) * MAX_SPEED
+        }
+
         const px = s.x
         const py = s.y
         s.x += s.vx * dt * 60
@@ -143,16 +164,16 @@ export default function NeonBackground() {
         if (s.y < -20) s.y = H + 20
         if (s.y > H + 20) s.y = -20
 
-        // Draw the streak as a line from the previous position to the head,
-        // exaggerated by current speed so fast streaks read as long light trails.
+        // Line from the previous position to the head; length scales gently with
+        // speed (capped) so faster streaks read as trails without flickering.
         const speed = Math.hypot(s.vx, s.vy)
-        const len = Math.min(60, 2 + speed * 2.2)
+        const len = Math.min(24, 3 + speed * 1.7)
         const nx = speed > 0.01 ? s.vx / speed : 0
         const ny = speed > 0.01 ? s.vy / speed : 0
         const r = Math.round(90 + s.hue * 90)
         const gg = Math.round(200 - s.hue * 40)
         const b = 240
-        const alpha = Math.min(0.5, 0.12 + speed * 0.03)
+        const alpha = Math.min(0.36, 0.1 + speed * 0.02)
 
         ctx.strokeStyle = `rgba(${r}, ${gg}, ${b}, ${alpha})`
         ctx.lineWidth = s.weight
