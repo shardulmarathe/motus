@@ -28,6 +28,7 @@ export interface ChallengeModifiers {
   oneLife?: boolean // no forgiveness — informational (all survival deaths are terminal already)
   movingHazards?: boolean
   noWallTouch?: boolean // touching a wall fails the challenge
+  obstacles?: number // count of static lethal hazards that block the route
 }
 
 export interface Challenge {

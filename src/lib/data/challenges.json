@@ -4,12 +4,12 @@
     "tier": 1,
     "archetype": "collector",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Collector I",
-    "description": "Collect 10 orbs. Take your time — but the enemies won't.",
+    "description": "Collect 10 orbs. No timer — but the enemies won't wait.",
     "goal": {
       "type": "orbs",
       "target": 10
@@ -22,25 +22,47 @@
   {
     "id": 2,
     "tier": 1,
-    "archetype": "sprint",
+    "archetype": "navigate",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Quick Collector I",
-    "description": "Collect 12 orbs in under 28 seconds.",
+    "title": "Navigator I",
+    "description": "Weave through 4 static hazards to collect 3 orbs.",
+    "goal": {
+      "type": "orbs",
+      "target": 3
+    },
+    "timeLimit": 0,
+    "enemyCount": 0,
+    "enemySpeed": 1.01,
+    "modifiers": {
+      "obstacles": 4
+    }
+  },
+  {
+    "id": 3,
+    "tier": 1,
+    "archetype": "sprint",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Sprint I",
+    "description": "Collect 12 orbs in under 30 seconds.",
     "goal": {
       "type": "orbs",
       "target": 12
     },
-    "timeLimit": 28,
+    "timeLimit": 30,
     "enemyCount": 1,
-    "enemySpeed": 1.1040404040404042,
+    "enemySpeed": 1.11,
     "modifiers": {}
   },
   {
-    "id": 3,
+    "id": 4,
     "tier": 1,
     "archetype": "survivor",
     "stars": {
@@ -49,45 +71,23 @@
       "mode": "clear"
     },
     "title": "Survivor I",
-    "description": "Stay alive for 20 seconds.",
+    "description": "Stay alive for 22 seconds.",
     "goal": {
       "type": "survive",
-      "target": 20
+      "target": 22
     },
-    "timeLimit": 20,
+    "timeLimit": 22,
     "enemyCount": 3,
-    "enemySpeed": 1.1101010101010103,
+    "enemySpeed": 1.13,
     "modifiers": {}
-  },
-  {
-    "id": 4,
-    "tier": 1,
-    "archetype": "purist",
-    "stars": {
-      "two": 0.25,
-      "three": 0.5,
-      "mode": "time"
-    },
-    "title": "Untouchable I",
-    "description": "Collect 8 orbs without ever touching a wall.",
-    "goal": {
-      "type": "orbs",
-      "target": 8
-    },
-    "timeLimit": 0,
-    "enemyCount": 2,
-    "enemySpeed": 1.0106060606060605,
-    "modifiers": {
-      "noWallTouch": true
-    }
   },
   {
     "id": 5,
     "tier": 1,
     "archetype": "sweep",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Clean Sweep I",
@@ -96,58 +96,18 @@
       "type": "collectAll",
       "target": 9
     },
-    "timeLimit": 24,
+    "timeLimit": 26,
     "enemyCount": 1,
-    "enemySpeed": 1.0141414141414142,
+    "enemySpeed": 1.02,
     "modifiers": {}
   },
   {
     "id": 6,
     "tier": 1,
-    "archetype": "swarm",
-    "stars": {
-      "two": 0.25,
-      "three": 0.5,
-      "mode": "time"
-    },
-    "title": "Swarm I",
-    "description": "Collect 10 orbs with double-speed enemies everywhere.",
-    "goal": {
-      "type": "orbs",
-      "target": 10
-    },
-    "timeLimit": 0,
-    "enemyCount": 5,
-    "enemySpeed": 1.8252525252525253,
-    "modifiers": {}
-  },
-  {
-    "id": 7,
-    "tier": 1,
-    "archetype": "chaos",
-    "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
-    },
-    "title": "Chaos I",
-    "description": "Survive 18s against relentless, fast waves.",
-    "goal": {
-      "type": "survive",
-      "target": 18
-    },
-    "timeLimit": 18,
-    "enemyCount": 6,
-    "enemySpeed": 1.4303030303030302,
-    "modifiers": {}
-  },
-  {
-    "id": 8,
-    "tier": 1,
     "archetype": "tiny",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Claustrophobia I",
@@ -158,31 +118,72 @@
     },
     "timeLimit": 0,
     "enemyCount": 2,
-    "enemySpeed": 1.0247474747474747,
+    "enemySpeed": 1.03,
     "modifiers": {
-      "arenaScale": 0.62
+      "arenaScale": 0.61
     }
+  },
+  {
+    "id": 7,
+    "tier": 1,
+    "archetype": "purist",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Untouchable I",
+    "description": "Collect 9 orbs without ever touching a wall.",
+    "goal": {
+      "type": "orbs",
+      "target": 9
+    },
+    "timeLimit": 0,
+    "enemyCount": 2,
+    "enemySpeed": 1.04,
+    "modifiers": {
+      "noWallTouch": true
+    }
+  },
+  {
+    "id": 8,
+    "tier": 1,
+    "archetype": "swarm",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Swarm I",
+    "description": "Collect 11 orbs amid a swarm of fast enemies.",
+    "goal": {
+      "type": "orbs",
+      "target": 11
+    },
+    "timeLimit": 0,
+    "enemyCount": 7,
+    "enemySpeed": 1.66,
+    "modifiers": {}
   },
   {
     "id": 9,
     "tier": 1,
     "archetype": "void",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "The Void I",
-    "description": "Collect 12 orbs in a vast arena — walls are lethal.",
+    "description": "Collect 13 orbs — walls are lethal, no wrap.",
     "goal": {
       "type": "orbs",
-      "target": 12
+      "target": 13
     },
     "timeLimit": 0,
-    "enemyCount": 3,
-    "enemySpeed": 1.1323232323232324,
+    "enemyCount": 4,
+    "enemySpeed": 1.16,
     "modifiers": {
-      "arenaScale": 1,
       "wraparound": false
     }
   },
@@ -191,19 +192,19 @@
     "tier": 1,
     "archetype": "slippery",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Frictionless I",
-    "description": "Collect 10 orbs on ice — momentum barely fades.",
+    "description": "Collect 11 orbs on ice — momentum barely fades.",
     "goal": {
       "type": "orbs",
-      "target": 10
+      "target": 11
     },
     "timeLimit": 0,
-    "enemyCount": 2,
-    "enemySpeed": 1.0318181818181817,
+    "enemyCount": 3,
+    "enemySpeed": 1.05,
     "modifiers": {
       "friction": 0.997,
       "acceleration": 1200
@@ -214,19 +215,19 @@
     "tier": 1,
     "archetype": "molasses",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Heavy I",
-    "description": "Collect 9 orbs with sluggish, heavy controls.",
+    "description": "Collect 10 orbs with sluggish, heavy controls.",
     "goal": {
       "type": "orbs",
-      "target": 9
+      "target": 10
     },
     "timeLimit": 0,
-    "enemyCount": 2,
-    "enemySpeed": 1.0303030303030303,
+    "enemyCount": 3,
+    "enemySpeed": 1.06,
     "modifiers": {
       "friction": 0.97,
       "acceleration": 760
@@ -237,19 +238,19 @@
     "tier": 1,
     "archetype": "reversed",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Mirror I",
-    "description": "Collect 8 orbs with your controls reversed.",
+    "description": "Collect 9 orbs with your controls reversed.",
     "goal": {
       "type": "orbs",
-      "target": 8
+      "target": 9
     },
     "timeLimit": 0,
-    "enemyCount": 2,
-    "enemySpeed": 1.038888888888889,
+    "enemyCount": 3,
+    "enemySpeed": 1.07,
     "modifiers": {
       "reverseControls": true
     }
@@ -259,19 +260,19 @@
     "tier": 1,
     "archetype": "suddendeath",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Sudden Death I",
-    "description": "Collect 10 orbs. One touch ends everything.",
+    "description": "Collect 12 orbs. One touch ends everything.",
     "goal": {
       "type": "orbs",
-      "target": 10
+      "target": 12
     },
     "timeLimit": 0,
-    "enemyCount": 4,
-    "enemySpeed": 1.3606060606060606,
+    "enemyCount": 5,
+    "enemySpeed": 1.4,
     "modifiers": {
       "oneLife": true
     }
@@ -286,59 +287,81 @@
       "mode": "clear"
     },
     "title": "Endurance I",
-    "description": "Outlast 45 seconds of relentless pressure.",
+    "description": "Outlast 57 seconds of relentless pressure.",
     "goal": {
       "type": "survive",
-      "target": 45
+      "target": 57
     },
-    "timeLimit": 45,
-    "enemyCount": 4,
-    "enemySpeed": 1.2656565656565657,
+    "timeLimit": 57,
+    "enemyCount": 5,
+    "enemySpeed": 1.32,
     "modifiers": {}
   },
   {
     "id": 15,
-    "tier": 2,
+    "tier": 1,
     "archetype": "collector",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Collector II",
-    "description": "Collect 16 orbs. Take your time — but the enemies won't.",
+    "description": "Collect 14 orbs. No timer — but the enemies won't wait.",
     "goal": {
       "type": "orbs",
-      "target": 16
+      "target": 14
     },
     "timeLimit": 0,
     "enemyCount": 3,
-    "enemySpeed": 1.0565656565656565,
+    "enemySpeed": 1.11,
     "modifiers": {}
   },
   {
     "id": 16,
-    "tier": 2,
-    "archetype": "sprint",
+    "tier": 1,
+    "archetype": "navigate",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Quick Collector II",
-    "description": "Collect 15 orbs in under 25 seconds.",
+    "title": "Navigator II",
+    "description": "Weave through 6 static hazards to collect 4 orbs.",
+    "goal": {
+      "type": "orbs",
+      "target": 4
+    },
+    "timeLimit": 0,
+    "enemyCount": 0,
+    "enemySpeed": 1.08,
+    "modifiers": {
+      "obstacles": 6
+    }
+  },
+  {
+    "id": 17,
+    "tier": 1,
+    "archetype": "sprint",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Sprint II",
+    "description": "Collect 15 orbs in under 28 seconds.",
     "goal": {
       "type": "orbs",
       "target": 15
     },
-    "timeLimit": 25,
+    "timeLimit": 28,
     "enemyCount": 2,
-    "enemySpeed": 1.1606060606060606,
+    "enemySpeed": 1.21,
     "modifiers": {}
   },
   {
-    "id": 17,
-    "tier": 2,
+    "id": 18,
+    "tier": 1,
     "archetype": "survivor",
     "stars": {
       "two": 0,
@@ -346,140 +369,119 @@
       "mode": "clear"
     },
     "title": "Survivor II",
-    "description": "Stay alive for 35 seconds.",
+    "description": "Stay alive for 32 seconds.",
     "goal": {
       "type": "survive",
-      "target": 35
+      "target": 32
     },
-    "timeLimit": 35,
+    "timeLimit": 32,
     "enemyCount": 5,
-    "enemySpeed": 1.180808080808081,
+    "enemySpeed": 1.25,
     "modifiers": {}
   },
   {
-    "id": 18,
-    "tier": 2,
-    "archetype": "purist",
+    "id": 19,
+    "tier": 1,
+    "archetype": "sweep",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Untouchable II",
-    "description": "Collect 12 orbs without ever touching a wall.",
+    "title": "Clean Sweep II",
+    "description": "Clear all 11 orbs before the timer runs out.",
+    "goal": {
+      "type": "collectAll",
+      "target": 11
+    },
+    "timeLimit": 24,
+    "enemyCount": 2,
+    "enemySpeed": 1.11,
+    "modifiers": {}
+  },
+  {
+    "id": 20,
+    "tier": 1,
+    "archetype": "tiny",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Claustrophobia II",
+    "description": "Collect 10 orbs in a cramped arena.",
     "goal": {
       "type": "orbs",
-      "target": 12
+      "target": 10
     },
     "timeLimit": 0,
     "enemyCount": 3,
-    "enemySpeed": 1.06010101010101,
+    "enemySpeed": 1.12,
+    "modifiers": {
+      "arenaScale": 0.59
+    }
+  },
+  {
+    "id": 21,
+    "tier": 2,
+    "archetype": "purist",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Untouchable II",
+    "description": "Collect 10 orbs without ever touching a wall.",
+    "goal": {
+      "type": "orbs",
+      "target": 10
+    },
+    "timeLimit": 0,
+    "enemyCount": 3,
+    "enemySpeed": 1.12,
     "modifiers": {
       "noWallTouch": true
     }
   },
   {
-    "id": 19,
-    "tier": 2,
-    "archetype": "sweep",
-    "stars": {
-      "two": 0.25,
-      "three": 0.5,
-      "mode": "time"
-    },
-    "title": "Clean Sweep II",
-    "description": "Clear all 12 orbs before the timer runs out.",
-    "goal": {
-      "type": "collectAll",
-      "target": 12
-    },
-    "timeLimit": 22,
-    "enemyCount": 2,
-    "enemySpeed": 1.0636363636363637,
-    "modifiers": {}
-  },
-  {
-    "id": 20,
+    "id": 22,
     "tier": 2,
     "archetype": "swarm",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Swarm II",
-    "description": "Collect 14 orbs with double-speed enemies everywhere.",
+    "description": "Collect 13 orbs amid a swarm of fast enemies.",
     "goal": {
       "type": "orbs",
-      "target": 14
+      "target": 13
     },
     "timeLimit": 0,
-    "enemyCount": 7,
-    "enemySpeed": 1.895959595959596,
+    "enemyCount": 9,
+    "enemySpeed": 1.77,
     "modifiers": {}
-  },
-  {
-    "id": 21,
-    "tier": 2,
-    "archetype": "chaos",
-    "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
-    },
-    "title": "Chaos II",
-    "description": "Survive 28s against relentless, fast waves.",
-    "goal": {
-      "type": "survive",
-      "target": 28
-    },
-    "timeLimit": 28,
-    "enemyCount": 8,
-    "enemySpeed": 1.501010101010101,
-    "modifiers": {}
-  },
-  {
-    "id": 22,
-    "tier": 2,
-    "archetype": "tiny",
-    "stars": {
-      "two": 0.25,
-      "three": 0.5,
-      "mode": "time"
-    },
-    "title": "Claustrophobia II",
-    "description": "Collect 11 orbs in a cramped arena.",
-    "goal": {
-      "type": "orbs",
-      "target": 11
-    },
-    "timeLimit": 0,
-    "enemyCount": 3,
-    "enemySpeed": 1.0742424242424242,
-    "modifiers": {
-      "arenaScale": 0.59
-    }
   },
   {
     "id": 23,
     "tier": 2,
     "archetype": "void",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "The Void II",
-    "description": "Collect 16 orbs in a vast arena — walls are lethal.",
+    "description": "Collect 15 orbs — walls are lethal, no wrap.",
     "goal": {
       "type": "orbs",
-      "target": 16
+      "target": 15
     },
     "timeLimit": 0,
-    "enemyCount": 4,
-    "enemySpeed": 1.1888888888888889,
+    "enemyCount": 5,
+    "enemySpeed": 1.26,
     "modifiers": {
-      "arenaScale": 1,
       "wraparound": false
     }
   },
@@ -488,19 +490,19 @@
     "tier": 2,
     "archetype": "slippery",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Frictionless II",
-    "description": "Collect 13 orbs on ice — momentum barely fades.",
+    "description": "Collect 12 orbs on ice — momentum barely fades.",
     "goal": {
       "type": "orbs",
-      "target": 13
+      "target": 12
     },
     "timeLimit": 0,
     "enemyCount": 3,
-    "enemySpeed": 1.0813131313131312,
+    "enemySpeed": 1.14,
     "modifiers": {
       "friction": 0.997,
       "acceleration": 1200
@@ -511,19 +513,19 @@
     "tier": 2,
     "archetype": "molasses",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Heavy II",
-    "description": "Collect 12 orbs with sluggish, heavy controls.",
+    "description": "Collect 11 orbs with sluggish, heavy controls.",
     "goal": {
       "type": "orbs",
-      "target": 12
+      "target": 11
     },
     "timeLimit": 0,
     "enemyCount": 3,
-    "enemySpeed": 1.0727272727272728,
+    "enemySpeed": 1.15,
     "modifiers": {
       "friction": 0.97,
       "acceleration": 760
@@ -534,19 +536,19 @@
     "tier": 2,
     "archetype": "reversed",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Mirror II",
-    "description": "Collect 11 orbs with your controls reversed.",
+    "description": "Collect 10 orbs with your controls reversed.",
     "goal": {
       "type": "orbs",
-      "target": 11
+      "target": 10
     },
     "timeLimit": 0,
     "enemyCount": 3,
-    "enemySpeed": 1.0883838383838385,
+    "enemySpeed": 1.15,
     "modifiers": {
       "reverseControls": true
     }
@@ -556,8 +558,8 @@
     "tier": 2,
     "archetype": "suddendeath",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Sudden Death II",
@@ -568,7 +570,7 @@
     },
     "timeLimit": 0,
     "enemyCount": 6,
-    "enemySpeed": 1.4313131313131313,
+    "enemySpeed": 1.51,
     "modifiers": {
       "oneLife": true
     }
@@ -583,59 +585,81 @@
       "mode": "clear"
     },
     "title": "Endurance II",
-    "description": "Outlast 70 seconds of relentless pressure.",
+    "description": "Outlast 71 seconds of relentless pressure.",
     "goal": {
       "type": "survive",
-      "target": 70
+      "target": 71
     },
-    "timeLimit": 70,
-    "enemyCount": 6,
-    "enemySpeed": 1.3363636363636364,
+    "timeLimit": 71,
+    "enemyCount": 7,
+    "enemySpeed": 1.45,
     "modifiers": {}
   },
   {
     "id": 29,
-    "tier": 3,
+    "tier": 2,
     "archetype": "collector",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Collector III",
-    "description": "Collect 22 orbs. Take your time — but the enemies won't.",
-    "goal": {
-      "type": "orbs",
-      "target": 22
-    },
-    "timeLimit": 0,
-    "enemyCount": 4,
-    "enemySpeed": 1.1131313131313132,
-    "modifiers": {}
-  },
-  {
-    "id": 30,
-    "tier": 3,
-    "archetype": "sprint",
-    "stars": {
-      "two": 0.25,
-      "three": 0.5,
-      "mode": "time"
-    },
-    "title": "Quick Collector III",
-    "description": "Collect 18 orbs in under 22 seconds.",
+    "description": "Collect 18 orbs. No timer — but the enemies won't wait.",
     "goal": {
       "type": "orbs",
       "target": 18
     },
-    "timeLimit": 22,
-    "enemyCount": 3,
-    "enemySpeed": 1.2171717171717173,
+    "timeLimit": 0,
+    "enemyCount": 4,
+    "enemySpeed": 1.23,
     "modifiers": {}
   },
   {
+    "id": 30,
+    "tier": 2,
+    "archetype": "navigate",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Navigator III",
+    "description": "Weave through 7 static hazards to collect 5 orbs.",
+    "goal": {
+      "type": "orbs",
+      "target": 5
+    },
+    "timeLimit": 0,
+    "enemyCount": 1,
+    "enemySpeed": 1.15,
+    "modifiers": {
+      "obstacles": 7
+    }
+  },
+  {
     "id": 31,
-    "tier": 3,
+    "tier": 2,
+    "archetype": "sprint",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Sprint III",
+    "description": "Collect 17 orbs in under 26 seconds.",
+    "goal": {
+      "type": "orbs",
+      "target": 17
+    },
+    "timeLimit": 26,
+    "enemyCount": 3,
+    "enemySpeed": 1.31,
+    "modifiers": {}
+  },
+  {
+    "id": 32,
+    "tier": 2,
     "archetype": "survivor",
     "stars": {
       "two": 0,
@@ -643,161 +667,140 @@
       "mode": "clear"
     },
     "title": "Survivor III",
-    "description": "Stay alive for 50 seconds.",
+    "description": "Stay alive for 42 seconds.",
     "goal": {
       "type": "survive",
-      "target": 50
+      "target": 42
     },
-    "timeLimit": 50,
-    "enemyCount": 7,
-    "enemySpeed": 1.2515151515151517,
+    "timeLimit": 42,
+    "enemyCount": 6,
+    "enemySpeed": 1.38,
     "modifiers": {}
   },
   {
-    "id": 32,
-    "tier": 3,
-    "archetype": "purist",
+    "id": 33,
+    "tier": 2,
+    "archetype": "sweep",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Untouchable III",
-    "description": "Collect 16 orbs without ever touching a wall.",
+    "title": "Clean Sweep III",
+    "description": "Clear all 13 orbs before the timer runs out.",
+    "goal": {
+      "type": "collectAll",
+      "target": 13
+    },
+    "timeLimit": 23,
+    "enemyCount": 3,
+    "enemySpeed": 1.19,
+    "modifiers": {}
+  },
+  {
+    "id": 34,
+    "tier": 2,
+    "archetype": "tiny",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Claustrophobia III",
+    "description": "Collect 11 orbs in a cramped arena.",
     "goal": {
       "type": "orbs",
-      "target": 16
+      "target": 11
     },
     "timeLimit": 0,
     "enemyCount": 4,
-    "enemySpeed": 1.1095959595959597,
+    "enemySpeed": 1.2,
+    "modifiers": {
+      "arenaScale": 0.57
+    }
+  },
+  {
+    "id": 35,
+    "tier": 2,
+    "archetype": "purist",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Untouchable III",
+    "description": "Collect 11 orbs without ever touching a wall.",
+    "goal": {
+      "type": "orbs",
+      "target": 11
+    },
+    "timeLimit": 0,
+    "enemyCount": 4,
+    "enemySpeed": 1.21,
     "modifiers": {
       "noWallTouch": true
     }
   },
   {
-    "id": 33,
-    "tier": 3,
-    "archetype": "sweep",
-    "stars": {
-      "two": 0.25,
-      "three": 0.5,
-      "mode": "time"
-    },
-    "title": "Clean Sweep III",
-    "description": "Clear all 15 orbs before the timer runs out.",
-    "goal": {
-      "type": "collectAll",
-      "target": 15
-    },
-    "timeLimit": 20,
-    "enemyCount": 3,
-    "enemySpeed": 1.1131313131313132,
-    "modifiers": {}
-  },
-  {
-    "id": 34,
-    "tier": 3,
+    "id": 36,
+    "tier": 2,
     "archetype": "swarm",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Swarm III",
-    "description": "Collect 18 orbs with double-speed enemies everywhere.",
+    "description": "Collect 16 orbs amid a swarm of fast enemies.",
     "goal": {
       "type": "orbs",
-      "target": 18
+      "target": 16
     },
     "timeLimit": 0,
-    "enemyCount": 9,
-    "enemySpeed": 1.9666666666666668,
-    "modifiers": {}
-  },
-  {
-    "id": 35,
-    "tier": 3,
-    "archetype": "chaos",
-    "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
-    },
-    "title": "Chaos III",
-    "description": "Survive 38s against relentless, fast waves.",
-    "goal": {
-      "type": "survive",
-      "target": 38
-    },
-    "timeLimit": 38,
     "enemyCount": 10,
-    "enemySpeed": 1.5717171717171716,
+    "enemySpeed": 1.88,
     "modifiers": {}
   },
   {
-    "id": 36,
-    "tier": 3,
-    "archetype": "tiny",
+    "id": 37,
+    "tier": 2,
+    "archetype": "void",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Claustrophobia III",
-    "description": "Collect 14 orbs in a cramped arena.",
+    "title": "The Void III",
+    "description": "Collect 17 orbs — walls are lethal, no wrap.",
+    "goal": {
+      "type": "orbs",
+      "target": 17
+    },
+    "timeLimit": 0,
+    "enemyCount": 6,
+    "enemySpeed": 1.35,
+    "modifiers": {
+      "wraparound": false
+    }
+  },
+  {
+    "id": 38,
+    "tier": 2,
+    "archetype": "slippery",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Frictionless III",
+    "description": "Collect 14 orbs on ice — momentum barely fades.",
     "goal": {
       "type": "orbs",
       "target": 14
     },
     "timeLimit": 0,
     "enemyCount": 4,
-    "enemySpeed": 1.1237373737373737,
-    "modifiers": {
-      "arenaScale": 0.56
-    }
-  },
-  {
-    "id": 37,
-    "tier": 3,
-    "archetype": "void",
-    "stars": {
-      "two": 0.25,
-      "three": 0.5,
-      "mode": "time"
-    },
-    "title": "The Void III",
-    "description": "Collect 20 orbs in a vast arena — walls are lethal.",
-    "goal": {
-      "type": "orbs",
-      "target": 20
-    },
-    "timeLimit": 0,
-    "enemyCount": 5,
-    "enemySpeed": 1.2454545454545456,
-    "modifiers": {
-      "arenaScale": 1,
-      "wraparound": false
-    }
-  },
-  {
-    "id": 38,
-    "tier": 3,
-    "archetype": "slippery",
-    "stars": {
-      "two": 0.25,
-      "three": 0.5,
-      "mode": "time"
-    },
-    "title": "Frictionless III",
-    "description": "Collect 16 orbs on ice — momentum barely fades.",
-    "goal": {
-      "type": "orbs",
-      "target": 16
-    },
-    "timeLimit": 0,
-    "enemyCount": 4,
-    "enemySpeed": 1.1308080808080807,
+    "enemySpeed": 1.22,
     "modifiers": {
       "friction": 0.997,
       "acceleration": 1200
@@ -805,22 +808,22 @@
   },
   {
     "id": 39,
-    "tier": 3,
+    "tier": 2,
     "archetype": "molasses",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Heavy III",
-    "description": "Collect 15 orbs with sluggish, heavy controls.",
+    "description": "Collect 12 orbs with sluggish, heavy controls.",
     "goal": {
       "type": "orbs",
-      "target": 15
+      "target": 12
     },
     "timeLimit": 0,
     "enemyCount": 4,
-    "enemySpeed": 1.1151515151515152,
+    "enemySpeed": 1.23,
     "modifiers": {
       "friction": 0.97,
       "acceleration": 760
@@ -828,22 +831,22 @@
   },
   {
     "id": 40,
-    "tier": 3,
+    "tier": 2,
     "archetype": "reversed",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Mirror III",
-    "description": "Collect 14 orbs with your controls reversed.",
+    "description": "Collect 12 orbs with your controls reversed.",
     "goal": {
       "type": "orbs",
-      "target": 14
+      "target": 12
     },
     "timeLimit": 0,
     "enemyCount": 4,
-    "enemySpeed": 1.137878787878788,
+    "enemySpeed": 1.24,
     "modifiers": {
       "reverseControls": true
     }
@@ -853,19 +856,19 @@
     "tier": 3,
     "archetype": "suddendeath",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Sudden Death III",
-    "description": "Collect 18 orbs. One touch ends everything.",
+    "description": "Collect 16 orbs. One touch ends everything.",
     "goal": {
       "type": "orbs",
-      "target": 18
+      "target": 16
     },
     "timeLimit": 0,
     "enemyCount": 8,
-    "enemySpeed": 1.502020202020202,
+    "enemySpeed": 1.62,
     "modifiers": {
       "oneLife": true
     }
@@ -880,59 +883,81 @@
       "mode": "clear"
     },
     "title": "Endurance III",
-    "description": "Outlast 95 seconds of relentless pressure.",
+    "description": "Outlast 84 seconds of relentless pressure.",
     "goal": {
       "type": "survive",
-      "target": 95
+      "target": 84
     },
-    "timeLimit": 95,
-    "enemyCount": 8,
-    "enemySpeed": 1.407070707070707,
+    "timeLimit": 84,
+    "enemyCount": 9,
+    "enemySpeed": 1.57,
     "modifiers": {}
   },
   {
     "id": 43,
-    "tier": 4,
+    "tier": 3,
     "archetype": "collector",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Collector IV",
-    "description": "Collect 28 orbs. Take your time — but the enemies won't.",
+    "description": "Collect 23 orbs. No timer — but the enemies won't wait.",
     "goal": {
       "type": "orbs",
-      "target": 28
+      "target": 23
     },
     "timeLimit": 0,
     "enemyCount": 5,
-    "enemySpeed": 1.1696969696969697,
+    "enemySpeed": 1.34,
     "modifiers": {}
   },
   {
     "id": 44,
-    "tier": 4,
-    "archetype": "sprint",
+    "tier": 3,
+    "archetype": "navigate",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Quick Collector IV",
-    "description": "Collect 21 orbs in under 19 seconds.",
+    "title": "Navigator IV",
+    "description": "Weave through 9 static hazards to collect 6 orbs.",
     "goal": {
       "type": "orbs",
-      "target": 21
+      "target": 6
     },
-    "timeLimit": 19,
-    "enemyCount": 4,
-    "enemySpeed": 1.2737373737373738,
-    "modifiers": {}
+    "timeLimit": 0,
+    "enemyCount": 1,
+    "enemySpeed": 1.22,
+    "modifiers": {
+      "obstacles": 9
+    }
   },
   {
     "id": 45,
-    "tier": 4,
+    "tier": 3,
+    "archetype": "sprint",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Sprint IV",
+    "description": "Collect 19 orbs in under 24 seconds.",
+    "goal": {
+      "type": "orbs",
+      "target": 19
+    },
+    "timeLimit": 24,
+    "enemyCount": 4,
+    "enemySpeed": 1.41,
+    "modifiers": {}
+  },
+  {
+    "id": 46,
+    "tier": 3,
     "archetype": "survivor",
     "stars": {
       "two": 0,
@@ -940,161 +965,140 @@
       "mode": "clear"
     },
     "title": "Survivor IV",
-    "description": "Stay alive for 65 seconds.",
+    "description": "Stay alive for 52 seconds.",
     "goal": {
       "type": "survive",
-      "target": 65
+      "target": 52
     },
-    "timeLimit": 65,
-    "enemyCount": 9,
-    "enemySpeed": 1.3222222222222224,
+    "timeLimit": 52,
+    "enemyCount": 8,
+    "enemySpeed": 1.51,
     "modifiers": {}
   },
   {
-    "id": 46,
-    "tier": 4,
+    "id": 47,
+    "tier": 3,
+    "archetype": "sweep",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Clean Sweep IV",
+    "description": "Clear all 15 orbs before the timer runs out.",
+    "goal": {
+      "type": "collectAll",
+      "target": 15
+    },
+    "timeLimit": 21,
+    "enemyCount": 3,
+    "enemySpeed": 1.28,
+    "modifiers": {}
+  },
+  {
+    "id": 48,
+    "tier": 3,
+    "archetype": "tiny",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Claustrophobia IV",
+    "description": "Collect 12 orbs in a cramped arena.",
+    "goal": {
+      "type": "orbs",
+      "target": 12
+    },
+    "timeLimit": 0,
+    "enemyCount": 4,
+    "enemySpeed": 1.28,
+    "modifiers": {
+      "arenaScale": 0.54
+    }
+  },
+  {
+    "id": 49,
+    "tier": 3,
     "archetype": "purist",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Untouchable IV",
-    "description": "Collect 20 orbs without ever touching a wall.",
+    "description": "Collect 13 orbs without ever touching a wall.",
     "goal": {
       "type": "orbs",
-      "target": 20
+      "target": 13
     },
     "timeLimit": 0,
     "enemyCount": 5,
-    "enemySpeed": 1.1590909090909092,
+    "enemySpeed": 1.29,
     "modifiers": {
       "noWallTouch": true
     }
   },
   {
-    "id": 47,
-    "tier": 4,
-    "archetype": "sweep",
-    "stars": {
-      "two": 0.25,
-      "three": 0.5,
-      "mode": "time"
-    },
-    "title": "Clean Sweep IV",
-    "description": "Clear all 18 orbs before the timer runs out.",
-    "goal": {
-      "type": "collectAll",
-      "target": 18
-    },
-    "timeLimit": 18,
-    "enemyCount": 4,
-    "enemySpeed": 1.1626262626262627,
-    "modifiers": {}
-  },
-  {
-    "id": 48,
-    "tier": 4,
+    "id": 50,
+    "tier": 3,
     "archetype": "swarm",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Swarm IV",
-    "description": "Collect 22 orbs with double-speed enemies everywhere.",
+    "description": "Collect 18 orbs amid a swarm of fast enemies.",
     "goal": {
       "type": "orbs",
-      "target": 22
+      "target": 18
     },
     "timeLimit": 0,
-    "enemyCount": 11,
-    "enemySpeed": 2.0373737373737373,
-    "modifiers": {}
-  },
-  {
-    "id": 49,
-    "tier": 4,
-    "archetype": "chaos",
-    "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
-    },
-    "title": "Chaos IV",
-    "description": "Survive 48s against relentless, fast waves.",
-    "goal": {
-      "type": "survive",
-      "target": 48
-    },
-    "timeLimit": 48,
     "enemyCount": 12,
-    "enemySpeed": 1.6424242424242423,
+    "enemySpeed": 2,
     "modifiers": {}
-  },
-  {
-    "id": 50,
-    "tier": 4,
-    "archetype": "tiny",
-    "stars": {
-      "two": 0.25,
-      "three": 0.5,
-      "mode": "time"
-    },
-    "title": "Claustrophobia IV",
-    "description": "Collect 17 orbs in a cramped arena.",
-    "goal": {
-      "type": "orbs",
-      "target": 17
-    },
-    "timeLimit": 0,
-    "enemyCount": 5,
-    "enemySpeed": 1.1732323232323232,
-    "modifiers": {
-      "arenaScale": 0.53
-    }
   },
   {
     "id": 51,
-    "tier": 4,
+    "tier": 3,
     "archetype": "void",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "The Void IV",
-    "description": "Collect 24 orbs in a vast arena — walls are lethal.",
-    "goal": {
-      "type": "orbs",
-      "target": 24
-    },
-    "timeLimit": 0,
-    "enemyCount": 6,
-    "enemySpeed": 1.302020202020202,
-    "modifiers": {
-      "arenaScale": 1,
-      "wraparound": false
-    }
-  },
-  {
-    "id": 52,
-    "tier": 4,
-    "archetype": "slippery",
-    "stars": {
-      "two": 0.25,
-      "three": 0.5,
-      "mode": "time"
-    },
-    "title": "Frictionless IV",
-    "description": "Collect 19 orbs on ice — momentum barely fades.",
+    "description": "Collect 19 orbs — walls are lethal, no wrap.",
     "goal": {
       "type": "orbs",
       "target": 19
     },
     "timeLimit": 0,
+    "enemyCount": 7,
+    "enemySpeed": 1.45,
+    "modifiers": {
+      "wraparound": false
+    }
+  },
+  {
+    "id": 52,
+    "tier": 3,
+    "archetype": "slippery",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Frictionless IV",
+    "description": "Collect 15 orbs on ice — momentum barely fades.",
+    "goal": {
+      "type": "orbs",
+      "target": 15
+    },
+    "timeLimit": 0,
     "enemyCount": 5,
-    "enemySpeed": 1.1803030303030302,
+    "enemySpeed": 1.31,
     "modifiers": {
       "friction": 0.997,
       "acceleration": 1200
@@ -1102,22 +1106,22 @@
   },
   {
     "id": 53,
-    "tier": 4,
+    "tier": 3,
     "archetype": "molasses",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Heavy IV",
-    "description": "Collect 18 orbs with sluggish, heavy controls.",
+    "description": "Collect 14 orbs with sluggish, heavy controls.",
     "goal": {
       "type": "orbs",
-      "target": 18
+      "target": 14
     },
     "timeLimit": 0,
     "enemyCount": 5,
-    "enemySpeed": 1.1575757575757577,
+    "enemySpeed": 1.32,
     "modifiers": {
       "friction": 0.97,
       "acceleration": 760
@@ -1125,51 +1129,51 @@
   },
   {
     "id": 54,
-    "tier": 4,
+    "tier": 3,
     "archetype": "reversed",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Mirror IV",
-    "description": "Collect 17 orbs with your controls reversed.",
+    "description": "Collect 13 orbs with your controls reversed.",
     "goal": {
       "type": "orbs",
-      "target": 17
+      "target": 13
     },
     "timeLimit": 0,
     "enemyCount": 5,
-    "enemySpeed": 1.1873737373737374,
+    "enemySpeed": 1.32,
     "modifiers": {
       "reverseControls": true
     }
   },
   {
     "id": 55,
-    "tier": 4,
+    "tier": 3,
     "archetype": "suddendeath",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Sudden Death IV",
-    "description": "Collect 22 orbs. One touch ends everything.",
+    "description": "Collect 18 orbs. One touch ends everything.",
     "goal": {
       "type": "orbs",
-      "target": 22
+      "target": 18
     },
     "timeLimit": 0,
-    "enemyCount": 10,
-    "enemySpeed": 1.5727272727272728,
+    "enemyCount": 9,
+    "enemySpeed": 1.74,
     "modifiers": {
       "oneLife": true
     }
   },
   {
     "id": 56,
-    "tier": 4,
+    "tier": 3,
     "archetype": "endurance",
     "stars": {
       "two": 0,
@@ -1177,59 +1181,81 @@
       "mode": "clear"
     },
     "title": "Endurance IV",
-    "description": "Outlast 120 seconds of relentless pressure.",
+    "description": "Outlast 98 seconds of relentless pressure.",
     "goal": {
       "type": "survive",
-      "target": 120
+      "target": 98
     },
-    "timeLimit": 120,
+    "timeLimit": 98,
     "enemyCount": 10,
-    "enemySpeed": 1.4777777777777779,
+    "enemySpeed": 1.7,
     "modifiers": {}
   },
   {
     "id": 57,
-    "tier": 5,
+    "tier": 3,
     "archetype": "collector",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Collector V",
-    "description": "Collect 34 orbs. Take your time — but the enemies won't.",
+    "description": "Collect 27 orbs. No timer — but the enemies won't wait.",
     "goal": {
       "type": "orbs",
-      "target": 34
+      "target": 27
     },
     "timeLimit": 0,
-    "enemyCount": 6,
-    "enemySpeed": 1.2262626262626264,
+    "enemyCount": 7,
+    "enemySpeed": 1.45,
     "modifiers": {}
   },
   {
     "id": 58,
-    "tier": 5,
-    "archetype": "sprint",
+    "tier": 3,
+    "archetype": "navigate",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Quick Collector V",
-    "description": "Collect 24 orbs in under 16 seconds.",
+    "title": "Navigator V",
+    "description": "Weave through 10 static hazards to collect 7 orbs.",
     "goal": {
       "type": "orbs",
-      "target": 24
+      "target": 7
     },
-    "timeLimit": 16,
-    "enemyCount": 5,
-    "enemySpeed": 1.3303030303030305,
-    "modifiers": {}
+    "timeLimit": 0,
+    "enemyCount": 2,
+    "enemySpeed": 1.29,
+    "modifiers": {
+      "obstacles": 10
+    }
   },
   {
     "id": 59,
-    "tier": 5,
+    "tier": 3,
+    "archetype": "sprint",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Sprint V",
+    "description": "Collect 21 orbs in under 22 seconds.",
+    "goal": {
+      "type": "orbs",
+      "target": 21
+    },
+    "timeLimit": 22,
+    "enemyCount": 5,
+    "enemySpeed": 1.51,
+    "modifiers": {}
+  },
+  {
+    "id": 60,
+    "tier": 3,
     "archetype": "survivor",
     "stars": {
       "two": 0,
@@ -1237,161 +1263,140 @@
       "mode": "clear"
     },
     "title": "Survivor V",
-    "description": "Stay alive for 80 seconds.",
+    "description": "Stay alive for 62 seconds.",
     "goal": {
       "type": "survive",
-      "target": 80
+      "target": 62
     },
-    "timeLimit": 80,
-    "enemyCount": 11,
-    "enemySpeed": 1.392929292929293,
+    "timeLimit": 62,
+    "enemyCount": 9,
+    "enemySpeed": 1.64,
     "modifiers": {}
   },
   {
-    "id": 60,
-    "tier": 5,
+    "id": 61,
+    "tier": 4,
+    "archetype": "sweep",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Clean Sweep V",
+    "description": "Clear all 16 orbs before the timer runs out.",
+    "goal": {
+      "type": "collectAll",
+      "target": 16
+    },
+    "timeLimit": 20,
+    "enemyCount": 4,
+    "enemySpeed": 1.36,
+    "modifiers": {}
+  },
+  {
+    "id": 62,
+    "tier": 4,
+    "archetype": "tiny",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Claustrophobia V",
+    "description": "Collect 13 orbs in a cramped arena.",
+    "goal": {
+      "type": "orbs",
+      "target": 13
+    },
+    "timeLimit": 0,
+    "enemyCount": 5,
+    "enemySpeed": 1.37,
+    "modifiers": {
+      "arenaScale": 0.52
+    }
+  },
+  {
+    "id": 63,
+    "tier": 4,
     "archetype": "purist",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Untouchable V",
-    "description": "Collect 24 orbs without ever touching a wall.",
+    "description": "Collect 14 orbs without ever touching a wall.",
     "goal": {
       "type": "orbs",
-      "target": 24
+      "target": 14
     },
     "timeLimit": 0,
     "enemyCount": 6,
-    "enemySpeed": 1.2085858585858587,
+    "enemySpeed": 1.38,
     "modifiers": {
       "noWallTouch": true
     }
   },
   {
-    "id": 61,
-    "tier": 5,
-    "archetype": "sweep",
-    "stars": {
-      "two": 0.25,
-      "three": 0.5,
-      "mode": "time"
-    },
-    "title": "Clean Sweep V",
-    "description": "Clear all 21 orbs before the timer runs out.",
-    "goal": {
-      "type": "collectAll",
-      "target": 21
-    },
-    "timeLimit": 16,
-    "enemyCount": 5,
-    "enemySpeed": 1.2121212121212122,
-    "modifiers": {}
-  },
-  {
-    "id": 62,
-    "tier": 5,
+    "id": 64,
+    "tier": 4,
     "archetype": "swarm",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Swarm V",
-    "description": "Collect 26 orbs with double-speed enemies everywhere.",
-    "goal": {
-      "type": "orbs",
-      "target": 26
-    },
-    "timeLimit": 0,
-    "enemyCount": 13,
-    "enemySpeed": 2.108080808080808,
-    "modifiers": {}
-  },
-  {
-    "id": 63,
-    "tier": 5,
-    "archetype": "chaos",
-    "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
-    },
-    "title": "Chaos V",
-    "description": "Survive 58s against relentless, fast waves.",
-    "goal": {
-      "type": "survive",
-      "target": 58
-    },
-    "timeLimit": 58,
-    "enemyCount": 14,
-    "enemySpeed": 1.713131313131313,
-    "modifiers": {}
-  },
-  {
-    "id": 64,
-    "tier": 5,
-    "archetype": "tiny",
-    "stars": {
-      "two": 0.25,
-      "three": 0.5,
-      "mode": "time"
-    },
-    "title": "Claustrophobia V",
-    "description": "Collect 20 orbs in a cramped arena.",
+    "description": "Collect 20 orbs amid a swarm of fast enemies.",
     "goal": {
       "type": "orbs",
       "target": 20
     },
     "timeLimit": 0,
-    "enemyCount": 6,
-    "enemySpeed": 1.2227272727272727,
-    "modifiers": {
-      "arenaScale": 0.5
-    }
+    "enemyCount": 14,
+    "enemySpeed": 2.11,
+    "modifiers": {}
   },
   {
     "id": 65,
-    "tier": 5,
+    "tier": 4,
     "archetype": "void",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "The Void V",
-    "description": "Collect 28 orbs in a vast arena — walls are lethal.",
+    "description": "Collect 21 orbs — walls are lethal, no wrap.",
     "goal": {
       "type": "orbs",
-      "target": 28
+      "target": 21
     },
     "timeLimit": 0,
-    "enemyCount": 7,
-    "enemySpeed": 1.3585858585858588,
+    "enemyCount": 8,
+    "enemySpeed": 1.55,
     "modifiers": {
-      "arenaScale": 1,
       "wraparound": false
     }
   },
   {
     "id": 66,
-    "tier": 5,
+    "tier": 4,
     "archetype": "slippery",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Frictionless V",
-    "description": "Collect 22 orbs on ice — momentum barely fades.",
+    "description": "Collect 17 orbs on ice — momentum barely fades.",
     "goal": {
       "type": "orbs",
-      "target": 22
+      "target": 17
     },
     "timeLimit": 0,
     "enemyCount": 6,
-    "enemySpeed": 1.2297979797979797,
+    "enemySpeed": 1.39,
     "modifiers": {
       "friction": 0.997,
       "acceleration": 1200
@@ -1399,22 +1404,22 @@
   },
   {
     "id": 67,
-    "tier": 5,
+    "tier": 4,
     "archetype": "molasses",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Heavy V",
-    "description": "Collect 21 orbs with sluggish, heavy controls.",
+    "description": "Collect 15 orbs with sluggish, heavy controls.",
     "goal": {
       "type": "orbs",
-      "target": 21
+      "target": 15
     },
     "timeLimit": 0,
     "enemyCount": 6,
-    "enemySpeed": 1.2,
+    "enemySpeed": 1.4,
     "modifiers": {
       "friction": 0.97,
       "acceleration": 760
@@ -1422,51 +1427,51 @@
   },
   {
     "id": 68,
-    "tier": 5,
+    "tier": 4,
     "archetype": "reversed",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Mirror V",
-    "description": "Collect 20 orbs with your controls reversed.",
+    "description": "Collect 14 orbs with your controls reversed.",
     "goal": {
       "type": "orbs",
-      "target": 20
+      "target": 14
     },
     "timeLimit": 0,
-    "enemyCount": 6,
-    "enemySpeed": 1.236868686868687,
+    "enemyCount": 5,
+    "enemySpeed": 1.41,
     "modifiers": {
       "reverseControls": true
     }
   },
   {
     "id": 69,
-    "tier": 5,
+    "tier": 4,
     "archetype": "suddendeath",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
     "title": "Sudden Death V",
-    "description": "Collect 26 orbs. One touch ends everything.",
+    "description": "Collect 20 orbs. One touch ends everything.",
     "goal": {
       "type": "orbs",
-      "target": 26
+      "target": 20
     },
     "timeLimit": 0,
-    "enemyCount": 12,
-    "enemySpeed": 1.6434343434343435,
+    "enemyCount": 10,
+    "enemySpeed": 1.85,
     "modifiers": {
       "oneLife": true
     }
   },
   {
     "id": 70,
-    "tier": 5,
+    "tier": 4,
     "archetype": "endurance",
     "stars": {
       "two": 0,
@@ -1474,592 +1479,594 @@
       "mode": "clear"
     },
     "title": "Endurance V",
-    "description": "Outlast 145 seconds of relentless pressure.",
+    "description": "Outlast 111 seconds of relentless pressure.",
     "goal": {
       "type": "survive",
-      "target": 145
+      "target": 111
     },
-    "timeLimit": 145,
+    "timeLimit": 111,
     "enemyCount": 12,
-    "enemySpeed": 1.5484848484848484,
+    "enemySpeed": 1.83,
     "modifiers": {}
   },
   {
     "id": 71,
-    "tier": 5,
-    "archetype": "endurance",
+    "tier": 4,
+    "archetype": "collector",
     "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
     },
-    "title": "Endurance — Finale -26",
-    "description": "Outlast 145 seconds of relentless pressure.",
+    "title": "Collector VI",
+    "description": "Collect 31 orbs. No timer — but the enemies won't wait.",
     "goal": {
-      "type": "survive",
-      "target": 145
+      "type": "orbs",
+      "target": 31
     },
-    "timeLimit": 145,
-    "enemyCount": 12,
-    "enemySpeed": 1.6035353535353534,
+    "timeLimit": 0,
+    "enemyCount": 8,
+    "enemySpeed": 1.57,
     "modifiers": {}
   },
   {
     "id": 72,
-    "tier": 5,
-    "archetype": "swarm",
+    "tier": 4,
+    "archetype": "navigate",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Swarm — Finale -25",
-    "description": "Collect 26 orbs with double-speed enemies everywhere.",
+    "title": "Navigator VI",
+    "description": "Weave through 12 static hazards to collect 8 orbs.",
     "goal": {
       "type": "orbs",
-      "target": 26
+      "target": 8
     },
     "timeLimit": 0,
-    "enemyCount": 13,
-    "enemySpeed": 2.2085858585858587,
-    "modifiers": {}
+    "enemyCount": 2,
+    "enemySpeed": 1.36,
+    "modifiers": {
+      "obstacles": 12
+    }
   },
   {
     "id": 73,
-    "tier": 5,
-    "archetype": "chaos",
+    "tier": 4,
+    "archetype": "sprint",
     "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
     },
-    "title": "Chaos — Finale -24",
-    "description": "Survive 58s against relentless, fast waves.",
+    "title": "Sprint VI",
+    "description": "Collect 24 orbs in under 20 seconds.",
     "goal": {
-      "type": "survive",
-      "target": 58
+      "type": "orbs",
+      "target": 24
     },
-    "timeLimit": 58,
-    "enemyCount": 14,
-    "enemySpeed": 1.8136363636363635,
+    "timeLimit": 20,
+    "enemyCount": 5,
+    "enemySpeed": 1.61,
     "modifiers": {}
   },
   {
     "id": 74,
-    "tier": 5,
-    "archetype": "suddendeath",
-    "stars": {
-      "two": 0.25,
-      "three": 0.5,
-      "mode": "time"
-    },
-    "title": "Sudden Death — Finale -23",
-    "description": "Collect 26 orbs. One touch ends everything.",
-    "goal": {
-      "type": "orbs",
-      "target": 26
-    },
-    "timeLimit": 0,
-    "enemyCount": 12,
-    "enemySpeed": 1.7186868686868686,
-    "modifiers": {
-      "oneLife": true
-    }
-  },
-  {
-    "id": 75,
-    "tier": 5,
-    "archetype": "endurance",
+    "tier": 4,
+    "archetype": "survivor",
     "stars": {
       "two": 0,
       "three": 0,
       "mode": "clear"
     },
-    "title": "Endurance — Finale -22",
-    "description": "Outlast 145 seconds of relentless pressure.",
+    "title": "Survivor VI",
+    "description": "Stay alive for 72 seconds.",
     "goal": {
       "type": "survive",
-      "target": 145
+      "target": 72
     },
-    "timeLimit": 145,
-    "enemyCount": 12,
-    "enemySpeed": 1.6237373737373737,
+    "timeLimit": 72,
+    "enemyCount": 10,
+    "enemySpeed": 1.76,
+    "modifiers": {}
+  },
+  {
+    "id": 75,
+    "tier": 4,
+    "archetype": "sweep",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Clean Sweep VI",
+    "description": "Clear all 18 orbs before the timer runs out.",
+    "goal": {
+      "type": "collectAll",
+      "target": 18
+    },
+    "timeLimit": 19,
+    "enemyCount": 5,
+    "enemySpeed": 1.45,
     "modifiers": {}
   },
   {
     "id": 76,
-    "tier": 5,
-    "archetype": "swarm",
+    "tier": 4,
+    "archetype": "tiny",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Swarm — Finale -21",
-    "description": "Collect 26 orbs with double-speed enemies everywhere.",
+    "title": "Claustrophobia VI",
+    "description": "Collect 14 orbs in a cramped arena.",
     "goal": {
       "type": "orbs",
-      "target": 26
+      "target": 14
     },
     "timeLimit": 0,
-    "enemyCount": 13,
-    "enemySpeed": 2.228787878787879,
-    "modifiers": {}
-  },
-  {
-    "id": 77,
-    "tier": 5,
-    "archetype": "chaos",
-    "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
-    },
-    "title": "Chaos — Finale -20",
-    "description": "Survive 58s against relentless, fast waves.",
-    "goal": {
-      "type": "survive",
-      "target": 58
-    },
-    "timeLimit": 58,
-    "enemyCount": 14,
-    "enemySpeed": 1.8338383838383838,
-    "modifiers": {}
-  },
-  {
-    "id": 78,
-    "tier": 5,
-    "archetype": "suddendeath",
-    "stars": {
-      "two": 0.25,
-      "three": 0.5,
-      "mode": "time"
-    },
-    "title": "Sudden Death — Finale -19",
-    "description": "Collect 26 orbs. One touch ends everything.",
-    "goal": {
-      "type": "orbs",
-      "target": 26
-    },
-    "timeLimit": 0,
-    "enemyCount": 12,
-    "enemySpeed": 1.738888888888889,
+    "enemyCount": 6,
+    "enemySpeed": 1.45,
     "modifiers": {
-      "oneLife": true
+      "arenaScale": 0.5
     }
   },
   {
-    "id": 79,
-    "tier": 5,
-    "archetype": "endurance",
+    "id": 77,
+    "tier": 4,
+    "archetype": "purist",
     "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
     },
-    "title": "Endurance — Finale -18",
-    "description": "Outlast 145 seconds of relentless pressure.",
+    "title": "Untouchable VI",
+    "description": "Collect 16 orbs without ever touching a wall.",
     "goal": {
-      "type": "survive",
-      "target": 145
+      "type": "orbs",
+      "target": 16
     },
-    "timeLimit": 145,
-    "enemyCount": 12,
-    "enemySpeed": 1.6439393939393938,
+    "timeLimit": 0,
+    "enemyCount": 7,
+    "enemySpeed": 1.46,
+    "modifiers": {
+      "noWallTouch": true
+    }
+  },
+  {
+    "id": 78,
+    "tier": 4,
+    "archetype": "swarm",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Swarm VI",
+    "description": "Collect 22 orbs amid a swarm of fast enemies.",
+    "goal": {
+      "type": "orbs",
+      "target": 22
+    },
+    "timeLimit": 0,
+    "enemyCount": 15,
+    "enemySpeed": 2.22,
     "modifiers": {}
   },
   {
-    "id": 80,
-    "tier": 5,
-    "archetype": "swarm",
+    "id": 79,
+    "tier": 4,
+    "archetype": "void",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Swarm — Finale -17",
-    "description": "Collect 26 orbs with double-speed enemies everywhere.",
+    "title": "The Void VI",
+    "description": "Collect 23 orbs — walls are lethal, no wrap.",
     "goal": {
       "type": "orbs",
-      "target": 26
+      "target": 23
     },
     "timeLimit": 0,
-    "enemyCount": 13,
-    "enemySpeed": 2.248989898989899,
-    "modifiers": {}
+    "enemyCount": 9,
+    "enemySpeed": 1.65,
+    "modifiers": {
+      "wraparound": false
+    }
+  },
+  {
+    "id": 80,
+    "tier": 4,
+    "archetype": "slippery",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Frictionless VI",
+    "description": "Collect 18 orbs on ice — momentum barely fades.",
+    "goal": {
+      "type": "orbs",
+      "target": 18
+    },
+    "timeLimit": 0,
+    "enemyCount": 7,
+    "enemySpeed": 1.48,
+    "modifiers": {
+      "friction": 0.997,
+      "acceleration": 1200
+    }
   },
   {
     "id": 81,
     "tier": 5,
-    "archetype": "chaos",
+    "archetype": "molasses",
     "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
     },
-    "title": "Chaos — Finale -16",
-    "description": "Survive 58s against relentless, fast waves.",
+    "title": "Heavy VI",
+    "description": "Collect 16 orbs with sluggish, heavy controls.",
     "goal": {
-      "type": "survive",
-      "target": 58
+      "type": "orbs",
+      "target": 16
     },
-    "timeLimit": 58,
-    "enemyCount": 14,
-    "enemySpeed": 1.854040404040404,
-    "modifiers": {}
+    "timeLimit": 0,
+    "enemyCount": 7,
+    "enemySpeed": 1.48,
+    "modifiers": {
+      "friction": 0.97,
+      "acceleration": 760
+    }
   },
   {
     "id": 82,
     "tier": 5,
-    "archetype": "suddendeath",
+    "archetype": "reversed",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Sudden Death — Finale -15",
-    "description": "Collect 26 orbs. One touch ends everything.",
+    "title": "Mirror VI",
+    "description": "Collect 15 orbs with your controls reversed.",
     "goal": {
       "type": "orbs",
-      "target": 26
+      "target": 15
     },
     "timeLimit": 0,
-    "enemyCount": 12,
-    "enemySpeed": 1.7590909090909093,
+    "enemyCount": 6,
+    "enemySpeed": 1.49,
     "modifiers": {
-      "oneLife": true
+      "reverseControls": true
     }
   },
   {
     "id": 83,
     "tier": 5,
+    "archetype": "suddendeath",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Sudden Death VI",
+    "description": "Collect 22 orbs. One touch ends everything.",
+    "goal": {
+      "type": "orbs",
+      "target": 22
+    },
+    "timeLimit": 0,
+    "enemyCount": 11,
+    "enemySpeed": 1.96,
+    "modifiers": {
+      "oneLife": true
+    }
+  },
+  {
+    "id": 84,
+    "tier": 5,
     "archetype": "endurance",
     "stars": {
       "two": 0,
       "three": 0,
       "mode": "clear"
     },
-    "title": "Endurance — Finale -14",
-    "description": "Outlast 145 seconds of relentless pressure.",
+    "title": "Endurance VI",
+    "description": "Outlast 125 seconds of relentless pressure.",
     "goal": {
       "type": "survive",
-      "target": 145
+      "target": 125
     },
-    "timeLimit": 145,
-    "enemyCount": 12,
-    "enemySpeed": 1.6641414141414141,
-    "modifiers": {}
-  },
-  {
-    "id": 84,
-    "tier": 5,
-    "archetype": "swarm",
-    "stars": {
-      "two": 0.25,
-      "three": 0.5,
-      "mode": "time"
-    },
-    "title": "Swarm — Finale -13",
-    "description": "Collect 26 orbs with double-speed enemies everywhere.",
-    "goal": {
-      "type": "orbs",
-      "target": 26
-    },
-    "timeLimit": 0,
+    "timeLimit": 125,
     "enemyCount": 13,
-    "enemySpeed": 2.269191919191919,
+    "enemySpeed": 1.95,
     "modifiers": {}
   },
   {
     "id": 85,
     "tier": 5,
-    "archetype": "chaos",
+    "archetype": "collector",
     "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
     },
-    "title": "Chaos — Finale -12",
-    "description": "Survive 58s against relentless, fast waves.",
+    "title": "Collector VII",
+    "description": "Collect 35 orbs. No timer — but the enemies won't wait.",
     "goal": {
-      "type": "survive",
-      "target": 58
+      "type": "orbs",
+      "target": 35
     },
-    "timeLimit": 58,
-    "enemyCount": 14,
-    "enemySpeed": 1.874242424242424,
+    "timeLimit": 0,
+    "enemyCount": 9,
+    "enemySpeed": 1.68,
     "modifiers": {}
   },
   {
     "id": 86,
     "tier": 5,
-    "archetype": "suddendeath",
+    "archetype": "navigate",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Sudden Death — Finale -11",
-    "description": "Collect 26 orbs. One touch ends everything.",
+    "title": "Navigator VII",
+    "description": "Weave through 13 static hazards to collect 9 orbs.",
     "goal": {
       "type": "orbs",
-      "target": 26
+      "target": 9
     },
     "timeLimit": 0,
-    "enemyCount": 12,
-    "enemySpeed": 1.7792929292929294,
+    "enemyCount": 3,
+    "enemySpeed": 1.43,
     "modifiers": {
-      "oneLife": true
+      "obstacles": 13
     }
   },
   {
     "id": 87,
     "tier": 5,
-    "archetype": "endurance",
+    "archetype": "sprint",
     "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
     },
-    "title": "Endurance — Finale -10",
-    "description": "Outlast 145 seconds of relentless pressure.",
+    "title": "Sprint VII",
+    "description": "Collect 26 orbs in under 18 seconds.",
     "goal": {
-      "type": "survive",
-      "target": 145
+      "type": "orbs",
+      "target": 26
     },
-    "timeLimit": 145,
-    "enemyCount": 12,
-    "enemySpeed": 1.6843434343434343,
+    "timeLimit": 18,
+    "enemyCount": 6,
+    "enemySpeed": 1.71,
     "modifiers": {}
   },
   {
     "id": 88,
     "tier": 5,
-    "archetype": "swarm",
+    "archetype": "survivor",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
-      "mode": "time"
+      "two": 0,
+      "three": 0,
+      "mode": "clear"
     },
-    "title": "Swarm — Finale -9",
-    "description": "Collect 26 orbs with double-speed enemies everywhere.",
+    "title": "Survivor VII",
+    "description": "Stay alive for 82 seconds.",
     "goal": {
-      "type": "orbs",
-      "target": 26
+      "type": "survive",
+      "target": 82
     },
-    "timeLimit": 0,
-    "enemyCount": 13,
-    "enemySpeed": 2.2893939393939395,
+    "timeLimit": 82,
+    "enemyCount": 12,
+    "enemySpeed": 1.89,
     "modifiers": {}
   },
   {
     "id": 89,
     "tier": 5,
-    "archetype": "chaos",
+    "archetype": "sweep",
     "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
     },
-    "title": "Chaos — Finale -8",
-    "description": "Survive 58s against relentless, fast waves.",
+    "title": "Clean Sweep VII",
+    "description": "Clear all 20 orbs before the timer runs out.",
     "goal": {
-      "type": "survive",
-      "target": 58
+      "type": "collectAll",
+      "target": 20
     },
-    "timeLimit": 58,
-    "enemyCount": 14,
-    "enemySpeed": 1.8944444444444444,
+    "timeLimit": 17,
+    "enemyCount": 5,
+    "enemySpeed": 1.53,
     "modifiers": {}
   },
   {
     "id": 90,
     "tier": 5,
-    "archetype": "suddendeath",
+    "archetype": "tiny",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Sudden Death — Finale -7",
-    "description": "Collect 26 orbs. One touch ends everything.",
+    "title": "Claustrophobia VII",
+    "description": "Collect 15 orbs in a cramped arena.",
     "goal": {
       "type": "orbs",
-      "target": 26
+      "target": 15
     },
     "timeLimit": 0,
-    "enemyCount": 12,
-    "enemySpeed": 1.7994949494949495,
+    "enemyCount": 6,
+    "enemySpeed": 1.54,
     "modifiers": {
-      "oneLife": true
+      "arenaScale": 0.48
     }
   },
   {
     "id": 91,
     "tier": 5,
-    "archetype": "endurance",
+    "archetype": "purist",
     "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
     },
-    "title": "Endurance — Finale -6",
-    "description": "Outlast 145 seconds of relentless pressure.",
+    "title": "Untouchable VII",
+    "description": "Collect 17 orbs without ever touching a wall.",
     "goal": {
-      "type": "survive",
-      "target": 145
+      "type": "orbs",
+      "target": 17
     },
-    "timeLimit": 145,
-    "enemyCount": 12,
-    "enemySpeed": 1.7,
-    "modifiers": {}
+    "timeLimit": 0,
+    "enemyCount": 7,
+    "enemySpeed": 1.55,
+    "modifiers": {
+      "noWallTouch": true
+    }
   },
   {
     "id": 92,
     "tier": 5,
     "archetype": "swarm",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Swarm — Finale -5",
-    "description": "Collect 26 orbs with double-speed enemies everywhere.",
+    "title": "Swarm VII",
+    "description": "Collect 25 orbs amid a swarm of fast enemies.",
     "goal": {
       "type": "orbs",
-      "target": 26
+      "target": 25
     },
     "timeLimit": 0,
-    "enemyCount": 13,
-    "enemySpeed": 2.3,
+    "enemyCount": 17,
+    "enemySpeed": 2.34,
     "modifiers": {}
   },
   {
     "id": 93,
     "tier": 5,
-    "archetype": "chaos",
+    "archetype": "void",
     "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
     },
-    "title": "Chaos — Finale -4",
-    "description": "Survive 58s against relentless, fast waves.",
+    "title": "The Void VII",
+    "description": "Collect 25 orbs — walls are lethal, no wrap.",
     "goal": {
-      "type": "survive",
-      "target": 58
+      "type": "orbs",
+      "target": 25
     },
-    "timeLimit": 58,
-    "enemyCount": 14,
-    "enemySpeed": 1.9,
-    "modifiers": {}
+    "timeLimit": 0,
+    "enemyCount": 10,
+    "enemySpeed": 1.75,
+    "modifiers": {
+      "wraparound": false
+    }
   },
   {
     "id": 94,
     "tier": 5,
-    "archetype": "suddendeath",
+    "archetype": "slippery",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Sudden Death — Finale -3",
-    "description": "Collect 26 orbs. One touch ends everything.",
+    "title": "Frictionless VII",
+    "description": "Collect 19 orbs on ice — momentum barely fades.",
     "goal": {
       "type": "orbs",
-      "target": 26
+      "target": 19
     },
     "timeLimit": 0,
-    "enemyCount": 12,
-    "enemySpeed": 1.8,
+    "enemyCount": 8,
+    "enemySpeed": 1.56,
     "modifiers": {
-      "oneLife": true
+      "friction": 0.997,
+      "acceleration": 1200
     }
   },
   {
     "id": 95,
     "tier": 5,
-    "archetype": "endurance",
+    "archetype": "molasses",
     "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
     },
-    "title": "Endurance — Finale -2",
-    "description": "Outlast 145 seconds of relentless pressure.",
+    "title": "Heavy VII",
+    "description": "Collect 18 orbs with sluggish, heavy controls.",
     "goal": {
-      "type": "survive",
-      "target": 145
+      "type": "orbs",
+      "target": 18
     },
-    "timeLimit": 145,
-    "enemyCount": 12,
-    "enemySpeed": 1.7,
-    "modifiers": {}
+    "timeLimit": 0,
+    "enemyCount": 8,
+    "enemySpeed": 1.57,
+    "modifiers": {
+      "friction": 0.97,
+      "acceleration": 760
+    }
   },
   {
     "id": 96,
     "tier": 5,
-    "archetype": "swarm",
+    "archetype": "reversed",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Swarm — Finale -1",
-    "description": "Collect 26 orbs with double-speed enemies everywhere.",
+    "title": "Mirror VII",
+    "description": "Collect 17 orbs with your controls reversed.",
     "goal": {
       "type": "orbs",
-      "target": 26
+      "target": 17
     },
     "timeLimit": 0,
-    "enemyCount": 13,
-    "enemySpeed": 2.3,
-    "modifiers": {}
+    "enemyCount": 7,
+    "enemySpeed": 1.58,
+    "modifiers": {
+      "reverseControls": true
+    }
   },
   {
     "id": 97,
     "tier": 5,
-    "archetype": "chaos",
-    "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
-    },
-    "title": "Chaos — Finale 0",
-    "description": "Survive 58s against relentless, fast waves.",
-    "goal": {
-      "type": "survive",
-      "target": 58
-    },
-    "timeLimit": 58,
-    "enemyCount": 14,
-    "enemySpeed": 1.9,
-    "modifiers": {}
-  },
-  {
-    "id": 98,
-    "tier": 5,
     "archetype": "suddendeath",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Sudden Death — Finale 1",
-    "description": "Collect 26 orbs. One touch ends everything.",
+    "title": "Sudden Death VII",
+    "description": "Collect 24 orbs. One touch ends everything.",
     "goal": {
       "type": "orbs",
-      "target": 26
+      "target": 24
     },
     "timeLimit": 0,
-    "enemyCount": 12,
-    "enemySpeed": 1.8,
+    "enemyCount": 13,
+    "enemySpeed": 2.08,
     "modifiers": {
       "oneLife": true
     }
   },
   {
-    "id": 99,
+    "id": 98,
     "tier": 5,
     "archetype": "endurance",
     "stars": {
@@ -2067,35 +2074,57 @@
       "three": 0,
       "mode": "clear"
     },
-    "title": "Endurance — Finale 2",
-    "description": "Outlast 145 seconds of relentless pressure.",
+    "title": "Endurance VII",
+    "description": "Outlast 138 seconds of relentless pressure.",
     "goal": {
       "type": "survive",
-      "target": 145
+      "target": 138
     },
-    "timeLimit": 145,
-    "enemyCount": 12,
-    "enemySpeed": 1.7,
+    "timeLimit": 138,
+    "enemyCount": 15,
+    "enemySpeed": 2.08,
+    "modifiers": {}
+  },
+  {
+    "id": 99,
+    "tier": 5,
+    "archetype": "collector",
+    "stars": {
+      "two": 0.2,
+      "three": 0.45,
+      "mode": "time"
+    },
+    "title": "Collector VIII",
+    "description": "Collect 40 orbs. No timer — but the enemies won't wait.",
+    "goal": {
+      "type": "orbs",
+      "target": 40
+    },
+    "timeLimit": 0,
+    "enemyCount": 10,
+    "enemySpeed": 1.79,
     "modifiers": {}
   },
   {
     "id": 100,
     "tier": 5,
-    "archetype": "swarm",
+    "archetype": "navigate",
     "stars": {
-      "two": 0.25,
-      "three": 0.5,
+      "two": 0.2,
+      "three": 0.45,
       "mode": "time"
     },
-    "title": "Swarm — Finale 3",
-    "description": "Collect 26 orbs with double-speed enemies everywhere.",
+    "title": "Navigator VIII",
+    "description": "Weave through 15 static hazards to collect 10 orbs.",
     "goal": {
       "type": "orbs",
-      "target": 26
+      "target": 10
     },
     "timeLimit": 0,
-    "enemyCount": 13,
-    "enemySpeed": 2.3,
-    "modifiers": {}
+    "enemyCount": 3,
+    "enemySpeed": 1.5,
+    "modifiers": {
+      "obstacles": 15
+    }
   }
 ]

@@ -1,11 +1,10 @@
 // Generates the 100-challenge campaign as static JSON.
 //
-// Challenges are composed from a set of hand-designed archetypes whose
-// parameters escalate across five tiers, giving a curated difficulty curve
-// while keeping the data authored rather than typed out by hand. Re-run with:
+// Difficulty rises monotonically with challenge id: every parameter is derived
+// from a single global ramp t = (id-1)/99, so later challenges are always
+// harder than earlier ones. Archetypes cycle for variety, and each successive
+// instance of an archetype is tuned to the higher ramp value. Re-run with:
 //   node scripts/generate-challenges.mjs
-// Output is committed as src/lib/data/challenges.json (the game reads the JSON,
-// not this script).
 
 import { writeFileSync, mkdirSync } from 'fs'
 import { dirname, join } from 'path'
@@ -14,217 +13,202 @@ import { fileURLToPath } from 'url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const OUT = join(__dirname, '..', 'src', 'lib', 'data', 'challenges.json')
 
-const ROMAN = ['I', 'II', 'III', 'IV', 'V']
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
+const r = (n) => Math.round(n)
 
-// Each archetype returns a partial challenge given a tier index (0..4).
-// `t` is a 0..1 intensity ramp within the whole campaign for smooth scaling.
+// Each archetype maps the global ramp t (0..1) to a challenge spec.
 const archetypes = [
   {
     key: 'collector',
-    build: (tier, t) => ({
-      title: `Collector ${ROMAN[tier]}`,
-      description: `Collect ${10 + tier * 6} orbs. Take your time — but the enemies won't.`,
-      goal: { type: 'orbs', target: 10 + tier * 6 },
+    build: (t) => ({
+      title: 'Collector',
+      description: `Collect ${r(10 + t * 30)} orbs. No timer — but the enemies won't wait.`,
+      goal: { type: 'orbs', target: r(10 + t * 30) },
       timeLimit: 0,
-      enemyCount: 2 + tier,
-      enemySpeed: 1 + t * 0.4,
+      enemyCount: r(2 + t * 8),
+      enemySpeed: +(1 + t * 0.8).toFixed(2),
       modifiers: {},
     }),
   },
   {
+    key: 'navigate',
+    build: (t) => ({
+      title: 'Navigator',
+      description: `Weave through ${r(4 + t * 11)} static hazards to collect ${r(3 + t * 7)} orbs.`,
+      goal: { type: 'orbs', target: r(3 + t * 7) },
+      timeLimit: 0,
+      enemyCount: r(t * 3),
+      enemySpeed: +(1 + t * 0.5).toFixed(2),
+      modifiers: { obstacles: r(4 + t * 11) },
+    }),
+  },
+  {
     key: 'sprint',
-    build: (tier, t) => ({
-      title: `Quick Collector ${ROMAN[tier]}`,
-      description: `Collect ${12 + tier * 3} orbs in under ${28 - tier * 3} seconds.`,
-      goal: { type: 'orbs', target: 12 + tier * 3 },
-      timeLimit: 28 - tier * 3,
-      enemyCount: 1 + tier,
-      enemySpeed: 1.1 + t * 0.4,
+    build: (t) => ({
+      title: 'Sprint',
+      description: `Collect ${r(12 + t * 16)} orbs in under ${r(30 - t * 14)} seconds.`,
+      goal: { type: 'orbs', target: r(12 + t * 16) },
+      timeLimit: r(30 - t * 14),
+      enemyCount: r(1 + t * 6),
+      enemySpeed: +(1.1 + t * 0.7).toFixed(2),
       modifiers: {},
     }),
   },
   {
     key: 'survivor',
-    build: (tier, t) => ({
-      title: `Survivor ${ROMAN[tier]}`,
-      description: `Stay alive for ${20 + tier * 15} seconds.`,
-      goal: { type: 'survive', target: 20 + tier * 15 },
-      timeLimit: 20 + tier * 15,
-      enemyCount: 3 + tier * 2,
-      enemySpeed: 1.1 + t * 0.5,
+    build: (t) => ({
+      title: 'Survivor',
+      description: `Stay alive for ${r(20 + t * 70)} seconds.`,
+      goal: { type: 'survive', target: r(20 + t * 70) },
+      timeLimit: r(20 + t * 70),
+      enemyCount: r(3 + t * 10),
+      enemySpeed: +(1.1 + t * 0.9).toFixed(2),
       modifiers: {},
-    }),
-  },
-  {
-    key: 'purist',
-    build: (tier, t) => ({
-      title: `Untouchable ${ROMAN[tier]}`,
-      description: `Collect ${8 + tier * 4} orbs without ever touching a wall.`,
-      goal: { type: 'orbs', target: 8 + tier * 4 },
-      timeLimit: 0,
-      enemyCount: 2 + tier,
-      enemySpeed: 1 + t * 0.35,
-      modifiers: { noWallTouch: true },
     }),
   },
   {
     key: 'sweep',
-    build: (tier, t) => ({
-      title: `Clean Sweep ${ROMAN[tier]}`,
-      description: `Clear all ${9 + tier * 3} orbs before the timer runs out.`,
-      goal: { type: 'collectAll', target: 9 + tier * 3 },
-      timeLimit: 24 - tier * 2,
-      enemyCount: 1 + tier,
-      enemySpeed: 1 + t * 0.35,
-      modifiers: {},
-    }),
-  },
-  {
-    key: 'swarm',
-    build: (tier, t) => ({
-      title: `Swarm ${ROMAN[tier]}`,
-      description: `Collect ${10 + tier * 4} orbs with double-speed enemies everywhere.`,
-      goal: { type: 'orbs', target: 10 + tier * 4 },
-      timeLimit: 0,
-      enemyCount: 5 + tier * 2,
-      enemySpeed: 1.8 + t * 0.5,
-      modifiers: {},
-    }),
-  },
-  {
-    key: 'chaos',
-    build: (tier, t) => ({
-      title: `Chaos ${ROMAN[tier]}`,
-      description: `Survive ${18 + tier * 10}s against relentless, fast waves.`,
-      goal: { type: 'survive', target: 18 + tier * 10 },
-      timeLimit: 18 + tier * 10,
-      enemyCount: 6 + tier * 2,
-      enemySpeed: 1.4 + t * 0.5,
+    build: (t) => ({
+      title: 'Clean Sweep',
+      description: `Clear all ${r(9 + t * 12)} orbs before the timer runs out.`,
+      goal: { type: 'collectAll', target: r(9 + t * 12) },
+      timeLimit: r(26 - t * 10),
+      enemyCount: r(1 + t * 5),
+      enemySpeed: +(1 + t * 0.6).toFixed(2),
       modifiers: {},
     }),
   },
   {
     key: 'tiny',
-    build: (tier, t) => ({
-      title: `Claustrophobia ${ROMAN[tier]}`,
-      description: `Collect ${8 + tier * 3} orbs in a cramped arena.`,
-      goal: { type: 'orbs', target: 8 + tier * 3 },
+    build: (t) => ({
+      title: 'Claustrophobia',
+      description: `Collect ${r(8 + t * 8)} orbs in a cramped arena.`,
+      goal: { type: 'orbs', target: r(8 + t * 8) },
       timeLimit: 0,
-      enemyCount: 2 + tier,
-      enemySpeed: 1 + t * 0.35,
-      modifiers: { arenaScale: 0.62 - tier * 0.03 },
+      enemyCount: r(2 + t * 5),
+      enemySpeed: +(1 + t * 0.6).toFixed(2),
+      modifiers: { arenaScale: +(0.62 - t * 0.16).toFixed(2) },
+    }),
+  },
+  {
+    key: 'purist',
+    build: (t) => ({
+      title: 'Untouchable',
+      description: `Collect ${r(8 + t * 10)} orbs without ever touching a wall.`,
+      goal: { type: 'orbs', target: r(8 + t * 10) },
+      timeLimit: 0,
+      enemyCount: r(2 + t * 6),
+      enemySpeed: +(1 + t * 0.6).toFixed(2),
+      modifiers: { noWallTouch: true },
+    }),
+  },
+  {
+    key: 'swarm',
+    build: (t) => ({
+      title: 'Swarm',
+      description: `Collect ${r(10 + t * 16)} orbs amid a swarm of fast enemies.`,
+      goal: { type: 'orbs', target: r(10 + t * 16) },
+      timeLimit: 0,
+      enemyCount: r(6 + t * 12),
+      enemySpeed: +(1.6 + t * 0.8).toFixed(2),
+      modifiers: {},
     }),
   },
   {
     key: 'void',
-    build: (tier, t) => ({
-      title: `The Void ${ROMAN[tier]}`,
-      description: `Collect ${12 + tier * 4} orbs in a vast arena — walls are lethal.`,
-      goal: { type: 'orbs', target: 12 + tier * 4 },
+    build: (t) => ({
+      title: 'The Void',
+      description: `Collect ${r(12 + t * 14)} orbs — walls are lethal, no wrap.`,
+      goal: { type: 'orbs', target: r(12 + t * 14) },
       timeLimit: 0,
-      enemyCount: 3 + tier,
-      enemySpeed: 1.1 + t * 0.4,
-      modifiers: { arenaScale: 1.0, wraparound: false },
+      enemyCount: r(3 + t * 7),
+      enemySpeed: +(1.1 + t * 0.7).toFixed(2),
+      modifiers: { wraparound: false },
     }),
   },
   {
     key: 'slippery',
-    build: (tier, t) => ({
-      title: `Frictionless ${ROMAN[tier]}`,
-      description: `Collect ${10 + tier * 3} orbs on ice — momentum barely fades.`,
-      goal: { type: 'orbs', target: 10 + tier * 3 },
+    build: (t) => ({
+      title: 'Frictionless',
+      description: `Collect ${r(10 + t * 10)} orbs on ice — momentum barely fades.`,
+      goal: { type: 'orbs', target: r(10 + t * 10) },
       timeLimit: 0,
-      enemyCount: 2 + tier,
-      enemySpeed: 1 + t * 0.35,
+      enemyCount: r(2 + t * 6),
+      enemySpeed: +(1 + t * 0.6).toFixed(2),
       modifiers: { friction: 0.997, acceleration: 1200 },
     }),
   },
   {
     key: 'molasses',
-    build: (tier, t) => ({
-      title: `Heavy ${ROMAN[tier]}`,
-      description: `Collect ${9 + tier * 3} orbs with sluggish, heavy controls.`,
-      goal: { type: 'orbs', target: 9 + tier * 3 },
+    build: (t) => ({
+      title: 'Heavy',
+      description: `Collect ${r(9 + t * 9)} orbs with sluggish, heavy controls.`,
+      goal: { type: 'orbs', target: r(9 + t * 9) },
       timeLimit: 0,
-      enemyCount: 2 + tier,
-      enemySpeed: 1 + t * 0.3,
+      enemyCount: r(2 + t * 6),
+      enemySpeed: +(1 + t * 0.6).toFixed(2),
       modifiers: { friction: 0.97, acceleration: 760 },
     }),
   },
   {
     key: 'reversed',
-    build: (tier, t) => ({
-      title: `Mirror ${ROMAN[tier]}`,
-      description: `Collect ${8 + tier * 3} orbs with your controls reversed.`,
-      goal: { type: 'orbs', target: 8 + tier * 3 },
+    build: (t) => ({
+      title: 'Mirror',
+      description: `Collect ${r(8 + t * 9)} orbs with your controls reversed.`,
+      goal: { type: 'orbs', target: r(8 + t * 9) },
       timeLimit: 0,
-      enemyCount: 2 + tier,
-      enemySpeed: 1 + t * 0.35,
+      enemyCount: r(2 + t * 5),
+      enemySpeed: +(1 + t * 0.6).toFixed(2),
       modifiers: { reverseControls: true },
     }),
   },
   {
     key: 'suddendeath',
-    build: (tier, t) => ({
-      title: `Sudden Death ${ROMAN[tier]}`,
-      description: `Collect ${10 + tier * 4} orbs. One touch ends everything.`,
-      goal: { type: 'orbs', target: 10 + tier * 4 },
+    build: (t) => ({
+      title: 'Sudden Death',
+      description: `Collect ${r(10 + t * 14)} orbs. One touch ends everything.`,
+      goal: { type: 'orbs', target: r(10 + t * 14) },
       timeLimit: 0,
-      enemyCount: 4 + tier * 2,
-      enemySpeed: 1.3 + t * 0.5,
+      enemyCount: r(4 + t * 9),
+      enemySpeed: +(1.3 + t * 0.8).toFixed(2),
       modifiers: { oneLife: true },
     }),
   },
   {
     key: 'endurance',
-    build: (tier, t) => ({
-      title: `Endurance ${ROMAN[tier]}`,
-      description: `Outlast ${45 + tier * 25} seconds of relentless pressure.`,
-      goal: { type: 'survive', target: 45 + tier * 25 },
-      timeLimit: 45 + tier * 25,
-      enemyCount: 4 + tier * 2,
-      enemySpeed: 1.2 + t * 0.5,
+    build: (t) => ({
+      title: 'Endurance',
+      description: `Outlast ${r(45 + t * 95)} seconds of relentless pressure.`,
+      goal: { type: 'survive', target: r(45 + t * 95) },
+      timeLimit: r(45 + t * 95),
+      enemyCount: r(4 + t * 11),
+      enemySpeed: +(1.2 + t * 0.9).toFixed(2),
       modifiers: {},
     }),
   },
 ]
 
-// Star thresholds are expressed as fractions of the objective that must be
-// beaten to earn 2 and 3 stars (more time to spare, or extra orbs collected).
 function starRule(goalType) {
-  // Fraction of time limit that must remain (time goals) OR spare orbs ratio.
-  return goalType === 'survive'
-    ? { two: 0, three: 0, mode: 'clear' } // survival: 3 stars = flawless (no near-death), handled in-game
-    : { two: 0.25, three: 0.5, mode: 'time' } // collect goals: reward finishing early
+  return goalType === 'survive' ? { two: 0, three: 0, mode: 'clear' } : { two: 0.2, three: 0.45, mode: 'time' }
 }
 
+const occurrences = {}
 const challenges = []
-let id = 1
-// 5 tiers x 14 archetypes would be 70; interleave to reach 100 with escalation.
-for (let tier = 0; tier < 5; tier++) {
-  for (let a = 0; a < archetypes.length; a++) {
-    if (challenges.length >= 100) break
-    const t = challenges.length / 99
-    const part = archetypes[a].build(tier, t)
-    challenges.push({
-      id: id++,
-      tier: tier + 1,
-      archetype: archetypes[a].key,
-      stars: starRule(part.goal.type),
-      ...part,
-    })
-  }
-}
-// Top up to exactly 100 with escalating endurance/swarm finales if short.
-const finales = ['endurance', 'swarm', 'chaos', 'suddendeath']
-let fi = 0
-while (challenges.length < 100) {
-  const arche = archetypes.find((x) => x.key === finales[fi % finales.length])
-  const t = challenges.length / 99
-  const part = arche.build(4, Math.min(1, t + 0.1))
-  part.title = `${part.title.replace(/ [IV]+$/, '')} — Finale ${challenges.length - 96}`
-  challenges.push({ id: id++, tier: 5, archetype: arche.key, stars: starRule(part.goal.type), ...part })
-  fi++
+for (let id = 1; id <= 100; id++) {
+  const t = (id - 1) / 99
+  const arch = archetypes[(id - 1) % archetypes.length]
+  occurrences[arch.key] = (occurrences[arch.key] || 0) + 1
+  const suffix = ROMAN[Math.min(ROMAN.length - 1, occurrences[arch.key] - 1)]
+  const tier = Math.min(5, Math.floor((id - 1) / 20) + 1)
+  const part = arch.build(t)
+  challenges.push({
+    id,
+    tier,
+    archetype: arch.key,
+    stars: starRule(part.goal.type),
+    ...part,
+    title: `${part.title} ${suffix}`,
+  })
 }
 
 mkdirSync(dirname(OUT), { recursive: true })
