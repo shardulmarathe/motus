@@ -51,15 +51,17 @@ export default function LeaderboardModal({ open, onClose }: LeaderboardModalProp
     <div className="overlay-center leaderboard-overlay" onClick={onClose}>
       <div className="overlay-backdrop" />
       <div
-        className="leaderboard-modal"
+        className="rules-modal leaderboard-modal"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-labelledby="leaderboard-title"
       >
-        <h2 id="leaderboard-title" className="glow-text leaderboard-modal-title">
+        <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
+        <span className="modal-eyebrow">SURVIVAL // GLOBAL</span>
+        <h2 id="leaderboard-title" className="leaderboard-modal-title">
           Top 7 Leaderboard
         </h2>
-        <p className="leaderboard-modal-subtitle">Survival Mode — highest scores</p>
+        <p className="leaderboard-modal-subtitle">Highest scores across all runs</p>
 
         {loading && <p className="leaderboard-status">Loading…</p>}
         {error && <p className="leaderboard-status leaderboard-error">{error}</p>}
@@ -80,7 +82,7 @@ export default function LeaderboardModal({ open, onClose }: LeaderboardModalProp
           </ol>
         )}
 
-        <button type="button" className="rules-modal-play" onClick={onClose}>
+        <button type="button" className="btn btn-ghost" onClick={onClose}>
           Close
         </button>
       </div>

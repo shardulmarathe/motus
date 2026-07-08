@@ -62,15 +62,15 @@ export interface ArenaTheme {
 }
 
 export const themes: ArenaTheme[] = [
-  { id: 'classic', name: 'Classic Neon', unlock: { kind: 'default' },
-    colors: { player: '#2de2e6', playerLight: '#a7f7ff', orb: '#7bffb2', orbDeep: '#23c876',
-      hostile: '#ff4d6d', hostileLight: '#ff9aac', bgInner: 'rgba(24,52,96,0.28)', bgOuter: 'rgba(4,10,28,1)', grid: 'rgba(45,226,230,0.05)' } },
+  { id: 'amethyst', name: 'Amethyst', unlock: { kind: 'default' },
+    colors: { player: '#b06bff', playerLight: '#dfc2ff', orb: '#7bffb2', orbDeep: '#23c876',
+      hostile: '#ff4d6d', hostileLight: '#ff9aac', bgInner: 'rgba(64,26,110,0.30)', bgOuter: 'rgba(10,4,26,1)', grid: 'rgba(176,107,255,0.06)' } },
   { id: 'azure', name: 'Azure', unlock: { kind: 'orbs', value: 100 },
     colors: { player: '#38bdf8', playerLight: '#bae6fd', orb: '#7bffb2', orbDeep: '#23c876',
       hostile: '#ff4d6d', hostileLight: '#ff9aac', bgInner: 'rgba(14,60,120,0.32)', bgOuter: 'rgba(2,8,24,1)', grid: 'rgba(56,189,248,0.06)' } },
-  { id: 'amethyst', name: 'Amethyst', unlock: { kind: 'score', value: 25 },
-    colors: { player: '#b06bff', playerLight: '#dfc2ff', orb: '#7bffb2', orbDeep: '#23c876',
-      hostile: '#ff4d6d', hostileLight: '#ff9aac', bgInner: 'rgba(64,26,110,0.30)', bgOuter: 'rgba(10,4,26,1)', grid: 'rgba(176,107,255,0.06)' } },
+  { id: 'classic', name: 'Classic Neon', unlock: { kind: 'score', value: 25 },
+    colors: { player: '#2de2e6', playerLight: '#a7f7ff', orb: '#7bffb2', orbDeep: '#23c876',
+      hostile: '#ff4d6d', hostileLight: '#ff9aac', bgInner: 'rgba(24,52,96,0.28)', bgOuter: 'rgba(4,10,28,1)', grid: 'rgba(45,226,230,0.05)' } },
   { id: 'emerald', name: 'Emerald', unlock: { kind: 'challenges', value: 5 },
     colors: { player: '#34f5c5', playerLight: '#b8fff0', orb: '#eaff7b', orbDeep: '#c8d000',
       hostile: '#ff6b6b', hostileLight: '#ffb0b0', bgInner: 'rgba(10,74,58,0.30)', bgOuter: 'rgba(2,16,12,1)', grid: 'rgba(52,245,197,0.06)' } },
@@ -133,7 +133,7 @@ export interface Settings {
   randomTheme: boolean // pick a random unlocked theme each run
 }
 
-const DEFAULT_SETTINGS: Settings = { themeId: 'classic', skinId: 'theme', trailId: 'classic', randomTheme: false }
+const DEFAULT_SETTINGS: Settings = { themeId: 'amethyst', skinId: 'theme', trailId: 'classic', randomTheme: false }
 
 export function loadSettings(): Settings {
   return { ...DEFAULT_SETTINGS, ...readJSON<Partial<Settings>>(STORAGE_KEYS.settings, {}) }

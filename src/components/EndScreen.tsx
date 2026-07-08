@@ -2,7 +2,7 @@
 
 import React from 'react'
 import type { RunSummary } from '../lib/stats'
-import { formatDuration } from '../lib/stats'
+import { formatDuration, formatCompact } from '../lib/stats'
 
 interface EndScreenProps {
   summary: RunSummary
@@ -62,8 +62,8 @@ export default function EndScreen({
         <div className="stat-grid end-stat-grid">
           <StatRow label="Time Survived" value={formatDuration(summary.timeSurvived)} />
           <StatRow label="Orbs Collected" value={String(summary.orbsCollected)} />
-          <StatRow label="Distance" value={`${Math.round(summary.distanceTraveled).toLocaleString()} px`} />
-          <StatRow label="Longest Drift" value={`${Math.round(summary.longestDrift).toLocaleString()} px`} />
+          <StatRow label="Distance" value={`${formatCompact(summary.distanceTraveled)} px`} />
+          <StatRow label="Longest Drift" value={`${formatCompact(summary.longestDrift)} px`} />
           <StatRow label="Avg Speed" value={`${Math.round(summary.averageSpeed)} px/s`} />
           <StatRow label="Top Speed" value={`${Math.round(summary.highestSpeed)} px/s`} />
           {summary.cataclysmsTriggered > 0 && (
@@ -72,11 +72,15 @@ export default function EndScreen({
         </div>
 
         <div className="end-actions">
-          <button className="pause-modal-btn pause-modal-btn-resume" onClick={onRetry}>Retry</button>
-          {won && hasNextChallenge && onNext && (
-            <button className="pause-modal-btn pause-modal-btn-restart" onClick={onNext}>Next Challenge</button>
+          {won && hasNextChallenge && onNext ? (
+            <>
+              <button className="btn btn-primary" onClick={onNext}>Next Challenge</button>
+              <button className="btn btn-ghost" onClick={onRetry}>Retry</button>
+            </>
+          ) : (
+            <button className="btn btn-primary" onClick={onRetry}>Retry</button>
           )}
-          <button className="pause-modal-btn pause-modal-btn-menu" onClick={onMenu}>Main Menu</button>
+          <button className="btn btn-ghost" onClick={onMenu}>Main Menu</button>
         </div>
       </div>
     </div>
