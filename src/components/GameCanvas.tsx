@@ -337,6 +337,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
   const enemiesRef = useRef<Enemy[]>([])
   const goalRef = useRef<Goal | null>(null)
   const obstaclesRef = useRef<Goal[]>([])
+  const bgStreaksRef = useRef<{ x: number; y: number; depth: number }[]>([])
   const gameDataRef = useRef<GameData>({
     score: 0,
     stage: 1,
@@ -768,6 +769,18 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       // ===== V2: per-frame progression accumulators =====
       const rs = runStatsRef.current
       rs.elapsed += dt
+
+      // Parallax speed-streak field drifts opposite the player's motion.
+      if (bgStreaksRef.current.length > 0) {
+        for (const st of bgStreaksRef.current) {
+          st.x -= player.vx * dt * 0.12 * st.depth
+          st.y -= player.vy * dt * 0.12 * st.depth
+          if (st.x < 0) st.x += w
+          else if (st.x > w) st.x -= w
+          if (st.y < 0) st.y += h
+          else if (st.y > h) st.y -= h
+        }
+      }
 
       const mods = propsRef.current.challenge?.modifiers ?? {}
 
@@ -1259,11 +1272,29 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       bgGrad.addColorStop(1, theme.bgOuter)
       ctx.fillStyle = bgGrad
       ctx.fillRect(0, 0, w, h)
-      ctx.strokeStyle = theme.grid
+
+      // Parallax speed-streak field — the arena's living texture. Streaks lengthen
+      // and align to the player's motion (idle = a slow ambient downward drift).
+      if (bgStreaksRef.current.length === 0 && w > 0) {
+        bgStreaksRef.current = Array.from({ length: 64 }, () => ({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          depth: 0.4 + Math.random() * 1.2,
+        }))
+      }
+      const pv = playerRef.current
+      const psp = pv ? Math.hypot(pv.vx, pv.vy) : 0
+      const dirx = psp > 6 ? -pv!.vx / psp : 0
+      const diry = psp > 6 ? -pv!.vy / psp : 1
+      const baseLen = 5 + Math.min(28, psp * 0.06)
+      ctx.strokeStyle = withAlpha(palette.player, 0.05 + Math.min(0.16, psp * 0.0004))
       ctx.lineWidth = 1
       ctx.beginPath()
-      for (let gx = 48; gx < w; gx += 48) { ctx.moveTo(gx, 0); ctx.lineTo(gx, h) }
-      for (let gy = 48; gy < h; gy += 48) { ctx.moveTo(0, gy); ctx.lineTo(w, gy) }
+      for (const st of bgStreaksRef.current) {
+        const len = baseLen * st.depth
+        ctx.moveTo(st.x, st.y)
+        ctx.lineTo(st.x + dirx * len, st.y + diry * len)
+      }
       ctx.stroke()
 
       // ===== CHALLENGE ARENA BOUNDARY (tiny-arena challenges) =====
