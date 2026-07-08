@@ -440,71 +440,35 @@ export default function Home() {
 
         {uiState === 'title' && (
           <div className="title-screen-center">
-            <div className="title-screen-inner">
-              <h1 className="glow-text title-logo">
-                Motus
-              </h1>
-              <div className="mode-btn-row">
-                <button
-                  className="mode-btn"
-                  onClick={() => { setGameMode('tutorial'); setUiState('rules') }}
-                >
-                  <div className="mode-btn-title">Tutorial Mode</div>
-                  <div className="mode-btn-desc">Learn the basics of gameplay step-by-step.</div>
-                </button>
+            <div className="home-shell">
+              <header className="home-head">
+                <span className="home-eyebrow">Neon momentum arcade</span>
+                <h1 className="home-wordmark glow-text">MOTUS</h1>
+                <p className="home-tagline">
+                  A bright signal adrift in a dark, hostile field. Drift, weave, and survive the Cataclysm.
+                </p>
+              </header>
 
-                <button
-                  className="mode-btn"
-                  onClick={() => { setGameMode('survival'); setUiState('rules') }}
-                >
-                  <div className="mode-btn-title">Survival Mode</div>
-                  <div className="mode-btn-desc">Avoid enemies and score points. Be the Best!</div>
-                </button>
-
-                <button
-                  type="button"
-                  className="mode-btn"
-                  onClick={() => setMenuScreen('challenges')}
-                >
-                  <div className="mode-btn-title">Challenges</div>
-                  <div className="mode-btn-desc">100 handcrafted trials. Earn your stars.</div>
-                </button>
-
-                <button
-                  className="mode-btn"
-                  onClick={() => { setGameMode('zen'); setUiState('rules') }}
-                >
-                  <div className="mode-btn-title">Practice Mode</div>
-                  <div className="mode-btn-desc">There are no enemies; only good vibes!</div>
-                </button>
-
-                <button
-                  type="button"
-                  className="mode-btn"
-                  onClick={() => setLeaderboardOpen(true)}
-                >
-                  <div className="mode-btn-title">Leaderboard</div>
-                  <div className="mode-btn-desc">See who is on top.</div>
-                </button>
-
-                <button
-                  type="button"
-                  className="mode-btn"
-                  onClick={() => setMenuScreen('profile')}
-                >
-                  <div className="mode-btn-title">Profile</div>
-                  <div className="mode-btn-desc">Your stats and achievements.</div>
-                </button>
-
-                <button
-                  type="button"
-                  className="mode-btn"
-                  onClick={() => setMenuScreen('settings')}
-                >
-                  <div className="mode-btn-title">Settings</div>
-                  <div className="mode-btn-desc">Themes, skins and trails you've earned.</div>
-                </button>
-              </div>
+              <nav className="menu-list" aria-label="Main menu">
+                {[
+                  { i: '01', title: 'Play', desc: 'Endless survival. Climb the global leaderboard.', on: () => { setGameMode('survival'); setUiState('rules') } },
+                  { i: '02', title: 'Challenges', desc: '100 handcrafted trials. Earn your stars.', on: () => setMenuScreen('challenges') },
+                  { i: '03', title: 'Practice', desc: 'No enemies, no death — just movement.', on: () => { setGameMode('zen'); setUiState('rules') } },
+                  { i: '04', title: 'Tutorial', desc: 'Learn the mechanics step by step.', on: () => { setGameMode('tutorial'); setUiState('rules') } },
+                  { i: '05', title: 'Leaderboard', desc: 'See who sits at the top.', on: () => setLeaderboardOpen(true) },
+                  { i: '06', title: 'Profile', desc: 'Your lifetime stats and achievements.', on: () => setMenuScreen('profile') },
+                  { i: '07', title: 'Settings', desc: 'Themes, skins and trails you’ve earned.', on: () => setMenuScreen('settings') },
+                ].map((item) => (
+                  <button key={item.i} type="button" className="menu-row" onClick={item.on}>
+                    <span className="menu-index">{item.i}</span>
+                    <span className="menu-row-body">
+                      <span className="menu-row-title">{item.title}</span>
+                      <span className="menu-row-desc">{item.desc}</span>
+                    </span>
+                    <span className="menu-arrow" aria-hidden="true">→</span>
+                  </button>
+                ))}
+              </nav>
             </div>
           </div>
         )}
