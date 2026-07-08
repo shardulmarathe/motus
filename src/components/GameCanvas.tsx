@@ -1267,7 +1267,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       }
 
       if (gameData.state === 'cataclysm' && gameData.cataclysm) {
-        renderCataclysmEvent({ ctx, cat: gameData.cataclysm })
+        renderCataclysmEvent({ ctx, cat: gameData.cataclysm, player, width: w, height: h })
       }
 
       // ===== DRAW ENEMIES =====

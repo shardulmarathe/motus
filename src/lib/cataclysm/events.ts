@@ -30,6 +30,7 @@ export type CataclysmData = {
   eventEnemies?: Enemy[]
   swapTimer?: number
   swapWarning?: number
+  meteorTimer?: number
 }
 
 type CataclysmContext = {
@@ -44,6 +45,9 @@ type CataclysmContext = {
 type CataclysmRenderContext = {
   ctx: CanvasRenderingContext2D
   cat: CataclysmData
+  player?: Puck
+  width?: number
+  height?: number
 }
 
 type CataclysmDefinition = {
@@ -104,6 +108,44 @@ function spawnSwapEnemy(goal: Goal, index: number): Enemy {
     behavior: 'linear',
     hue: 'red',
   }
+}
+
+/** A fast hazard that streaks straight across the arena (Meteor Storm). */
+function spawnMeteor(width: number, height: number): Enemy {
+  const speed = 320 + Math.random() * 160
+  const horizontal = Math.random() < 0.5
+  let x: number, y: number, vx: number, vy: number
+  if (horizontal) {
+    const fromLeft = Math.random() < 0.5
+    x = fromLeft ? -40 : width + 40
+    y = Math.random() * height
+    vx = (fromLeft ? 1 : -1) * speed
+    vy = (Math.random() - 0.5) * 60
+  } else {
+    const fromTop = Math.random() < 0.5
+    x = Math.random() * width
+    y = fromTop ? -40 : height + 40
+    vx = (Math.random() - 0.5) * 60
+    vy = (fromTop ? 1 : -1) * speed
+  }
+  return {
+    x, y, vx, vy,
+    radius: 11,
+    id: `meteor-${Date.now()}-${Math.random()}`,
+    baseSpeed: speed,
+    behavior: 'linear',
+    hue: 'red',
+  }
+}
+
+function renderBlackout(ctx: CanvasRenderingContext2D, player: Puck, width: number, height: number) {
+  const r = 128
+  const grad = ctx.createRadialGradient(player.x, player.y, r * 0.35, player.x, player.y, r * 1.9)
+  grad.addColorStop(0, 'rgba(0, 0, 0, 0)')
+  grad.addColorStop(0.7, 'rgba(2, 4, 10, 0.72)')
+  grad.addColorStop(1, 'rgba(1, 2, 6, 0.97)')
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, width, height)
 }
 
 function renderShrinkingArena(ctx: CanvasRenderingContext2D, cat: CataclysmData) {
@@ -240,6 +282,52 @@ export const cataclysmEvents: Record<CataclysmEventType, CataclysmDefinition> = 
       }
     },
     onRender: ({ ctx, cat }) => renderSwapWarning(ctx, cat),
+  },
+  magnet: {
+    onEnter: (width, height, player) => makeEventBase('magnet', width, height, player),
+    onUpdate: ({ cat, player, width, height, dt }) => {
+      // Goals actively flee the player when approached.
+      for (const goal of cat.goals) {
+        const dx = goal.x - player.x
+        const dy = goal.y - player.y
+        const d = Math.hypot(dx, dy) || 1
+        if (d < 200) {
+          const push = (200 - d) * 3.4 * dt
+          goal.x += (dx / d) * push
+          goal.y += (dy / d) * push
+        }
+        const m = goal.radius + 10
+        goal.x = Math.max(m, Math.min(width - m, goal.x))
+        goal.y = Math.max(m, Math.min(height - m, goal.y))
+      }
+    },
+  },
+  blackout: {
+    onEnter: (width, height, player) => makeEventBase('blackout', width, height, player),
+    onRender: ({ ctx, player, width, height }) => {
+      if (player && width && height) renderBlackout(ctx, player, width, height)
+    },
+  },
+  meteorStorm: {
+    onEnter: (width, height, player) => {
+      const cat = makeEventBase('meteorStorm', width, height, player)
+      cat.eventEnemies = []
+      cat.meteorTimer = 0.4
+      return cat
+    },
+    onUpdate: ({ cat, width, height, dt }) => {
+      cat.meteorTimer = (cat.meteorTimer ?? 0) - dt
+      if (cat.meteorTimer <= 0) {
+        cat.meteorTimer = 0.5 + Math.random() * 0.45
+        cat.eventEnemies = cat.eventEnemies ?? []
+        cat.eventEnemies.push(spawnMeteor(width, height))
+      }
+      const list = cat.eventEnemies ?? []
+      for (const m of list) integrate(m, dt)
+      cat.eventEnemies = list.filter(
+        (m) => m.x > -70 && m.x < width + 70 && m.y > -70 && m.y < height + 70
+      )
+    },
   },
 }
 
