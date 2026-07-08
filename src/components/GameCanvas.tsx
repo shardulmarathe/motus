@@ -1397,8 +1397,22 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         ctx.fill()
       }
 
-      // ===== DRAW PLAYER =====
-      drawGlowCircle(player.x, player.y, player.radius + 8, palette.player, 25, 0.4)
+      // ===== DRAW PLAYER (velocity-reactive glow + squash/stretch) =====
+      const pSpeed = Math.hypot(player.vx, player.vy)
+      const speedT = Math.min(1, pSpeed / 500)
+      drawGlowCircle(player.x, player.y, player.radius + 8 + speedT * 8, palette.player, 25 + speedT * 22, 0.4 + speedT * 0.25)
+
+      ctx.save()
+      // Stretch the body along the direction of travel — subtle arcade juice.
+      if (pSpeed > 30) {
+        const ang = Math.atan2(player.vy, player.vx)
+        const stretch = speedT * 0.18
+        ctx.translate(player.x, player.y)
+        ctx.rotate(ang)
+        ctx.scale(1 + stretch, 1 - stretch)
+        ctx.rotate(-ang)
+        ctx.translate(-player.x, -player.y)
+      }
       drawGradientPuck(player.x, player.y, player.radius, palette.playerLight, palette.player)
 
       // Player highlight
@@ -1409,6 +1423,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       ctx.beginPath()
       ctx.arc(player.x - 4, player.y - 4, player.radius * 0.4, 0, Math.PI * 2)
       ctx.fill()
+      ctx.restore()
 
       // ===== COMBO INDICATOR (floats above the player) =====
       const combo = comboRef.current
@@ -1525,6 +1540,14 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         gradient.addColorStop(1, `rgba(0, 0, 0, ${vignetteIntensity})`)
         ctx.fillStyle = gradient
         ctx.fillRect(0, 0, w, h)
+
+        // Urgency pulse: the whole screen throbs red in the final seconds.
+        const tl = gameData.cataclysm.timeLeft
+        if (tl > 0 && tl <= 5) {
+          const pulse = (Math.sin(Date.now() / 140) + 1) / 2
+          ctx.fillStyle = withAlpha(palette.hostile, (1 - tl / 5) * 0.16 * pulse)
+          ctx.fillRect(0, 0, w, h)
+        }
       }
 
       // ===== CATACLYSM EVENT - INTRO OVERLAY + TIMER (survival only) =====
