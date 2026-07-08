@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Sora:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap');
+
 /* Neon Arcade Style Game */
 
 :root {
@@ -16,9 +18,9 @@
   --motion-base: 240ms;
 
   /* Font roles — 3 standardized tiers */
-  --font-ui-body: var(--font-nunito), system-ui, sans-serif;
-  --font-ui-display: var(--font-sora), var(--font-nunito), system-ui, sans-serif;
-  --font-game: var(--font-space-mono), ui-monospace, 'Courier New', monospace;
+  --font-ui-body: 'Nunito', system-ui, sans-serif;
+  --font-ui-display: 'Sora', 'Nunito', system-ui, sans-serif;
+  --font-game: 'Space Mono', ui-monospace, 'Courier New', monospace;
 
   /* HUD bar — chips share one exact size; padding is equal above/below chips.
      Sizes are fluid so the bar never overflows on narrow phones. */

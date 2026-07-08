@@ -2,27 +2,8 @@ import './globals.css'
 import React from 'react'
 import type { Metadata, Viewport } from 'next'
 import { Analytics } from '@vercel/analytics/react'
-import { Nunito, Sora, Space_Mono } from 'next/font/google'
 
 const siteUrl = 'https://playmotus.vercel.app'
-
-const nunito = Nunito({
-  subsets: ['latin'],
-  weight: ['400', '600', '700', '800'],
-  variable: '--font-nunito',
-})
-
-const sora = Sora({
-  subsets: ['latin'],
-  weight: ['600', '700', '800'],
-  variable: '--font-sora',
-})
-
-const spaceMono = Space_Mono({
-  subsets: ['latin'],
-  weight: ['400', '700'],
-  variable: '--font-space-mono',
-})
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -62,8 +43,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${nunito.variable} ${sora.variable} ${spaceMono.variable}`}>
-      <body className={nunito.className}>
+    <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+      </head>
+      <body>
         {children}
         <Analytics />
       </body>
