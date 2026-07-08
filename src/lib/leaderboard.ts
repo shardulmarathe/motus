@@ -1,4 +1,3 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { isAppropriateUsername } from './profanity'
 
 export type LeaderboardEntry = {
@@ -114,18 +113,4 @@ export function saveRegisteredPlayerName(name: string): void {
   } catch {
     // storage unavailable
   }
-}
-
-/** Case-insensitive lookup across the full leaderboard table. */
-export async function findLeaderboardEntry(
-  supabase: SupabaseClient,
-  username: string
-): Promise<LeaderboardEntry | null> {
-  const { data, error } = await supabase
-    .from('leaderboard')
-    .select('username, score, updated_at')
-
-  if (error || !data) return null
-
-  return data.find((entry) => usernamesMatch(entry.username, username)) ?? null
 }

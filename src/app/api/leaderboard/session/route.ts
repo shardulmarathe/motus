@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSessionId, signGameSession } from '../../../../lib/game-session'
+import { createGameSession } from '../../../../lib/leaderboard-db'
 import { isAllowedUsername, normalizeUsername } from '../../../../lib/leaderboard'
-import { createServiceSupabaseClient } from '../../../../lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,24 +15,19 @@ export async function POST(request: Request) {
     }
 
     const sessionId = createSessionId()
-    const startedAt = Date.now()
-    const supabase = createServiceSupabaseClient()
+    const startedAt = new Date()
 
-    const { error } = await supabase.from('game_sessions').insert({
-      id: sessionId,
-      username,
-      started_at: new Date(startedAt).toISOString(),
-    })
-
-    if (error) {
+    try {
+      await createGameSession(sessionId, username, startedAt)
+    } catch (error) {
       console.error('game session create:', error)
       return NextResponse.json(
-        { error: 'Could not start game session. Run supabase/game_sessions.sql in Supabase.' },
+        { error: 'Could not start game session. Run neon/schema.sql in your Neon database.' },
         { status: 500 }
       )
     }
 
-    const sessionToken = signGameSession(username, sessionId, startedAt)
+    const sessionToken = signGameSession(username, sessionId, startedAt.getTime())
     return NextResponse.json({ sessionToken })
   } catch (e) {
     console.error('game session POST:', e)

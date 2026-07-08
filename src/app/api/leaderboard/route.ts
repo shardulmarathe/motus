@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server'
 import { maxScoreForDuration, verifyGameSession } from '../../../lib/game-session'
 import {
-  filterPublicLeaderboardEntries,
+  fetchLeaderboardTop,
   findLeaderboardEntry,
+  insertLeaderboardEntry,
+  getGameSession,
+  markGameSessionConsumed,
+  updateLeaderboardScore,
+} from '../../../lib/leaderboard-db'
+import {
+  filterPublicLeaderboardEntries,
   isAppropriateUsername,
   isValidScore,
   isValidUsername,
@@ -11,9 +18,7 @@ import {
   USERNAME_MIN_LENGTH,
   USERNAME_MAX_LENGTH,
   usernamesMatch,
-  type LeaderboardEntry,
 } from '../../../lib/leaderboard'
-import { createAnonSupabaseClient, createServiceSupabaseClient } from '../../../lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,20 +26,8 @@ const TOP_N = 7
 
 export async function GET() {
   try {
-    const supabase = createAnonSupabaseClient()
-    const { data, error } = await supabase
-      .from('leaderboard')
-      .select('username, score, updated_at')
-      .order('score', { ascending: false })
-      .order('updated_at', { ascending: true })
-      .limit(TOP_N * 4)
-
-    if (error) {
-      console.error('leaderboard GET:', error)
-      return NextResponse.json({ error: 'Failed to fetch leaderboard' }, { status: 500 })
-    }
-
-    const entries = filterPublicLeaderboardEntries((data ?? []) as LeaderboardEntry[]).slice(0, TOP_N)
+    const rows = await fetchLeaderboardTop(TOP_N * 4)
+    const entries = filterPublicLeaderboardEntries(rows).slice(0, TOP_N)
     return NextResponse.json({ entries })
   } catch (e) {
     console.error('leaderboard GET:', e)
@@ -70,15 +63,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid or expired game session' }, { status: 403 })
     }
 
-    const supabase = createServiceSupabaseClient()
-
-    const { data: gameSession, error: sessionError } = await supabase
-      .from('game_sessions')
-      .select('id, username, started_at, consumed_at')
-      .eq('id', session.sid)
-      .maybeSingle()
-
-    if (sessionError || !gameSession) {
+    const gameSession = await getGameSession(session.sid)
+    if (!gameSession) {
       return NextResponse.json({ error: 'Unknown game session' }, { status: 403 })
     }
     if (!usernamesEqual(gameSession.username, username)) {
@@ -94,25 +80,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Score exceeds allowed maximum for run duration' }, { status: 400 })
     }
 
-    const existing = await findLeaderboardEntry(supabase, username)
-    const top = await fetchTop(supabase)
+    const existing = await findLeaderboardEntry(username)
+    const top = filterPublicLeaderboardEntries(await fetchLeaderboardTop(TOP_N * 4)).slice(0, TOP_N)
 
-    // Returning player already on the board (including top 7) — always allow personal-best update.
     const boardRow =
       existing ?? top.find((entry) => usernamesMatch(entry.username, username)) ?? null
 
     if (boardRow) {
       if (boardRow.score >= score) {
-        await markSessionConsumed(supabase, session.sid)
+        await markGameSessionConsumed(session.sid)
         return NextResponse.json({ entries: top, updated: false })
       }
 
-      const { error } = await supabase
-        .from('leaderboard')
-        .update({ score, updated_at: new Date().toISOString() })
-        .eq('username', boardRow.username)
-
-      if (error) {
+      try {
+        await updateLeaderboardScore(boardRow.username, score)
+      } catch (error) {
         console.error('leaderboard POST update:', error)
         return NextResponse.json({ error: 'Failed to save score' }, { status: 500 })
       }
@@ -121,20 +103,16 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Username is already on the leaderboard' }, { status: 400 })
       }
 
-      const { error } = await supabase.from('leaderboard').insert({
-        username,
-        score,
-        updated_at: new Date().toISOString(),
-      })
-
-      if (error) {
+      try {
+        await insertLeaderboardEntry(username, score)
+      } catch (error) {
         console.error('leaderboard POST insert:', error)
         return NextResponse.json({ error: 'Failed to save score' }, { status: 500 })
       }
     }
 
-    await markSessionConsumed(supabase, session.sid)
-    const updatedTop = await fetchTop(supabase)
+    await markGameSessionConsumed(session.sid)
+    const updatedTop = filterPublicLeaderboardEntries(await fetchLeaderboardTop(TOP_N * 4)).slice(0, TOP_N)
     return NextResponse.json({ entries: updatedTop, updated: true })
   } catch (e) {
     console.error('leaderboard POST:', e)
@@ -144,24 +122,4 @@ export async function POST(request: Request) {
 
 function usernamesEqual(a: string, b: string): boolean {
   return usernamesMatch(a, b)
-}
-
-async function markSessionConsumed(
-  supabase: ReturnType<typeof createServiceSupabaseClient>,
-  sessionId: string
-) {
-  await supabase
-    .from('game_sessions')
-    .update({ consumed_at: new Date().toISOString() })
-    .eq('id', sessionId)
-}
-
-async function fetchTop(supabase: ReturnType<typeof createServiceSupabaseClient>) {
-  const { data } = await supabase
-    .from('leaderboard')
-    .select('username, score, updated_at')
-    .order('score', { ascending: false })
-    .order('updated_at', { ascending: true })
-    .limit(TOP_N * 4)
-  return filterPublicLeaderboardEntries((data ?? []) as LeaderboardEntry[]).slice(0, TOP_N)
 }

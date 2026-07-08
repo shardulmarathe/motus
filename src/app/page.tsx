@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import GameCanvas from '../components/GameCanvas'
 import NeonBackground from '../components/NeonBackground'
 import TouchControls from '../components/TouchControls'
@@ -17,6 +18,8 @@ import {
   USERNAME_MIN_LENGTH,
   type LeaderboardEntry,
 } from '../lib/leaderboard'
+
+const LeaderboardModal = dynamic(() => import('../components/LeaderboardModal'), { ssr: false })
 
 type HudState = {
   score: number
@@ -42,6 +45,7 @@ export default function Home() {
   const [draftName, setDraftName] = useState('')
   const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([])
   const [leaderboardNamesLoading, setLeaderboardNamesLoading] = useState(false)
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false)
   const [startingSession, setStartingSession] = useState(false)
   const [isTouch, setIsTouch] = useState(false)
   const submittedDeathRef = useRef(false)
@@ -356,6 +360,15 @@ export default function Home() {
                   <div className="mode-btn-title">Practice Mode</div>
                   <div className="mode-btn-desc">There are no enemies; only good vibes!</div>
                 </button>
+
+                <button
+                  type="button"
+                  className="mode-btn"
+                  onClick={() => setLeaderboardOpen(true)}
+                >
+                  <div className="mode-btn-title">Leaderboard</div>
+                  <div className="mode-btn-desc">See who is on top.</div>
+                </button>
               </div>
             </div>
           </div>
@@ -491,6 +504,8 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      <LeaderboardModal open={leaderboardOpen} onClose={() => setLeaderboardOpen(false)} />
     </div>
   )
 }
