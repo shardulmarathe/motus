@@ -4,8 +4,12 @@
 
 A Next.js (App Router) + TypeScript arcade game rendered on an HTML5 `<canvas>`. You pilot a
 momentum-driven neon puck, collect green orbs for points, dodge red enemies, and survive periodic
-"Cataclysm" challenge events. Includes a hardened Neon Postgres leaderboard with server-side
-anti-cheat.
+"Cataclysm" events. Includes a hardened Neon Postgres leaderboard with server-side anti-cheat.
+
+**V2 progression layer** (shipped): a 100-challenge campaign, achievements, a lifetime-stats
+profile, earned cosmetics/arena themes, and a redesigned "Signal in the Void" UI. All progression
+is stored client-side in `localStorage` (namespaced `motus:v2:`); only the leaderboard uses Neon.
+See **`MOTUS_V2.md`** for the full V2 feature list and architecture.
 
 ---
 
@@ -39,13 +43,16 @@ routes throw.
 The live experience is a **single client page** (`src/app/page.tsx`) driven by a `uiState` state
 machine — gameplay is not routed:
 
-- **`title`** — neon animated background (`NeonBackground`), the "Motus" logo, and four buttons:
-  Tutorial · Survival · Practice · Leaderboard.
-- **`rules`** — mode-specific rules modal. In **Survival** it also forces a **username picker**
-  (validated live against the leaderboard) before "Play" unlocks and a signed game session is minted.
-- **`playing`** — `GameCanvas` runs. HUD overlay shows Score, "Next X/10" event counter,
-  Stage / event name, and session Best.
+- **`title`** — streaky cursor-reactive backdrop (`NeonBackground`), the big `MOTUS` wordmark, and a
+  console-style menu: Play · Challenges · Practice · Tutorial · Leaderboard · Profile · Settings.
+- **`rules`** — mode-specific rules / briefing modal (challenges show their objective + hazards). In
+  **Survival** it also forces a **username picker** before "Play" unlocks and a signed session is minted.
+- **`playing`** — `GameCanvas` runs. HUD shows Score, the challenge/event objective, and (survival)
+  the "Next X/10" counter + session Best.
 - **`paused`** — Resume / Restart / Menu modal.
+
+Overlays layered on top (managed in `page.tsx`): `ChallengeSelect`, `SettingsModal`, `ProfileModal`,
+`EndScreen` (redesigned run-end screen), and `AchievementToast` (bold unlock banner).
 
 > Legacy routes `src/app/rules/page.tsx` and `src/app/game/page.tsx` still exist (older `/game`
 > flow) but are not part of the live single-page experience.
@@ -59,6 +66,7 @@ machine — gameplay is not routed:
 | **Tutorial** | Scripted | Restarts current step | Deadly | 8 guided steps (`tutorialLogic.ts`) |
 | **Survival** | Yes, scaling | Game over | Deadly | Score + submit to leaderboard |
 | **Practice** ("zen") | None | Cannot die | **Wrap-around** | Relaxed orb collecting |
+| **Challenge** | Fixed roster + static hazards | Game over | Deadly (or wrap per challenge) | Clear the challenge's goal (`challenges.ts`) |
 
 ---
 
@@ -92,6 +100,11 @@ advance a **stage**; letting the timer hit 0 = game over. Events never repeat ba
 3. **Last Stand** (`shrinkingArena`) — arena walls close inward; leaving the safe rectangle kills you.
 4. **The Hunt** (`hunt`) — 2–5 purple homing "hunters" seek you while you collect.
 5. **Trickster** (`swap`) — red decoys sit on orb positions and swap places every 5s (dashed-line warning).
+6. **Repulsor** (`magnet`) — the 7 goals flee from the player when approached.
+7. **Blackout** (`blackout`) — the arena darkens to a light radius around the player.
+8. **Meteor Storm** (`meteorStorm`) — fast hazards streak across the arena while you collect.
+
+(Cataclysms fire in **Survival** only, not inside Challenge mode.)
 
 **Difficulty scaling** (`getDifficultyMultiplier`): compounds ~6% per stage × ~5% per completed
 cataclysm.
@@ -127,15 +140,20 @@ src/
     api/leaderboard/session/route.ts     # POST mint signed game session
   components/
     GameCanvas.tsx           # canvas, main loop, all game state (largest file)
-    NeonBackground.tsx       # animated title-screen background (in use)
+    NeonBackground.tsx       # streaky, cursor-reactive title background
     TouchControls.tsx        # on-screen D-pad for touch devices
     LeaderboardModal.tsx     # leaderboard overlay
+    ChallengeSelect.tsx      # V2 — 100-challenge progression screen
+    SettingsModal.tsx        # V2 — theme / skin / trail selection
+    ProfileModal.tsx         # V2 — lifetime stats + achievements
+    EndScreen.tsx            # V2 — redesigned run-end screen
+    AchievementToast.tsx     # V2 — bold unlock banner
     ParticleBackground.tsx   # UNUSED / untracked — not imported anywhere
     WaterDistortion.tsx      # UNUSED / untracked — not imported anywhere
   lib/
     physics.ts               # vectors, integration, collisions, arena/bounds helpers
     gameLogic.ts             # player/enemy/goal spawning, cataclysm config, difficulty scaling
-    cataclysm/events.ts      # the 5 event definitions (onEnter/onUpdate/onRender)
+    cataclysm/events.ts      # the 8 event definitions (onEnter/onUpdate/onRender)
     tutorialLogic.ts         # 8-step tutorial script + progression state
     palette.ts               # color palette + withAlpha helper
     game-session.ts          # HMAC session signing/verification + anti-cheat limits
@@ -144,7 +162,16 @@ src/
     db.ts                    # Postgres client
     profanity.ts, blocked-words.json     # username moderation
     fonts.ts                 # runtime Google Fonts loader
+    storage.ts               # V2 — SSR-safe namespaced localStorage wrapper
+    stats.ts                 # V2 — lifetime stats + per-run summary
+    achievements.ts          # V2 — 16 achievement predicates
+    challenges.ts            # V2 — challenge types, unlock gating, star scoring
+    customization.ts         # V2 — themes, skins, trails, settings + palette resolver
+    data/challenges.json     # V2 — the 100 challenges (generated, committed)
+scripts/generate-challenges.mjs  # V2 — challenge campaign authoring script
 ```
+
+See `MOTUS_V2.md` for the V2 design system, progression architecture, and future-work notes.
 
 ---
 
@@ -156,7 +183,18 @@ src/
   sync — keep copy consistent or remove the legacy route.
 - `GameCanvas.tsx` holds most state and the full loop in one file; the natural next refactor is to
   extract state/update from rendering.
+- V2 progression is `localStorage`-only (no accounts). Moving it to Neon would require real auth —
+  see the "storage" discussion in `MOTUS_V2.md`.
 
 ---
 
-_Last updated: 2026-07-08. Reconstructed from source — there was no prior handoff document._
+## Branches & deploy
+
+- Single branch: **`master`** (the V2 work was developed on `feature/challenge-mode-progression`,
+  then merged). Vercel's Production Branch is `master`; pushing there deploys production.
+- Production needs `LEADERBOARD_SESSION_SECRET` and the Neon connection string set in the Vercel
+  Production environment, or the leaderboard/session routes fail at runtime.
+
+---
+
+_Last updated: 2026-07-08. V2 (challenge mode + progression + design refresh) merged to `master`._
