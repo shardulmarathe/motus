@@ -80,6 +80,32 @@ function challengeWon(ch: Challenge, orbs: number, elapsed: number): boolean {
   return orbs >= ch.goal.target // 'orbs' and 'collectAll'
 }
 
+/** Static lethal hazards for navigate challenges — placed clear of the player. */
+function spawnObstacles(
+  width: number,
+  height: number,
+  player: Puck,
+  count: number,
+  arena: { x: number; y: number; width: number; height: number } | null
+): Goal[] {
+  const obstacles: Goal[] = []
+  const radius = 16
+  const minX = (arena ? arena.x : 0) + radius + 24
+  const maxX = (arena ? arena.x + arena.width : width) - radius - 24
+  const minY = (arena ? arena.y : 0) + radius + 24
+  const maxY = (arena ? arena.y + arena.height : height) - radius - 24
+  let tries = 0
+  while (obstacles.length < count && tries < count * 60) {
+    tries++
+    const x = minX + Math.random() * Math.max(1, maxX - minX)
+    const y = minY + Math.random() * Math.max(1, maxY - minY)
+    if (Math.hypot(x - player.x, y - player.y) < 110) continue // keep spawn area clear
+    if (obstacles.some((o) => Math.hypot(x - o.x, y - o.y) < radius * 3)) continue
+    obstacles.push({ x, y, radius })
+  }
+  return obstacles
+}
+
 function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
   const words = text.split(' ')
   const lines: string[] = []
@@ -310,6 +336,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
   const playerRef = useRef<Puck | null>(null)
   const enemiesRef = useRef<Enemy[]>([])
   const goalRef = useRef<Goal | null>(null)
+  const obstaclesRef = useRef<Goal[]>([])
   const gameDataRef = useRef<GameData>({
     score: 0,
     stage: 1,
@@ -511,7 +538,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     const w = canvasWidthRef.current
     const h = canvasHeightRef.current
     playerRef.current = createPlayer(w / 2, h / 2)
-    
+    obstaclesRef.current = [] // overwritten below for navigate challenges
+
     if (props.gameMode === 'tutorial') {
       // Initialize tutorial state
       tutorialStateRef.current = createTutorialState()
@@ -521,6 +549,9 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       const ch = props.challenge
       const arena = challengeArena(w, h, ch)
       enemiesRef.current = Array.from({ length: ch.enemyCount }, () => makeChallengeEnemy(w, h, ch))
+      obstaclesRef.current = ch.modifiers.obstacles
+        ? spawnObstacles(w, h, playerRef.current, ch.modifiers.obstacles, arena)
+        : []
       goalRef.current = spawnCataclysmGoals(w, h, playerRef.current.x, playerRef.current.y)[0]
       if (goalRef.current) {
         clampGoalToCanvas(goalRef.current, w, h)
@@ -1131,6 +1162,20 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         }
       }
 
+      // ===== STATIC OBSTACLE COLLISION (navigate challenges) =====
+      if (!isInEventOverlay && obstaclesRef.current.length > 0) {
+        for (const o of obstaclesRef.current) {
+          if (puckCollideGoal(player, o)) {
+            gameData.state = 'gameOver'
+            player.vx = 0
+            player.vy = 0
+            shakeIntensityRef.current = 20
+            collisionFlashRef.current = 0.5
+            return
+          }
+        }
+      }
+
       for (let i = 0; i < particlesRef.current.length; i++) {
         const p = particlesRef.current[i]
         
@@ -1274,6 +1319,29 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       for (const enemy of enemiesRef.current) {
         drawGlowCircle(enemy.x, enemy.y, enemy.radius + 6, palette.hostile, 12, 0.2)
         drawGradientPuck(enemy.x, enemy.y, enemy.radius, palette.hostileLight, palette.hostile)
+      }
+
+      // ===== DRAW STATIC OBSTACLES (navigate hazards) =====
+      if (obstaclesRef.current.length > 0) {
+        const pulse = (Math.sin(Date.now() / 300) + 1) / 2
+        for (const o of obstaclesRef.current) {
+          drawGlowCircle(o.x, o.y, o.radius + 6 + pulse * 3, palette.hostile, 16, 0.24)
+          drawGradientPuck(o.x, o.y, o.radius, palette.hostileLight, palette.hostile)
+          ctx.strokeStyle = withAlpha(palette.hostileLight, 0.4 + pulse * 0.3)
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.arc(o.x, o.y, o.radius + 5, 0, Math.PI * 2)
+          ctx.stroke()
+          // Inner cross marks it as a fixed hazard, not a moving enemy
+          ctx.strokeStyle = withAlpha(palette.void, 0.55)
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.moveTo(o.x - o.radius * 0.45, o.y)
+          ctx.lineTo(o.x + o.radius * 0.45, o.y)
+          ctx.moveTo(o.x, o.y - o.radius * 0.45)
+          ctx.lineTo(o.x, o.y + o.radius * 0.45)
+          ctx.stroke()
+        }
       }
 
       if (gameData.state === 'cataclysm' && gameData.cataclysm?.eventEnemies) {
