@@ -2,7 +2,15 @@ import { Puck, Goal, normalize, clampGoalToCanvas } from './physics'
 import { Enemy } from './physics'
 
 // Event types for Cataclysm mode
-export type CataclysmEventType = 'staticGoals' | 'movingGoals' | 'shrinkingArena' | 'hunt' | 'swap'
+export type CataclysmEventType =
+  | 'staticGoals'
+  | 'movingGoals'
+  | 'shrinkingArena'
+  | 'hunt'
+  | 'swap'
+  | 'magnet'
+  | 'blackout'
+  | 'meteorStorm'
 
 /**
  * Create the player puck centered at (cx, cy)
@@ -158,7 +166,10 @@ export function spawnCataclysmGoals(
 let lastEventType: CataclysmEventType | null = null
 
 export function getEventType(): CataclysmEventType {
-  const types: CataclysmEventType[] = ['staticGoals', 'movingGoals', 'shrinkingArena', 'hunt', 'swap']
+  const types: CataclysmEventType[] = [
+    'staticGoals', 'movingGoals', 'shrinkingArena', 'hunt', 'swap',
+    'magnet', 'blackout', 'meteorStorm',
+  ]
   // Filter out the last event type to avoid immediate repeats
   const availableTypes = lastEventType ? types.filter(t => t !== lastEventType) : types
   const selected = availableTypes[Math.floor(Math.random() * availableTypes.length)]
@@ -181,6 +192,12 @@ export function getEventName(eventType: CataclysmEventType): string {
       return 'The Hunt'
     case 'swap':
       return 'Trickster'
+    case 'magnet':
+      return 'Repulsor'
+    case 'blackout':
+      return 'Blackout'
+    case 'meteorStorm':
+      return 'Meteor Storm'
     default:
       return 'Event'
   }
@@ -201,6 +218,12 @@ export function getCataclysmObjective(eventType: CataclysmEventType): string {
       return 'Collect all 7 goals while hunters chase you'
     case 'swap':
       return 'Collect all 7 goals before the swap catches you'
+    case 'magnet':
+      return 'Collect all 7 goals as they flee from you'
+    case 'blackout':
+      return 'Collect all 7 goals in the dark'
+    case 'meteorStorm':
+      return 'Collect all 7 goals while meteors streak past'
     default:
       return 'Complete the objective'
   }
