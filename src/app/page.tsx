@@ -5,6 +5,21 @@ import dynamic from 'next/dynamic'
 import GameCanvas from '../components/GameCanvas'
 import NeonBackground from '../components/NeonBackground'
 import TouchControls from '../components/TouchControls'
+import ChallengeSelect from '../components/ChallengeSelect'
+import SettingsModal from '../components/SettingsModal'
+import ProfileModal from '../components/ProfileModal'
+import EndScreen from '../components/EndScreen'
+import AchievementToast from '../components/AchievementToast'
+import { recordRun, loadStats, type RunSummary } from '../lib/stats'
+import { checkAchievements, type Achievement } from '../lib/achievements'
+import {
+  challenges,
+  computeStars,
+  recordChallengeResult,
+  isChallengeUnlocked,
+  challengeStats,
+  type Challenge,
+} from '../lib/challenges'
 import {
   filterPublicLeaderboardEntries,
   getUsernameValidationIssue,
@@ -39,7 +54,15 @@ export default function Home() {
     eventName: '',
     eventProgress: 0,
   })
-  const [gameMode, setGameMode] = useState<'survival' | 'zen' | 'tutorial'>('survival')
+  const [gameMode, setGameMode] = useState<'survival' | 'zen' | 'tutorial' | 'challenge'>('survival')
+  const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null)
+  const [menuScreen, setMenuScreen] = useState<'challenges' | 'settings' | 'profile' | null>(null)
+  const [endRun, setEndRun] = useState<{
+    summary: RunSummary
+    newPersonalBest: boolean
+    stars?: number
+  } | null>(null)
+  const [achievementQueue, setAchievementQueue] = useState<Achievement[]>([])
   const [sessionBest, setSessionBest] = useState(0)
   const [registeredName, setRegisteredName] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
@@ -143,6 +166,77 @@ export default function Home() {
     [submitLeaderboardScore]
   )
 
+  // Process a finished run: persist stats, score challenge stars, unlock
+  // achievements, then surface the end screen + any achievement toasts.
+  const handleRunEnd = useCallback(
+    (summary: RunSummary, perf: { wallTouched: boolean; timeRemaining: number; timeLimit: number }) => {
+      const { newPersonalBest } = recordRun(summary)
+
+      let stars: number | undefined
+      if (summary.mode === 'challenge' && activeChallenge) {
+        stars = computeStars(activeChallenge, {
+          completed: summary.won,
+          timeRemaining: perf.timeRemaining,
+          timeLimit: perf.timeLimit,
+          wallTouched: perf.wallTouched,
+          nearMisses: summary.nearMisses,
+        })
+        recordChallengeResult(activeChallenge.id, {
+          completed: summary.won,
+          stars: stars ?? 0,
+          score: summary.score,
+          timeMs: Math.round(summary.timeSurvived * 1000),
+        })
+      }
+
+      const cs = challengeStats()
+      const fresh = checkAchievements(
+        {
+          stats: loadStats(),
+          lastRun: summary,
+          challengesCompleted: cs.completedCount,
+          highestChallengeCleared: cs.highestCleared,
+          perfectChallengeCleared: summary.mode === 'challenge' && summary.won && stars === 3,
+        },
+        Date.now()
+      )
+
+      setEndRun({ summary, newPersonalBest, stars })
+      if (fresh.length > 0) setAchievementQueue(fresh)
+    },
+    [activeChallenge]
+  )
+
+  const handleSelectChallenge = useCallback((ch: Challenge) => {
+    setActiveChallenge(ch)
+    setGameMode('challenge')
+    setMenuScreen(null)
+    setUiState('rules')
+  }, [])
+
+  const handleEndRetry = useCallback(() => {
+    setEndRun(null)
+    setAchievementQueue([])
+    dispatchSpace() // in-canvas Space handler restarts survival/challenge instantly
+  }, [dispatchSpace])
+
+  const handleEndMenu = useCallback(() => {
+    setEndRun(null)
+    setAchievementQueue([])
+    setActiveChallenge(null)
+    setUiState('title')
+  }, [])
+
+  const handleEndNext = useCallback(() => {
+    if (!activeChallenge) return
+    const next = challenges.find((c) => c.id === activeChallenge.id + 1)
+    if (!next) return
+    setEndRun(null)
+    setAchievementQueue([])
+    setActiveChallenge(next)
+    setUiState('rules')
+  }, [activeChallenge])
+
   const handleStateUpdate = useCallback(
     (s: HudState) => {
       setHud({
@@ -169,6 +263,14 @@ export default function Home() {
       gameSessionTokenRef.current = null
     }
   }, [uiState])
+
+  // Dismiss the end screen once the game is live again (covers a direct Space restart).
+  useEffect(() => {
+    if (!hud.gameOver && endRun) {
+      setEndRun(null)
+      setAchievementQueue([])
+    }
+  }, [hud.gameOver, endRun])
 
   useEffect(() => {
     const handleSwitchToSurvival = () => {
@@ -277,6 +379,10 @@ export default function Home() {
             {gameMode === 'tutorial' && (
               <div className="status-text status-text-tutorial">{hud.eventName}</div>
             )}
+
+            {gameMode === 'challenge' && (
+              <div className="status-text status-text-tutorial">{hud.eventName}</div>
+            )}
           </div>
 
           <div className="hud-right">
@@ -310,6 +416,8 @@ export default function Home() {
             isPaused={uiState !== 'playing'}
             onStateChange={handleStateUpdate}
             onSurvivalGameOver={handleSurvivalGameOver}
+            onRunEnd={handleRunEnd}
+            challenge={gameMode === 'challenge' ? activeChallenge : null}
           />
         )}
 
@@ -354,6 +462,15 @@ export default function Home() {
                 </button>
 
                 <button
+                  type="button"
+                  className="mode-btn"
+                  onClick={() => setMenuScreen('challenges')}
+                >
+                  <div className="mode-btn-title">Challenges</div>
+                  <div className="mode-btn-desc">100 handcrafted trials. Earn your stars.</div>
+                </button>
+
+                <button
                   className="mode-btn"
                   onClick={() => { setGameMode('zen'); setUiState('rules') }}
                 >
@@ -369,6 +486,24 @@ export default function Home() {
                   <div className="mode-btn-title">Leaderboard</div>
                   <div className="mode-btn-desc">See who is on top.</div>
                 </button>
+
+                <button
+                  type="button"
+                  className="mode-btn"
+                  onClick={() => setMenuScreen('profile')}
+                >
+                  <div className="mode-btn-title">Profile</div>
+                  <div className="mode-btn-desc">Your stats and achievements.</div>
+                </button>
+
+                <button
+                  type="button"
+                  className="mode-btn"
+                  onClick={() => setMenuScreen('settings')}
+                >
+                  <div className="mode-btn-title">Settings</div>
+                  <div className="mode-btn-desc">Themes, skins and trails you've earned.</div>
+                </button>
               </div>
             </div>
           </div>
@@ -381,10 +516,25 @@ export default function Home() {
               <h2 className="glow-text">
                 {gameMode === 'zen' ? 'Practice Mode – Rules' :
                  gameMode === 'tutorial' ? 'Tutorial Mode – Rules' :
+                 gameMode === 'challenge' ? (activeChallenge?.title ?? 'Challenge') :
                  'Survival Mode – Rules'}
               </h2>
               <div>
-                {gameMode === 'zen' ? (
+                {gameMode === 'challenge' && activeChallenge ? (
+                  <ul>
+                    <li>{activeChallenge.description}</li>
+                    <li>
+                      Objective:{' '}
+                      {activeChallenge.goal.type === 'survive'
+                        ? `Survive ${activeChallenge.goal.target}s`
+                        : `Collect ${activeChallenge.goal.target} orbs`}
+                      {activeChallenge.timeLimit > 0 && activeChallenge.goal.type !== 'survive'
+                        ? ` within ${activeChallenge.timeLimit}s`
+                        : ''}
+                    </li>
+                    <li>3 stars for a flawless, danger-free clear.</li>
+                  </ul>
+                ) : gameMode === 'zen' ? (
                   <ul>
                     <li>No enemies</li>
                     <li>No death — you cannot lose</li>
@@ -506,6 +656,29 @@ export default function Home() {
       </main>
 
       <LeaderboardModal open={leaderboardOpen} onClose={() => setLeaderboardOpen(false)} />
+
+      {menuScreen === 'challenges' && (
+        <ChallengeSelect onSelect={handleSelectChallenge} onClose={() => setMenuScreen(null)} />
+      )}
+      {menuScreen === 'settings' && <SettingsModal onClose={() => setMenuScreen(null)} />}
+      {menuScreen === 'profile' && <ProfileModal onClose={() => setMenuScreen(null)} />}
+
+      {endRun && (
+        <EndScreen
+          summary={endRun.summary}
+          newPersonalBest={endRun.newPersonalBest}
+          stars={endRun.stars}
+          challengeTitle={endRun.summary.mode === 'challenge' ? activeChallenge?.title : undefined}
+          hasNextChallenge={
+            !!activeChallenge && challenges.some((c) => c.id === activeChallenge.id + 1)
+          }
+          onRetry={handleEndRetry}
+          onMenu={handleEndMenu}
+          onNext={handleEndNext}
+        />
+      )}
+
+      <AchievementToast queue={achievementQueue} onDrained={() => setAchievementQueue([])} />
     </div>
   )
 }
