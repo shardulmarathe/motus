@@ -2,105 +2,65 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 
-type Dot = {
+type Streak = {
   x: number
   y: number
-  baseX: number
-  baseY: number
   vx: number
   vy: number
-  radius: number
-  opacity: number
-  phase: number
+  hue: number // 0 = cyan, 1 = violet blend
+  weight: number
 }
 
-type Ripple = {
-  x: number
-  y: number
-  radius: number
-  maxRadius: number
-  opacity: number
-}
-
+/**
+ * Streaky, cursor-reactive backdrop. Particles drift slowly and leave light
+ * trails (motion blur via a low-alpha fade instead of a hard clear). Moving the
+ * cursor "combs" nearby streaks along the cursor's own velocity, so the field
+ * reacts as fast, directional streaks rather than a soft wave.
+ */
 export default function NeonBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const dotsRef = useRef<Dot[]>([])
-  const ripplesRef = useRef<Ripple[]>([])
-  const mouseRef = useRef({ x: -9999, y: -9999 })
-  const lastRippleTimeRef = useRef(0)
+  const streaksRef = useRef<Streak[]>([])
+  const mouseRef = useRef({ x: -9999, y: -9999, px: -9999, py: -9999, vx: 0, vy: 0 })
   const animationRef = useRef<number>()
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
 
   useEffect(() => {
-    const updateDimensions = () => {
-      setDimensions({ width: window.innerWidth, height: window.innerHeight })
-    }
-
-    updateDimensions()
-    window.addEventListener('resize', updateDimensions)
-    return () => window.removeEventListener('resize', updateDimensions)
+    const update = () => setDimensions({ width: window.innerWidth, height: window.innerHeight })
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
   }, [])
 
   useEffect(() => {
     if (dimensions.width === 0 || dimensions.height === 0) return
-
-    const count = Math.min(160, Math.max(90, Math.floor((dimensions.width * dimensions.height) / 11000)))
-    dotsRef.current = Array.from({ length: count }, () => {
-      const x = Math.random() * dimensions.width
-      const y = Math.random() * dimensions.height
-
+    const count = Math.min(150, Math.max(70, Math.floor((dimensions.width * dimensions.height) / 15000)))
+    const drift = 26 // base drift speed (px/s equivalent, scaled per frame)
+    streaksRef.current = Array.from({ length: count }, () => {
+      const angle = Math.PI * 0.72 + (Math.random() - 0.5) * 0.5 // mostly down-left flow
+      const speed = drift * (0.4 + Math.random() * 0.9)
       return {
-        x,
-        y,
-        baseX: x,
-        baseY: y,
-        vx: 0,
-        vy: 0,
-        radius: 1 + Math.random() * 1.6,
-        opacity: 0.1 + Math.random() * 0.22,
-        phase: Math.random() * Math.PI * 2,
+        x: Math.random() * dimensions.width,
+        y: Math.random() * dimensions.height,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        hue: Math.random(),
+        weight: 0.6 + Math.random() * 1.4,
       }
     })
   }, [dimensions])
 
   useEffect(() => {
-    const createRipple = (x: number, y: number) => {
-      if (ripplesRef.current.length >= 6) ripplesRef.current.shift()
-
-      ripplesRef.current.push({
-        x,
-        y,
-        radius: 0,
-        maxRadius: 110 + Math.random() * 70,
-        opacity: 0.16 + Math.random() * 0.08,
-      })
+    const onMove = (e: MouseEvent) => {
+      mouseRef.current.x = e.clientX
+      mouseRef.current.y = e.clientY
     }
-
-    const handleMouseMove = (e: MouseEvent) => {
-      mouseRef.current = { x: e.clientX, y: e.clientY }
-      const now = Date.now()
-
-      if (now - lastRippleTimeRef.current > 220) {
-        createRipple(e.clientX, e.clientY)
-        lastRippleTimeRef.current = now
-      }
-    }
-
-    const handleClick = (e: MouseEvent) => createRipple(e.clientX, e.clientY)
-
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('click', handleClick)
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('click', handleClick)
-    }
+    window.addEventListener('mousemove', onMove)
+    return () => window.removeEventListener('mousemove', onMove)
   }, [])
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || dimensions.width === 0 || dimensions.height === 0) return
-
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
@@ -111,84 +71,111 @@ export default function NeonBackground() {
     canvas.style.height = `${dimensions.height}px`
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-    const animate = () => {
-      ctx.clearRect(0, 0, dimensions.width, dimensions.height)
+    const W = dimensions.width
+    const H = dimensions.height
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-      const gradient = ctx.createRadialGradient(
-        dimensions.width / 2,
-        dimensions.height * 0.35,
-        0,
-        dimensions.width / 2,
-        dimensions.height * 0.5,
-        Math.max(dimensions.width, dimensions.height) * 0.75
-      )
-      gradient.addColorStop(0, 'rgba(45, 226, 230, 0.08)')
-      gradient.addColorStop(0.5, 'rgba(10, 18, 42, 0.28)')
-      gradient.addColorStop(1, 'rgba(5, 7, 15, 0)')
-      ctx.fillStyle = gradient
-      ctx.fillRect(0, 0, dimensions.width, dimensions.height)
+    // Static, calm render for reduced-motion users.
+    if (reduced) {
+      ctx.fillStyle = '#04060c'
+      ctx.fillRect(0, 0, W, H)
+      const g = ctx.createRadialGradient(W / 2, H * 0.4, 0, W / 2, H * 0.5, Math.max(W, H) * 0.7)
+      g.addColorStop(0, 'rgba(20, 46, 92, 0.35)')
+      g.addColorStop(1, 'rgba(3, 5, 9, 0)')
+      ctx.fillStyle = g
+      ctx.fillRect(0, 0, W, H)
+      return
+    }
 
-      const { x: mouseX, y: mouseY } = mouseRef.current
-      const influenceRadius = 190
+    // Paint an opaque dark base once; subsequent frames only fade partially.
+    ctx.fillStyle = '#04060c'
+    ctx.fillRect(0, 0, W, H)
 
-      for (const dot of dotsRef.current) {
-        dot.phase += 0.012
-        const dx = mouseX - dot.x
-        const dy = mouseY - dot.y
-        const distance = Math.hypot(dx, dy)
+    let last = performance.now()
 
-        if (distance < influenceRadius) {
-          const force = 1 - distance / influenceRadius
-          dot.vx += dx * force * 0.004
-          dot.vy += dy * force * 0.004
+    const frame = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000)
+      last = now
+
+      const m = mouseRef.current
+      m.vx = m.x - m.px
+      m.vy = m.y - m.py
+      m.px = m.x
+      m.py = m.y
+      const mouseSpeed = Math.hypot(m.vx, m.vy)
+
+      // Motion-blur fade — leaves streaks; darker = longer trails.
+      ctx.fillStyle = 'rgba(4, 6, 12, 0.22)'
+      ctx.fillRect(0, 0, W, H)
+
+      // Soft cool vignette toward the top so the wordmark reads.
+      const g = ctx.createRadialGradient(W / 2, H * 0.34, 0, W / 2, H * 0.46, Math.max(W, H) * 0.7)
+      g.addColorStop(0, 'rgba(18, 42, 86, 0.05)')
+      g.addColorStop(1, 'rgba(4, 6, 12, 0)')
+      ctx.fillStyle = g
+      ctx.fillRect(0, 0, W, H)
+
+      const influence = 220
+      for (const s of streaksRef.current) {
+        // Cursor combs nearby streaks along its own motion vector.
+        if (mouseSpeed > 0.5) {
+          const dx = s.x - m.x
+          const dy = s.y - m.y
+          const d = Math.hypot(dx, dy)
+          if (d < influence) {
+            const force = (1 - d / influence) * 0.35
+            s.vx += m.vx * force
+            s.vy += m.vy * force
+          }
         }
 
-        dot.vx += (dot.baseX - dot.x) * 0.012
-        dot.vy += (dot.baseY - dot.y) * 0.012
-        dot.vx *= 0.9
-        dot.vy *= 0.9
-        dot.x += dot.vx
-        dot.y += dot.vy
+        // Ease back toward the baseline flow speed so combs relax into drift.
+        s.vx *= 0.94
+        s.vy *= 0.94
+        const px = s.x
+        const py = s.y
+        s.x += s.vx * dt * 60
+        s.y += s.vy * dt * 60
 
-        const twinkle = Math.sin(dot.phase) * 0.04
+        // Wrap around edges.
+        if (s.x < -20) s.x = W + 20
+        if (s.x > W + 20) s.x = -20
+        if (s.y < -20) s.y = H + 20
+        if (s.y > H + 20) s.y = -20
+
+        // Draw the streak as a line from the previous position to the head,
+        // exaggerated by current speed so fast streaks read as long light trails.
+        const speed = Math.hypot(s.vx, s.vy)
+        const len = Math.min(60, 2 + speed * 2.2)
+        const nx = speed > 0.01 ? s.vx / speed : 0
+        const ny = speed > 0.01 ? s.vy / speed : 0
+        const r = Math.round(90 + s.hue * 90)
+        const gg = Math.round(200 - s.hue * 40)
+        const b = 240
+        const alpha = Math.min(0.5, 0.12 + speed * 0.03)
+
+        ctx.strokeStyle = `rgba(${r}, ${gg}, ${b}, ${alpha})`
+        ctx.lineWidth = s.weight
         ctx.beginPath()
-        ctx.arc(dot.x, dot.y, dot.radius, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(132, 184, 211, ${Math.max(0.05, dot.opacity + twinkle)})`
+        ctx.moveTo(px - nx * len, py - ny * len)
+        ctx.lineTo(s.x, s.y)
+        ctx.stroke()
+
+        // Bright head.
+        ctx.fillStyle = `rgba(200, 240, 255, ${alpha + 0.15})`
+        ctx.beginPath()
+        ctx.arc(s.x, s.y, s.weight * 0.9, 0, Math.PI * 2)
         ctx.fill()
       }
 
-      ripplesRef.current = ripplesRef.current.filter((ripple) => {
-        ripple.radius += 2.1
-        ripple.opacity -= 0.011
-        if (ripple.opacity <= 0 || ripple.radius > ripple.maxRadius) return false
-
-        ctx.beginPath()
-        ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2)
-        ctx.strokeStyle = `rgba(45, 226, 230, ${ripple.opacity})`
-        ctx.lineWidth = 1
-        ctx.shadowColor = `rgba(45, 226, 230, ${ripple.opacity * 0.6})`
-        ctx.shadowBlur = 10
-        ctx.stroke()
-        ctx.shadowBlur = 0
-
-        return true
-      })
-
-      animationRef.current = requestAnimationFrame(animate)
+      animationRef.current = requestAnimationFrame(frame)
     }
 
-    animate()
-
+    animationRef.current = requestAnimationFrame(frame)
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current)
     }
   }, [dimensions])
 
-  return (
-    <canvas
-      ref={canvasRef}
-      aria-hidden="true"
-      className="neon-background"
-    />
-  )
+  return <canvas ref={canvasRef} aria-hidden="true" className="neon-background" />
 }
