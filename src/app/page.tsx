@@ -477,50 +477,61 @@ export default function Home() {
           <div className="overlay-center" style={{ position: 'absolute', inset: 0, zIndex: 80 }}>
             <div className="overlay-backdrop" />
             <div className="rules-modal">
-              <h2 className="glow-text">
-                {gameMode === 'zen' ? 'Practice Mode – Rules' :
-                 gameMode === 'tutorial' ? 'Tutorial Mode – Rules' :
-                 gameMode === 'challenge' ? (activeChallenge?.title ?? 'Challenge') :
-                 'Survival Mode – Rules'}
-              </h2>
-              <div>
-                {gameMode === 'challenge' && activeChallenge ? (
-                  <ul>
-                    <li>{activeChallenge.description}</li>
-                    <li>
-                      Objective:{' '}
-                      {activeChallenge.goal.type === 'survive'
+              {(() => {
+                const eyebrow =
+                  gameMode === 'zen' ? 'PRACTICE // BRIEFING' :
+                  gameMode === 'tutorial' ? 'TUTORIAL // BRIEFING' :
+                  gameMode === 'challenge' ? `CHALLENGE ${activeChallenge?.id ?? ''}`.trim() :
+                  'SURVIVAL // BRIEFING'
+                const title =
+                  gameMode === 'zen' ? 'Practice Mode' :
+                  gameMode === 'tutorial' ? 'Tutorial' :
+                  gameMode === 'challenge' ? (activeChallenge?.title ?? 'Challenge') :
+                  'Survival Mode'
+                const items: string[] =
+                  gameMode === 'challenge' && activeChallenge ? [
+                    activeChallenge.description,
+                    `Objective: ${
+                      activeChallenge.goal.type === 'survive'
                         ? `Survive ${activeChallenge.goal.target}s`
-                        : `Collect ${activeChallenge.goal.target} orbs`}
-                      {activeChallenge.timeLimit > 0 && activeChallenge.goal.type !== 'survive'
+                        : `Collect ${activeChallenge.goal.target} orbs`
+                    }${
+                      activeChallenge.timeLimit > 0 && activeChallenge.goal.type !== 'survive'
                         ? ` within ${activeChallenge.timeLimit}s`
-                        : ''}
-                    </li>
-                    <li>3 stars for a flawless, danger-free clear.</li>
-                  </ul>
-                ) : gameMode === 'zen' ? (
-                  <ul>
-                    <li>No enemies</li>
-                    <li>No death — you cannot lose</li>
-                    <li>Wrap-around borders (teleport to opposite side)</li>
-                    <li>Focus on collecting green orbs and movement</li>
-                  </ul>
-                ) : gameMode === 'tutorial' ? (
-                  <ul>
-                    <li>Learn the game mechanics step-by-step</li>
-                    <li>Follow instructions to complete each tutorial step</li>
-                    <li>Practice movement and goal collection</li>
-                    <li>Learn to avoid enemies in a safe environment</li>
-                  </ul>
-                ) : (
-                  <ul>
-                    <li>Move with arrow keys or WASD.</li>
-                    <li>Avoid red enemies; touch green goals to score.</li>
-                    <li>Every few goals triggers a short challenge event.</li>
-                    <li>Stay inside the field — edges will warn you.</li>
-                  </ul>
-                )}
-              </div>
+                        : ''
+                    }`,
+                    '3 stars for a flawless, danger-free clear.',
+                  ] : gameMode === 'zen' ? [
+                    'No enemies.',
+                    'No death — you cannot lose.',
+                    'Wrap-around borders teleport you to the opposite side.',
+                    'Focus on collecting green orbs and movement.',
+                  ] : gameMode === 'tutorial' ? [
+                    'Learn the game mechanics step by step.',
+                    'Follow the instructions to complete each step.',
+                    'Practice movement and goal collection.',
+                    'Learn to avoid enemies in a safe environment.',
+                  ] : [
+                    'Move with arrow keys or WASD.',
+                    'Avoid red enemies; touch green goals to score.',
+                    'Every few goals triggers a short Cataclysm event.',
+                    'Stay inside the field — the edges will warn you.',
+                  ]
+                return (
+                  <>
+                    <span className="modal-eyebrow">{eyebrow}</span>
+                    <h2>{title}</h2>
+                    <div className="brief-list">
+                      {items.map((text, i) => (
+                        <div className="brief-row" key={i}>
+                          <span className="brief-row-index">{String(i + 1).padStart(2, '0')}</span>
+                          <span className="brief-row-text">{text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )
+              })()}
 
               {gameMode === 'survival' && registeredName && (
                 <p className="username-registered">
@@ -576,9 +587,9 @@ export default function Home() {
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-start' }}>
                 <button
-                  className="rules-modal-play"
+                  className="btn btn-primary"
                   disabled={!canPlaySurvival}
                   onClick={() => void handleStartPlaying()}
                 >
@@ -592,23 +603,24 @@ export default function Home() {
         {uiState === 'paused' && (
           <div className="overlay-center" style={{ position: 'absolute', inset: 0, zIndex: 90 }}>
             <div className="overlay-backdrop" />
-            <div className="pause-modal">
-              <div className="pause-modal-title glow-text">Paused</div>
+            <div className="rules-modal pause-modal">
+              <span className="modal-eyebrow">SESSION PAUSED</span>
+              <div className="pause-modal-title">Paused</div>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
                 <button
-                  className="pause-modal-btn pause-modal-btn-resume"
+                  className="btn btn-primary"
                   onClick={() => setUiState('playing')}
                 >
                   Resume
                 </button>
                 <button
-                  className="pause-modal-btn pause-modal-btn-restart"
+                  className="btn btn-ghost"
                   onClick={() => setUiState('rules')}
                 >
                   Restart
                 </button>
                 <button
-                  className="pause-modal-btn pause-modal-btn-menu"
+                  className="btn btn-ghost"
                   onClick={() => setUiState('title')}
                 >
                   Menu
