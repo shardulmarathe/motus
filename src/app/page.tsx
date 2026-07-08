@@ -178,8 +178,8 @@ export default function Home() {
           completed: summary.won,
           timeRemaining: perf.timeRemaining,
           timeLimit: perf.timeLimit,
+          elapsed: summary.timeSurvived,
           wallTouched: perf.wallTouched,
-          nearMisses: summary.nearMisses,
         })
         recordChallengeResult(activeChallenge.id, {
           completed: summary.won,

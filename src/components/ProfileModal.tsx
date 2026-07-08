@@ -10,9 +10,8 @@ interface ProfileModalProps {
 
 const STAT_ORDER: (keyof LifetimeStats)[] = [
   'gamesPlayed', 'gamesWon', 'totalDeaths', 'highestScore',
-  'totalOrbs', 'highestCombo', 'totalNearMisses', 'cataclysmsTriggered',
-  'challengesCompleted', 'starsEarned', 'longestSurvival', 'totalPlayTime',
-  'totalDistance', 'longestDrift', 'fastestSpeed',
+  'totalOrbs', 'cataclysmsTriggered', 'challengesCompleted', 'starsEarned',
+  'longestSurvival', 'totalPlayTime', 'totalDistance', 'longestDrift', 'fastestSpeed',
 ]
 
 /** Profile: lifetime statistics and achievements, in two tabs. */

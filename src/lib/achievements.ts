@@ -52,8 +52,10 @@ export const achievements: Achievement[] = [
     test: (c) => c.stats.totalDistance >= 10000 },
   { id: 'survive-5min', name: 'Endurance', description: 'Survive a single run for 5 minutes.', icon: '⏳',
     test: (c) => c.stats.longestSurvival >= 300 },
-  { id: 'near-miss-master', name: 'Near Miss Master', description: 'Pull off 8 near misses in one run.', icon: '😅',
-    test: (c) => (c.lastRun?.nearMisses ?? 0) >= 8 },
+  { id: 'storm-survivor', name: 'Storm Survivor', description: 'Clear 3 Cataclysms in a single run.', icon: '⚔️',
+    test: (c) => (c.lastRun?.cataclysmsTriggered ?? 0) >= 3 },
+  { id: 'storm-veteran', name: 'Storm Veteran', description: 'Trigger 25 Cataclysms in total.', icon: '🌪️',
+    test: (c) => c.stats.cataclysmsTriggered >= 25 },
   { id: 'perfect-challenge', name: 'Flawless', description: 'Earn 3 stars on a challenge.', icon: '✨',
     test: (c) => c.perfectChallengeCleared === true },
 ]
