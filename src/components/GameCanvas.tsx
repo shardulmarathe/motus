@@ -471,7 +471,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       const rs = runStatsRef.current
       eventName =
         ch.goal.type === 'survive'
-          ? `Survive ${Math.max(0, Math.ceil(ch.goal.target - rs.elapsed))}s`
+          ? 'Survive'
           : `Orbs ${rs.orbs}/${ch.goal.target}`
     } else if (gameData.state === 'cataclysm' && gameData.cataclysm) {
       mode = 'Event'
@@ -1620,6 +1620,57 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           ctx.fillText(`${timeLeft}s`, w / 2, 40)
           ctx.restore()
           
+          ctx.shadowColor = 'transparent'
+          ctx.shadowBlur = 0
+        }
+      }
+
+      // ===== CHALLENGE TIMER (time-bound challenges) =====
+      // Mirrors the Cataclysm countdown so timed challenges surface the clock the
+      // same way events do. Survive challenges count down their target; timed
+      // collect challenges count down their deadline. Both escalate to red.
+      if (
+        props.gameMode === 'challenge' &&
+        propsRef.current.challenge &&
+        gameData.state === 'playing'
+      ) {
+        const ch = propsRef.current.challenge
+        const isSurvive = ch.goal.type === 'survive'
+        const limit = isSurvive ? ch.goal.target : ch.timeLimit
+        if (limit > 0) {
+          const secs = Math.max(0, Math.ceil(limit - runStatsRef.current.elapsed))
+
+          // Color by urgency, matching the Cataclysm timer.
+          if (secs > 10) {
+            ctx.fillStyle = palette.white
+            ctx.shadowColor = 'rgba(255, 255, 255, 0.5)'
+          } else if (secs > 5) {
+            ctx.fillStyle = palette.warn
+            ctx.shadowColor = withAlpha(palette.warn, 0.8)
+          } else {
+            ctx.fillStyle = palette.hostile
+            ctx.shadowColor = withAlpha(palette.hostile, 1)
+          }
+
+          ctx.font = `bold 48px ${FONT_GAME}`
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'top'
+          ctx.shadowBlur = 20
+
+          // Subtle pulse in the final seconds.
+          let scaleOffset = 1
+          if (secs <= 5) {
+            const pulsePhase = (Date.now() % 400) / 400
+            scaleOffset = 1 + Math.sin(pulsePhase * Math.PI * 2) * 0.05
+          }
+
+          ctx.save()
+          ctx.translate(w / 2, 40)
+          ctx.scale(scaleOffset, scaleOffset)
+          ctx.translate(-w / 2, -40)
+          ctx.fillText(`${secs}s`, w / 2, 40)
+          ctx.restore()
+
           ctx.shadowColor = 'transparent'
           ctx.shadowBlur = 0
         }

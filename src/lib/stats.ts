@@ -109,7 +109,7 @@ const STAT_LABELS: Record<keyof LifetimeStats, string> = {
   gamesWon: 'Games Won',
   totalDeaths: 'Total Deaths',
   totalOrbs: 'Total Orbs Collected',
-  totalDistance: 'Total Distance Traveled',
+  totalDistance: 'Total Distance',
   highestScore: 'Highest Score',
   longestSurvival: 'Longest Survival',
   totalPlayTime: 'Total Play Time',
@@ -124,12 +124,35 @@ export function statLabel(key: keyof LifetimeStats): string {
   return STAT_LABELS[key]
 }
 
+/**
+ * Compact large numbers so big readouts never overflow their box:
+ * 950 → "950", 1_200 → "1.2k", 3_400_000 → "3.4M", 1_100_000_000 → "1.1B".
+ */
+export function formatCompact(value: number): string {
+  const n = Math.round(value)
+  const abs = Math.abs(n)
+  if (abs < 1000) return n.toLocaleString()
+  for (const { v, s } of [
+    { v: 1e9, s: 'B' },
+    { v: 1e6, s: 'M' },
+    { v: 1e3, s: 'k' },
+  ]) {
+    if (abs >= v) {
+      const scaled = n / v
+      // One decimal below 100 of a unit (1.2k), none above (340k)
+      const str = scaled.toFixed(Math.abs(scaled) >= 100 ? 0 : 1).replace(/\.0$/, '')
+      return `${str}${s}`
+    }
+  }
+  return n.toLocaleString()
+}
+
 /** Human-readable value formatting for the stats/profile screen. */
 export function formatStat(key: keyof LifetimeStats, value: number): string {
   switch (key) {
     case 'totalDistance':
     case 'longestDrift':
-      return `${Math.round(value).toLocaleString()} px`
+      return `${formatCompact(value)} px`
     case 'fastestSpeed':
       return `${Math.round(value)} px/s`
     case 'longestSurvival':
