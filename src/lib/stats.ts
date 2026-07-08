@@ -18,8 +18,6 @@ export interface RunSummary {
   averageSpeed: number // px/s
   highestSpeed: number // px/s
   cataclysmsTriggered: number
-  nearMisses: number
-  highestCombo: number
   won: boolean
   challengeId?: number
   starsEarned?: number
@@ -32,7 +30,6 @@ export interface LifetimeStats {
   totalOrbs: number
   totalDistance: number
   highestScore: number
-  highestCombo: number
   longestSurvival: number // seconds
   totalPlayTime: number // seconds
   fastestSpeed: number // px/s
@@ -40,7 +37,6 @@ export interface LifetimeStats {
   cataclysmsTriggered: number
   challengesCompleted: number
   starsEarned: number
-  totalNearMisses: number
 }
 
 export function defaultStats(): LifetimeStats {
@@ -51,7 +47,6 @@ export function defaultStats(): LifetimeStats {
     totalOrbs: 0,
     totalDistance: 0,
     highestScore: 0,
-    highestCombo: 0,
     longestSurvival: 0,
     totalPlayTime: 0,
     fastestSpeed: 0,
@@ -59,7 +54,6 @@ export function defaultStats(): LifetimeStats {
     cataclysmsTriggered: 0,
     challengesCompleted: 0,
     starsEarned: 0,
-    totalNearMisses: 0,
   }
 }
 
@@ -97,7 +91,6 @@ export function recordRun(summary: RunSummary): RecordRunResult {
     totalOrbs: stats.totalOrbs + summary.orbsCollected,
     totalDistance: stats.totalDistance + summary.distanceTraveled,
     highestScore: scoreCountsForBest ? Math.max(stats.highestScore, summary.score) : stats.highestScore,
-    highestCombo: Math.max(stats.highestCombo, summary.highestCombo),
     longestSurvival: Math.max(stats.longestSurvival, summary.timeSurvived),
     totalPlayTime: stats.totalPlayTime + summary.timeSurvived,
     fastestSpeed: Math.max(stats.fastestSpeed, summary.highestSpeed),
@@ -105,7 +98,6 @@ export function recordRun(summary: RunSummary): RecordRunResult {
     cataclysmsTriggered: stats.cataclysmsTriggered + summary.cataclysmsTriggered,
     challengesCompleted: stats.challengesCompleted, // updated by challenge system on first clear
     starsEarned: stats.starsEarned, // updated by challenge system
-    totalNearMisses: stats.totalNearMisses + summary.nearMisses,
   }
 
   saveStats(next)
@@ -119,7 +111,6 @@ const STAT_LABELS: Record<keyof LifetimeStats, string> = {
   totalOrbs: 'Total Orbs Collected',
   totalDistance: 'Total Distance Traveled',
   highestScore: 'Highest Score',
-  highestCombo: 'Highest Combo',
   longestSurvival: 'Longest Survival',
   totalPlayTime: 'Total Play Time',
   fastestSpeed: 'Fastest Speed',
@@ -127,7 +118,6 @@ const STAT_LABELS: Record<keyof LifetimeStats, string> = {
   cataclysmsTriggered: 'Cataclysms Triggered',
   challengesCompleted: 'Challenges Completed',
   starsEarned: 'Stars Earned',
-  totalNearMisses: 'Total Near Misses',
 }
 
 export function statLabel(key: keyof LifetimeStats): string {

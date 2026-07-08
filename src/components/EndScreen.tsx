@@ -62,8 +62,6 @@ export default function EndScreen({
         <div className="stat-grid end-stat-grid">
           <StatRow label="Time Survived" value={formatDuration(summary.timeSurvived)} />
           <StatRow label="Orbs Collected" value={String(summary.orbsCollected)} />
-          <StatRow label="Highest Combo" value={`x${summary.highestCombo}`} />
-          <StatRow label="Near Misses" value={String(summary.nearMisses)} />
           <StatRow label="Distance" value={`${Math.round(summary.distanceTraveled).toLocaleString()} px`} />
           <StatRow label="Longest Drift" value={`${Math.round(summary.longestDrift).toLocaleString()} px`} />
           <StatRow label="Avg Speed" value={`${Math.round(summary.averageSpeed)} px/s`} />

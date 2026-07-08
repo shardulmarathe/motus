@@ -33,23 +33,6 @@ import type { RunSummary } from '../lib/stats'
 import { resolveActiveTheme, activeTrailStyle, type ResolvedTheme, type TrailStyle } from '../lib/customization'
 import type { Challenge } from '../lib/challenges'
 
-// ── V2 tuning constants ──
-const COMBO_WINDOW = 2.2 // seconds allowed between orbs to keep a combo alive
-const COMBO_MAX = 5 // multiplier cap (x5)
-const NEAR_MISS_BAND = 24 // px of clearance beyond a collision that still counts as a near miss
-const NEAR_MISS_BONUS = 25 // points per near miss
-const NEAR_MISS_COOLDOWN = 0.8 // seconds before the same enemy can trigger another near miss
-
-interface FloatingText {
-  x: number
-  y: number
-  text: string
-  color: string
-  life: number
-  maxLife: number
-  vy: number
-}
-
 interface RunStats {
   elapsed: number // seconds of active play (pause-safe: accumulated from dt)
   orbs: number
@@ -58,8 +41,6 @@ interface RunStats {
   longestDrift: number
   currentDrift: number
   cataclysms: number
-  nearMisses: number
-  highestCombo: number
   wallTouched: boolean
 }
 
@@ -72,8 +53,6 @@ function freshRunStats(): RunStats {
     longestDrift: 0,
     currentDrift: 0,
     cataclysms: 0,
-    nearMisses: 0,
-    highestCombo: 0,
     wallTouched: false,
   }
 }
@@ -359,9 +338,6 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
   // ── V2 progression refs ──
   const runStatsRef = useRef<RunStats>(freshRunStats())
-  const comboRef = useRef<{ count: number; timer: number }>({ count: 0, timer: 0 })
-  const floatingTextsRef = useRef<FloatingText[]>([])
-  const nearMissCooldownRef = useRef<Map<string, number>>(new Map())
   const themeRef = useRef<ResolvedTheme>(resolveActiveTheme())
   const trailStyleRef = useRef<TrailStyle>(activeTrailStyle())
   const challengeDoneRef = useRef(false) // guards one-shot challenge completion
@@ -412,8 +388,6 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       averageSpeed: rs.elapsed > 0 ? rs.distance / rs.elapsed : 0,
       highestSpeed: rs.topSpeed,
       cataclysmsTriggered: rs.cataclysms,
-      nearMisses: rs.nearMisses,
-      highestCombo: rs.highestCombo,
       won,
       challengeId: p.challenge?.id,
     }
@@ -425,9 +399,9 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     const isGameOver = gameData.state === 'gameOver'
     if (isGameOver && !lastGameOverNotifiedRef.current) {
       if (gameModeRef.current === 'survival' && props.onSurvivalGameOver) {
-        // Leaderboard ranks by orbs collected (its historical metric + anti-cheat
-        // contract); the combo/near-miss-boosted arcade score is local only.
-        props.onSurvivalGameOver(runStatsRef.current.orbs)
+        // Score is 1 point per orb, matching the leaderboard's historical metric
+        // and its elapsed-time anti-cheat bound.
+        props.onSurvivalGameOver(gameData.score)
       }
       // A game-over is always a loss; challenge wins call finalizeRun(true) directly.
       finalizeRun(false)
@@ -581,9 +555,6 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
     // V2: reset run-scoped progression state and re-resolve cosmetics for this run
     runStatsRef.current = freshRunStats()
-    comboRef.current = { count: 0, timer: 0 }
-    floatingTextsRef.current = []
-    nearMissCooldownRef.current.clear()
     challengeDoneRef.current = false
     runFinalizedRef.current = false
     themeRef.current = resolveActiveTheme()
@@ -617,35 +588,11 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     }
   }
 
-  /**
-   * Register an orb pickup: advances the combo, tracks run stats, spawns a
-   * floating multiplier label, and returns the points earned (= multiplier).
-   */
+  /** Register an orb pickup: +1 score, tracks the run stat, spawns a burst. */
   const registerOrb = (x: number, y: number): number => {
-    const combo = comboRef.current
-    combo.count = Math.min(COMBO_MAX, combo.count + 1)
-    combo.timer = COMBO_WINDOW
-    const multiplier = combo.count
-
-    const rs = runStatsRef.current
-    rs.orbs++
-    if (multiplier > rs.highestCombo) rs.highestCombo = multiplier
-
+    runStatsRef.current.orbs++
     spawnBurst(x, y)
-    floatingTextsRef.current.push({
-      x,
-      y: y - 12,
-      text: multiplier > 1 ? `+${multiplier}  x${multiplier}` : '+1',
-      color: multiplier >= 4 ? themeRef.current.palette.warn : themeRef.current.palette.orb,
-      life: 0.85,
-      maxLife: 0.85,
-      vy: -46,
-    })
-    return multiplier
-  }
-
-  const addFloatingText = (x: number, y: number, text: string, color: string) => {
-    floatingTextsRef.current.push({ x, y, text, color, life: 0.9, maxLife: 0.9, vy: -40 })
+    return 1
   }
 
   // Handle pause events
@@ -790,16 +737,6 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       // ===== V2: per-frame progression accumulators =====
       const rs = runStatsRef.current
       rs.elapsed += dt
-      if (comboRef.current.timer > 0) {
-        comboRef.current.timer -= dt
-        if (comboRef.current.timer <= 0) comboRef.current.count = 0
-      }
-      for (let i = floatingTextsRef.current.length - 1; i >= 0; i--) {
-        const ft = floatingTextsRef.current[i]
-        ft.y += ft.vy * dt
-        ft.life -= dt
-        if (ft.life <= 0) floatingTextsRef.current.splice(i, 1)
-      }
 
       const mods = propsRef.current.challenge?.modifiers ?? {}
 
@@ -1175,30 +1112,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         (gameData.cataclysm.enterTime ?? 0) < 1.5
       
       const eventEnemies = gameData.cataclysm?.eventEnemies ?? []
-      const canNearMiss =
-        !isInEventOverlay && (props.gameMode === 'survival' || props.gameMode === 'challenge')
       for (const enemy of [...enemiesRef.current, ...eventEnemies]) {
-        if (!circlesCollide(player, enemy)) {
-          // ===== NEAR MISS: an enemy grazes past without landing a hit =====
-          if (canNearMiss) {
-            const gap = Math.hypot(player.x - enemy.x, player.y - enemy.y) - (player.radius + enemy.radius)
-            if (gap > 0 && gap < NEAR_MISS_BAND) {
-              const eid = enemy.id ?? 'e'
-              const last = nearMissCooldownRef.current.get(eid) ?? -999
-              const enemySpeed = Math.hypot(enemy.vx, enemy.vy)
-              const playerSpeed = Math.hypot(player.vx, player.vy)
-              if (rs.elapsed - last > NEAR_MISS_COOLDOWN && (enemySpeed > 60 || playerSpeed > 60)) {
-                nearMissCooldownRef.current.set(eid, rs.elapsed)
-                if (nearMissCooldownRef.current.size > 256) nearMissCooldownRef.current.clear()
-                rs.nearMisses++
-                gameData.score += NEAR_MISS_BONUS
-                addFloatingText(player.x, player.y - player.radius - 8, `NEAR MISS +${NEAR_MISS_BONUS}`, themeRef.current.palette.warn)
-              }
-            }
-          }
-          continue
-        }
-        {
+        if (circlesCollide(player, enemy)) {
           // Don't die during overlay grace period (fairness - transition from intro to gameplay)
           if (!isInEventOverlay) {
             if (props.gameMode === 'tutorial') {
@@ -1424,38 +1339,6 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       ctx.arc(player.x - 4, player.y - 4, player.radius * 0.4, 0, Math.PI * 2)
       ctx.fill()
       ctx.restore()
-
-      // ===== COMBO INDICATOR (floats above the player) =====
-      const combo = comboRef.current
-      if (combo.count >= 2) {
-        const fade = Math.min(1, combo.timer / 0.6)
-        const c = combo.count >= 4 ? palette.warn : palette.playerLight
-        ctx.save()
-        ctx.globalAlpha = 0.5 + 0.5 * fade
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.font = `800 ${18 + combo.count * 2}px ${FONT_GAME}`
-        ctx.fillStyle = c
-        ctx.shadowColor = withAlpha(c, 0.85)
-        ctx.shadowBlur = 14
-        ctx.fillText(`x${combo.count}`, player.x, player.y - player.radius - 22)
-        ctx.restore()
-      }
-
-      // ===== FLOATING TEXTS (combo pops, near misses) =====
-      for (const ft of floatingTextsRef.current) {
-        const a = Math.max(0, ft.life / ft.maxLife)
-        ctx.save()
-        ctx.globalAlpha = a
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.font = `700 14px ${FONT_GAME}`
-        ctx.fillStyle = ft.color
-        ctx.shadowColor = withAlpha(ft.color, 0.7)
-        ctx.shadowBlur = 8
-        ctx.fillText(ft.text, ft.x, ft.y)
-        ctx.restore()
-      }
 
       ctx.restore()
 

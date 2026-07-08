@@ -75,23 +75,33 @@ export interface ChallengePerf {
   completed: boolean
   timeRemaining: number
   timeLimit: number
+  elapsed: number // seconds of active play at completion
   wallTouched: boolean
-  nearMisses: number
 }
 
+/**
+ * Stars reward efficiency:
+ *  - timed collect goals → by fraction of the time limit left over;
+ *  - untimed collect goals → by clear speed vs a par derived from the goal;
+ *  - survive goals → clearing the full duration is itself mastery (3 stars).
+ */
 export function computeStars(ch: Challenge, perf: ChallengePerf): number {
   if (!perf.completed) return 0
-  let stars = 1
 
-  if (ch.stars.mode === 'time' && perf.timeLimit > 0) {
-    const frac = Math.max(0, Math.min(1, perf.timeRemaining / perf.timeLimit))
-    if (frac >= ch.stars.two) stars = 2
-    if (frac >= ch.stars.three) stars = 3
+  if (ch.goal.type === 'survive') return 3
+
+  let frac: number
+  if (perf.timeLimit > 0) {
+    frac = perf.timeRemaining / perf.timeLimit
   } else {
-    // Untimed / survival goals: reward flawless, danger-free clears.
-    if (!perf.wallTouched) stars = 2
-    if (!perf.wallTouched && perf.nearMisses === 0) stars = 3
+    const par = ch.goal.target * 1.6 + 5 // seconds of "expected" clear time
+    frac = (par - perf.elapsed) / par
   }
+  frac = Math.max(0, Math.min(1, frac))
+
+  let stars = 1
+  if (frac >= 0.2) stars = 2
+  if (frac >= 0.45) stars = 3
   return stars
 }
 
