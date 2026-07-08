@@ -17,11 +17,9 @@ export type VerifiedGameSession = {
 }
 
 export function getSessionSecret(): string {
-  const secret =
-    process.env.LEADERBOARD_SESSION_SECRET?.trim() ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+  const secret = process.env.LEADERBOARD_SESSION_SECRET?.trim()
   if (!secret) {
-    throw new Error('Missing LEADERBOARD_SESSION_SECRET or SUPABASE_SERVICE_ROLE_KEY')
+    throw new Error('Missing LEADERBOARD_SESSION_SECRET')
   }
   return secret
 }

@@ -1,10 +1,10 @@
 /**
  * One-off admin script — run with: npx tsx scripts/leaderboard-admin.mjs
- * Requires .env.local with Supabase credentials.
+ * Requires .env.local with DATABASE_URL.
  */
-import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
+import { neon } from '@neondatabase/serverless'
 import { isAppropriateUsername } from '../src/lib/profanity.ts'
 
 function loadEnvLocal() {
@@ -22,33 +22,22 @@ function loadEnvLocal() {
 }
 
 const env = loadEnvLocal()
-const url = env.NEXT_PUBLIC_SUPABASE_URL
-const key = env.SUPABASE_SERVICE_ROLE_KEY
-if (!url || !key) {
-  console.error('Missing Supabase env vars in .env.local')
+const databaseUrl = env.DATABASE_URL
+if (!databaseUrl) {
+  console.error('Missing DATABASE_URL in .env.local')
   process.exit(1)
 }
 
-const supabase = createClient(url, key, {
-  auth: { persistSession: false, autoRefreshToken: false },
-})
+const sql = neon(databaseUrl)
 
-const { data: rows, error: listError } = await supabase.from('leaderboard').select('username')
-if (listError) {
-  console.error('List failed:', listError.message)
-  process.exit(1)
-}
+const rows = await sql`SELECT username FROM leaderboard`
+const toRemove = rows.filter((r) => !isAppropriateUsername(r.username))
 
-const toRemove = (rows ?? []).filter((r) => !isAppropriateUsername(r.username))
 if (toRemove.length === 0) {
   console.log('No disallowed leaderboard rows to remove.')
 } else {
   for (const row of toRemove) {
-    const { error } = await supabase.from('leaderboard').delete().eq('username', row.username)
-    if (error) {
-      console.error(`Delete failed for ${row.username}:`, error.message)
-      process.exit(1)
-    }
+    await sql`DELETE FROM leaderboard WHERE username = ${row.username}`
     console.log(`Removed: ${row.username}`)
   }
 }

@@ -3,12 +3,13 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import type { LeaderboardEntry } from '../lib/leaderboard'
 import { filterPublicLeaderboardEntries } from '../lib/leaderboard'
-import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js'
 
 interface LeaderboardModalProps {
   open: boolean
   onClose: () => void
 }
+
+const POLL_MS = 15_000
 
 export default function LeaderboardModal({ open, onClose }: LeaderboardModalProps) {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
@@ -33,37 +34,14 @@ export default function LeaderboardModal({ open, onClose }: LeaderboardModalProp
     if (!open) return
 
     setLoading(true)
-    fetchLeaderboard()
+    void fetchLeaderboard()
 
-    let supabase: SupabaseClient | null = null
-    let channel: RealtimeChannel | null = null
-    let cancelled = false
-
-    void (async () => {
-      try {
-        const { createBrowserSupabaseClient } = await import('../lib/supabase/client')
-        if (cancelled) return
-        supabase = createBrowserSupabaseClient()
-        channel = supabase
-          .channel('leaderboard-changes')
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'leaderboard' },
-            () => {
-              fetchLeaderboard()
-            }
-          )
-          .subscribe()
-      } catch {
-        // Env missing locally — still show fetched data
-      }
-    })()
+    const interval = window.setInterval(() => {
+      void fetchLeaderboard()
+    }, POLL_MS)
 
     return () => {
-      cancelled = true
-      if (supabase && channel) {
-        supabase.removeChannel(channel)
-      }
+      window.clearInterval(interval)
     }
   }, [open, fetchLeaderboard])
 
