@@ -5,6 +5,11 @@ import { Analytics } from '@vercel/analytics/react'
 
 const siteUrl = 'https://playmotus.vercel.app'
 
+// Platforms (iMessage, Discord, Slack, …) cache og:image per-URL. Versioning
+// the URL with the deploy's commit SHA makes every deploy a fresh URL, so new
+// shares always fetch the latest screenshot instead of a stale cached one.
+const ogImage = `/og-home.png?v=${(process.env.VERCEL_GIT_COMMIT_SHA ?? 'dev').slice(0, 8)}`
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: 'Motus',
@@ -12,21 +17,22 @@ export const metadata: Metadata = {
   alternates: {
     canonical: siteUrl,
   },
-  // og:image is a screenshot of the live homepage, regenerated on every deploy
-  // by scripts/capture-og.mjs -> public/og-home.png (see package.json build).
+  // og:image is a screenshot of the homepage, regenerated after every push by
+  // .github/workflows/og-refresh.yml -> public/og-home.png (committed by CI;
+  // headless Chrome can't run in Vercel's build container).
   openGraph: {
     title: 'Motus',
     description: 'A momentum-based platformer where precision and movement are everything.',
     url: siteUrl,
     type: 'website',
     siteName: 'Motus',
-    images: [{ url: '/og-home.png', width: 1200, height: 630, alt: 'Motus' }],
+    images: [{ url: ogImage, width: 1200, height: 630, alt: 'Motus' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Motus',
     description: 'A momentum-based platformer where precision and movement are everything.',
-    images: ['/og-home.png'],
+    images: [ogImage],
   },
   icons: {
     icon: '/favicon.svg',
