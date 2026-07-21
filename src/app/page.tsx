@@ -18,8 +18,10 @@ import {
   recordChallengeResult,
   isChallengeUnlocked,
   challengeStats,
+  starRequirements,
   type Challenge,
 } from '../lib/challenges'
+import { challengeTimeLimit, REFERENCE_ARENA } from '../lib/challenge-par'
 import {
   filterPublicLeaderboardEntries,
   getUsernameValidationIssue,
@@ -73,6 +75,23 @@ export default function Home() {
   const [isTouch, setIsTouch] = useState(false)
   const submittedDeathRef = useRef(false)
   const gameSessionTokenRef = useRef<string | null>(null)
+  const gameAreaRef = useRef<HTMLElement | null>(null)
+  // Par, deadlines and star bars all scale with the play surface, so the
+  // briefing needs the same dimensions the canvas is about to use.
+  const [arenaSize, setArenaSize] = useState(REFERENCE_ARENA)
+
+  useEffect(() => {
+    const el = gameAreaRef.current
+    if (!el) return
+    const measure = () => {
+      if (el.clientWidth > 0 && el.clientHeight > 0) {
+        setArenaSize({ width: el.clientWidth, height: el.clientHeight })
+      }
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
 
   // Detect coarse-pointer (touch) devices to surface on-screen controls
   useEffect(() => {
@@ -169,17 +188,21 @@ export default function Home() {
   // Process a finished run: persist stats, score challenge stars, unlock
   // achievements, then surface the end screen + any achievement toasts.
   const handleRunEnd = useCallback(
-    (summary: RunSummary, perf: { wallTouched: boolean; timeRemaining: number; timeLimit: number }) => {
+    (
+      summary: RunSummary,
+      perf: { orbs: number; elapsed: number; wallTouched: boolean; arenaWidth: number; arenaHeight: number }
+    ) => {
       const { newPersonalBest } = recordRun(summary)
 
       let stars: number | undefined
       if (summary.mode === 'challenge' && activeChallenge) {
         stars = computeStars(activeChallenge, {
           completed: summary.won,
-          timeRemaining: perf.timeRemaining,
-          timeLimit: perf.timeLimit,
-          elapsed: summary.timeSurvived,
+          elapsed: perf.elapsed,
+          orbs: perf.orbs,
           wallTouched: perf.wallTouched,
+          arenaWidth: perf.arenaWidth,
+          arenaHeight: perf.arenaHeight,
         })
         recordChallengeResult(activeChallenge.id, {
           completed: summary.won,
@@ -408,7 +431,7 @@ export default function Home() {
         </header>
       )}
 
-      <main className="canvas-wrap game-area">
+      <main className="canvas-wrap game-area" ref={gameAreaRef}>
         {uiState !== 'title' && (
           <GameCanvas
             gameMode={gameMode}
@@ -488,6 +511,12 @@ export default function Home() {
                   gameMode === 'tutorial' ? 'Tutorial' :
                   gameMode === 'challenge' ? (activeChallenge?.title ?? 'Challenge') :
                   'Survival Mode'
+                // Star bars scale with the arena, so the briefing quotes the
+                // numbers for the surface this run will actually be played on.
+                const deadline =
+                  gameMode === 'challenge' && activeChallenge
+                    ? challengeTimeLimit(activeChallenge, arenaSize.width, arenaSize.height)
+                    : 0
                 const items: string[] =
                   gameMode === 'challenge' && activeChallenge ? [
                     activeChallenge.description,
@@ -496,11 +525,13 @@ export default function Home() {
                         ? `Survive ${activeChallenge.goal.target}s`
                         : `Collect ${activeChallenge.goal.target} orbs`
                     }${
-                      activeChallenge.timeLimit > 0 && activeChallenge.goal.type !== 'survive'
-                        ? ` within ${activeChallenge.timeLimit}s`
+                      deadline > 0 && activeChallenge.goal.type !== 'survive'
+                        ? ` within ${deadline}s`
                         : ''
                     }`,
-                    '3 stars for a flawless, danger-free clear.',
+                    ...starRequirements(activeChallenge, arenaSize.width, arenaSize.height).map(
+                      (req, i) => `${'★'.repeat(i + 1)} ${req}`
+                    ),
                   ] : gameMode === 'zen' ? [
                     'No enemies.',
                     'No death — you cannot lose.',

@@ -8,6 +8,13 @@
 import rawChallenges from './data/challenges.json'
 import { readJSON, writeJSON, STORAGE_KEYS } from './storage'
 import { loadStats, saveStats } from './stats'
+import {
+  parSeconds,
+  surviveStarOrbs,
+  TWO_STAR_PAR_MULT,
+  REFERENCE_ARENA,
+  type ChallengeFeel,
+} from './challenge-par'
 
 export type ChallengeGoalType = 'orbs' | 'survive' | 'collectAll'
 
@@ -16,19 +23,25 @@ export interface ChallengeGoal {
   target: number
 }
 
-/** Runtime rule tweaks applied by GameCanvas when a challenge is active. */
+/**
+ * Runtime rule tweaks applied by GameCanvas when a challenge is active.
+ *
+ * Every field here must change something the player can feel. Modifiers that
+ * read as flavour but resolve to the base rules (a "one life" flag in a game
+ * where every hit is fatal, "walls are lethal" where they already are) make
+ * distinct-looking challenges play identically, so they don't belong.
+ */
 export interface ChallengeModifiers {
-  arenaScale?: number // fraction of full arena (1 = normal, <1 tiny, >1 giant)
+  arenaScale?: number // fraction of full arena (1 = normal, <1 tiny)
+  shrinkTo?: number // arena closes to this fraction of its start over the run
   wraparound?: boolean // teleport across walls instead of dying
+  noWallTouch?: boolean // wall contact fails the run (only meaningful with wraparound)
   reverseControls?: boolean
-  friction?: number // per-frame damping override (default 0.99)
-  acceleration?: number // input accel override (default 1000)
-  frequentCataclysms?: boolean
-  randomCataclysm?: boolean
-  oneLife?: boolean // no forgiveness — informational (all survival deaths are terminal already)
-  movingHazards?: boolean
-  noWallTouch?: boolean // touching a wall fails the challenge
-  obstacles?: number // count of static lethal hazards that block the route
+  feel?: ChallengeFeel // handling preset: 'ice' (slick) or 'heavy' (sluggish)
+  movingOrbs?: boolean // orbs drift instead of sitting still
+  homingEnemies?: number // how many of the roster steer toward the player
+  obstacles?: number // count of lethal hazards that block the route
+  movingHazards?: boolean // those hazards drift and bounce
 }
 
 export interface Challenge {
@@ -38,11 +51,21 @@ export interface Challenge {
   title: string
   description: string
   goal: ChallengeGoal
-  timeLimit: number // seconds; 0 = untimed
+  /**
+   * Deadline as a multiple of par, or 0 for untimed. Deadlines are derived at
+   * run time rather than authored in seconds so they scale with the arena — a
+   * fixed second count is either trivial on a small window or impossible on a
+   * large one.
+   */
+  deadlineMult: number
   enemyCount: number
   enemySpeed: number // multiplier applied to base enemy speed
   modifiers: ChallengeModifiers
-  stars: { two: number; three: number; mode: 'time' | 'clear' }
+  /**
+   * Collect goals: unused (thresholds come from par). Survive goals: the
+   * fraction of collectable orbs needed for two and three stars.
+   */
+  stars: { two: number; three: number; mode: 'par' | 'survive' }
 }
 
 export const challenges = rawChallenges as Challenge[]
@@ -74,36 +97,66 @@ export function isChallengeUnlocked(id: number, progress: ChallengeProgress = lo
 /** Performance snapshot used to score stars, produced by the game loop. */
 export interface ChallengePerf {
   completed: boolean
-  timeRemaining: number
-  timeLimit: number
   elapsed: number // seconds of active play at completion
-  wallTouched: boolean
+  orbs: number // orbs collected over the run
+  wallTouched: boolean // grazed the boundary at any point
+  arenaWidth: number // the canvas the run was actually played on
+  arenaHeight: number
 }
 
 /**
- * Stars reward efficiency:
- *  - timed collect goals → by fraction of the time limit left over;
- *  - untimed collect goals → by clear speed vs a par derived from the goal;
- *  - survive goals → clearing the full duration is itself mastery (3 stars).
+ * Stars are scored against par — the time a skilled player needs for a clean
+ * run of *this* challenge on *this* screen (see ./challenge-par).
+ *
+ *  - collect goals → 3 stars at par, 2 stars at 1.45x par, 1 star for clearing;
+ *  - survive goals → the clear is one star; orbs banked while surviving earn
+ *    the rest, so outlasting the clock is a floor rather than a perfect score.
+ *
+ * `noWallTouch` challenges then cap the result at one star if the boundary was
+ * ever grazed. The wall is a scoring line there, not a wall — wrapping through
+ * it is survivable, which is the whole point of the archetype.
  */
 export function computeStars(ch: Challenge, perf: ChallengePerf): number {
   if (!perf.completed) return 0
 
-  if (ch.goal.type === 'survive') return 3
+  const w = perf.arenaWidth || REFERENCE_ARENA.width
+  const h = perf.arenaHeight || REFERENCE_ARENA.height
 
-  let frac: number
-  if (perf.timeLimit > 0) {
-    frac = perf.timeRemaining / perf.timeLimit
-  } else {
-    const par = ch.goal.target * 1.6 + 5 // seconds of "expected" clear time
-    frac = (par - perf.elapsed) / par
+  if (ch.modifiers.noWallTouch && perf.wallTouched) return 1
+
+  if (ch.goal.type === 'survive') {
+    const need = surviveStarOrbs(ch, w, h)
+    if (perf.orbs >= need.three) return 3
+    if (perf.orbs >= need.two) return 2
+    return 1
   }
-  frac = Math.max(0, Math.min(1, frac))
 
-  let stars = 1
-  if (frac >= 0.2) stars = 2
-  if (frac >= 0.45) stars = 3
-  return stars
+  const par = parSeconds(ch, w, h)
+  if (perf.elapsed <= par) return 3
+  if (perf.elapsed <= par * TWO_STAR_PAR_MULT) return 2
+  return 1
+}
+
+/**
+ * What the player has to do for each star, in plain text. Needs the live arena
+ * because both par and the survive orb targets scale with it.
+ */
+export function starRequirements(ch: Challenge, width: number, height: number): string[] {
+  const clean = ch.modifiers.noWallTouch ? ', never touching a wall' : ''
+  if (ch.goal.type === 'survive') {
+    const need = surviveStarOrbs(ch, width, height)
+    return [
+      'Outlast the clock',
+      `Bank ${need.two} orbs${clean}`,
+      `Bank ${need.three} orbs${clean}`,
+    ]
+  }
+  const par = parSeconds(ch, width, height)
+  return [
+    'Clear the goal',
+    `Clear in ${Math.round(par * TWO_STAR_PAR_MULT)}s${clean}`,
+    `Clear in ${Math.round(par)}s${clean}`,
+  ]
 }
 
 export interface ChallengeResultSummary {

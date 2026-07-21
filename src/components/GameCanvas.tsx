@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useEffect, useRef, forwardRef } from 'react'
-import { Puck, Goal, Enemy, integrate, applyAcceleration, applyDamping, circlesCollide, puckCollideGoal, isOutOfBounds, isOutOfArena, getShakeOffset, clampGoalToCanvas, repositionGoalInBounds } from '../lib/physics'
+import { Puck, Goal, Enemy, integrate, applyAcceleration, applyDamping, applySeek, circlesCollide, puckCollideGoal, isOutOfBounds, isOutOfArena, getShakeOffset, clampGoalToCanvas, repositionGoalInBounds } from '../lib/physics'
 import {
   createPlayer,
   spawnEnemy,
+  spawnGoal,
   spawnCataclysmGoals,
   getEventType,
   getCataclysmObjective,
@@ -32,6 +33,7 @@ import { palette, withAlpha } from '../lib/palette'
 import type { RunSummary } from '../lib/stats'
 import { resolveActiveTheme, activeTrailStyle, type ResolvedTheme, type TrailStyle } from '../lib/customization'
 import type { Challenge } from '../lib/challenges'
+import { challengeTimeLimit, FEEL_PRESETS } from '../lib/challenge-par'
 
 interface RunStats {
   elapsed: number // seconds of active play (pause-safe: accumulated from dt)
@@ -57,21 +59,61 @@ function freshRunStats(): RunStats {
   }
 }
 
-/** Centered play rectangle for challenges that shrink the arena (arenaScale < 1). */
-function challengeArena(w: number, h: number, ch?: Challenge | null) {
-  const s = ch?.modifiers?.arenaScale
-  if (!s || s >= 1) return null
+/** Seconds a collapsing arena takes to close to its final size. */
+const COLLAPSE_SECONDS = 45
+
+/**
+ * Centered play rectangle for challenges that shrink the arena. `arenaScale`
+ * sets the size it starts at; `shrinkTo` closes it further over the run, so
+ * `elapsed` has to be threaded through every caller.
+ */
+function challengeArena(w: number, h: number, ch?: Challenge | null, elapsed = 0) {
+  const start = ch?.modifiers?.arenaScale ?? 1
+  const shrinkTo = ch?.modifiers?.shrinkTo
+  let s = start
+  if (shrinkTo) {
+    const progress = Math.min(1, elapsed / COLLAPSE_SECONDS)
+    s = start * (1 - progress) + start * shrinkTo * progress
+  }
+  if (s >= 1) return null
   const aw = w * s
   const ah = h * s
   return { x: (w - aw) / 2, y: (h - ah) / 2, width: aw, height: ah }
 }
 
+/** Handling overrides for a challenge's `feel` preset, or the defaults. */
+function challengeHandling(ch?: Challenge | null) {
+  const feel = ch?.modifiers?.feel
+  if (feel && FEEL_PRESETS[feel]) {
+    return { friction: FEEL_PRESETS[feel].friction, acceleration: FEEL_PRESETS[feel].acceleration }
+  }
+  return { friction: 0.99, acceleration: 1000 }
+}
+
 /** Spawn a world enemy scaled to a challenge's enemy-speed multiplier. */
-function makeChallengeEnemy(w: number, h: number, ch: Challenge): Enemy {
+function makeChallengeEnemy(w: number, h: number, ch: Challenge, homing = false): Enemy {
   const e = spawnEnemy(w, h, 1, 1) as Enemy
   e.vx *= ch.enemySpeed
   e.vy *= ch.enemySpeed
+  if (homing) {
+    e.behavior = 'homing'
+    e.hue = 'purple'
+  }
   return e
+}
+
+/**
+ * Hunters are additional to `enemyCount`, not carved out of it — the par model
+ * counts them as their own pressure and the challenge text promises them on top
+ * of the traffic.
+ */
+function homingQuota(ch: Challenge) {
+  return ch.modifiers.homingEnemies ?? 0
+}
+
+/** Total roster a challenge maintains: drifting traffic plus hunters. */
+function rosterSize(ch: Challenge) {
+  return ch.enemyCount + homingQuota(ch)
 }
 
 /** Whether a challenge's win condition is met given current run progress. */
@@ -80,13 +122,18 @@ function challengeWon(ch: Challenge, orbs: number, elapsed: number): boolean {
   return orbs >= ch.goal.target // 'orbs' and 'collectAll'
 }
 
-/** Static lethal hazards for navigate challenges — placed clear of the player. */
+/**
+ * Lethal hazards for navigate/minefield challenges — placed clear of the
+ * player. `drift` gives them a slow wander, which turns a memorised route into
+ * a read-and-react one.
+ */
 function spawnObstacles(
   width: number,
   height: number,
   player: Puck,
   count: number,
-  arena: { x: number; y: number; width: number; height: number } | null
+  arena: { x: number; y: number; width: number; height: number } | null,
+  drift = false
 ): Goal[] {
   const obstacles: Goal[] = []
   const radius = 16
@@ -101,9 +148,104 @@ function spawnObstacles(
     const y = minY + Math.random() * Math.max(1, maxY - minY)
     if (Math.hypot(x - player.x, y - player.y) < 110) continue // keep spawn area clear
     if (obstacles.some((o) => Math.hypot(x - o.x, y - o.y) < radius * 3)) continue
-    obstacles.push({ x, y, radius })
+    const o: Goal = { x, y, radius }
+    if (drift) {
+      const speed = 26 + Math.random() * 30
+      const angle = Math.random() * Math.PI * 2
+      o.vx = Math.cos(angle) * speed
+      o.vy = Math.sin(angle) * speed
+    }
+    obstacles.push(o)
   }
   return obstacles
+}
+
+/**
+ * Keep an orb inside the play area. A collapsing arena would otherwise sweep
+ * past its own orbs and strand them outside the lethal boundary, where reaching
+ * one costs the run; instead the closing wall herds them inward.
+ */
+function containInside(
+  o: Goal,
+  bounds: { x: number; y: number; width: number; height: number }
+) {
+  o.x = Math.min(Math.max(o.x, bounds.x + o.radius), bounds.x + bounds.width - o.radius)
+  o.y = Math.min(Math.max(o.y, bounds.y + o.radius), bounds.y + bounds.height - o.radius)
+}
+
+/** Drift a hazard or orb inside the play area, bouncing off its edges. */
+function driftInside(
+  o: Goal,
+  dt: number,
+  bounds: { x: number; y: number; width: number; height: number }
+) {
+  if (o.vx === undefined || o.vy === undefined) {
+    containInside(o, bounds)
+    return
+  }
+  o.x += o.vx * dt
+  o.y += o.vy * dt
+
+  const minX = bounds.x + o.radius
+  const maxX = bounds.x + bounds.width - o.radius
+  const minY = bounds.y + o.radius
+  const maxY = bounds.y + bounds.height - o.radius
+
+  if (o.x < minX) { o.x = minX; o.vx = Math.abs(o.vx) }
+  else if (o.x > maxX) { o.x = maxX; o.vx = -Math.abs(o.vx) }
+  if (o.y < minY) { o.y = minY; o.vy = Math.abs(o.vy) }
+  else if (o.y > maxY) { o.y = maxY; o.vy = -Math.abs(o.vy) }
+}
+
+/**
+ * Clearance an orb needs from a lethal hazard. Without it an orb can land on a
+ * mine, where collecting it costs the run — and on a sweep, where the whole set
+ * is on the board at once, that makes the challenge unwinnable rather than
+ * merely unlucky.
+ */
+const ORB_HAZARD_CLEARANCE = 34
+
+/** Minimum gap between two orbs of a sweep, so they read as separate targets. */
+const ORB_SPACING = 70
+
+/**
+ * Place a challenge orb clear of the hazards and of the orbs already placed,
+ * retrying the spawn until it lands somewhere reachable.
+ */
+function spawnSafeGoal(
+  width: number,
+  height: number,
+  player: Puck,
+  moving: boolean,
+  obstacles: Goal[],
+  placed: Goal[],
+  arena: { x: number; y: number; width: number; height: number } | null
+): Goal {
+  let best: Goal | null = null
+  let bestClearance = -Infinity
+
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const g = spawnGoal(width, height, player.x, player.y, moving)
+    clampGoalToCanvas(g, width, height)
+    if (arena) repositionGoalInBounds(g, arena.x, arena.y, arena.width, arena.height)
+
+    // Score the spot by how much room it has to spare, so even a crowded arena
+    // returns the roomiest candidate rather than an arbitrary one.
+    let clearance = Infinity
+    for (const o of obstacles) {
+      clearance = Math.min(clearance, Math.hypot(g.x - o.x, g.y - o.y) - o.radius - g.radius - ORB_HAZARD_CLEARANCE)
+    }
+    for (const p of placed) {
+      clearance = Math.min(clearance, Math.hypot(g.x - p.x, g.y - p.y) - ORB_SPACING)
+    }
+    if (clearance >= 0) return g
+    if (clearance > bestClearance) {
+      bestClearance = clearance
+      best = g
+    }
+  }
+
+  return best!
 }
 
 function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
@@ -321,7 +463,10 @@ interface GameCanvasProps {
   }) => void
   onSurvivalGameOver?: (score: number) => void
   /** Emitted once when a survival/challenge run ends, with the full run summary. */
-  onRunEnd?: (summary: RunSummary, perf: { wallTouched: boolean; timeRemaining: number; timeLimit: number }) => void
+  onRunEnd?: (
+    summary: RunSummary,
+    perf: { orbs: number; elapsed: number; wallTouched: boolean; arenaWidth: number; arenaHeight: number }
+  ) => void
   isPaused?: boolean
   uiState?: 'title' | 'rules' | 'playing' | 'paused'
   gameMode?: 'survival' | 'zen' | 'tutorial' | 'challenge'
@@ -337,6 +482,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
   const enemiesRef = useRef<Enemy[]>([])
   const goalRef = useRef<Goal | null>(null)
   const obstaclesRef = useRef<Goal[]>([])
+  /** Every orb of a `collectAll` challenge, on the board at once. */
+  const sweepGoalsRef = useRef<Goal[]>([])
   const bgStreaksRef = useRef<{ x: number; y: number; depth: number }[]>([])
   const gameDataRef = useRef<GameData>({
     score: 0,
@@ -403,8 +550,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
     const gameData = gameDataRef.current
     const rs = runStatsRef.current
-    const timeLimit = p.challenge?.timeLimit ?? 0
-    const timeRemaining = timeLimit > 0 ? Math.max(0, timeLimit - rs.elapsed) : 0
+    const arenaWidth = canvasWidthRef.current
+    const arenaHeight = canvasHeightRef.current
 
     const summary: RunSummary = {
       mode: mode === 'challenge' ? 'challenge' : 'survival',
@@ -419,7 +566,15 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       won,
       challengeId: p.challenge?.id,
     }
-    p.onRunEnd?.(summary, { wallTouched: rs.wallTouched, timeRemaining, timeLimit })
+    // Stars are scored against the arena the run was actually played on, so the
+    // dimensions travel with the result.
+    p.onRunEnd?.(summary, {
+      orbs: rs.orbs,
+      elapsed: rs.elapsed,
+      wallTouched: rs.wallTouched,
+      arenaWidth,
+      arenaHeight,
+    })
   }
 
   function notifySurvivalGameOverIfNeeded() {
@@ -539,24 +694,41 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     const w = canvasWidthRef.current
     const h = canvasHeightRef.current
     playerRef.current = createPlayer(w / 2, h / 2)
-    obstaclesRef.current = [] // overwritten below for navigate challenges
+    obstaclesRef.current = [] // overwritten below for hazard challenges
+    sweepGoalsRef.current = [] // overwritten below for collectAll challenges
 
     if (props.gameMode === 'tutorial') {
       // Initialize tutorial state
       tutorialStateRef.current = createTutorialState()
       resetTutorial()
     } else if (props.gameMode === 'challenge' && props.challenge) {
-      // Challenge: fixed enemy roster + a single orb, both kept inside the arena.
+      // Challenge: fixed enemy roster + the goal's orbs, all kept inside the arena.
       const ch = props.challenge
-      const arena = challengeArena(w, h, ch)
-      enemiesRef.current = Array.from({ length: ch.enemyCount }, () => makeChallengeEnemy(w, h, ch))
+      const player = playerRef.current
+      const arena = challengeArena(w, h, ch, 0)
+      const hunters = homingQuota(ch)
+      enemiesRef.current = Array.from({ length: rosterSize(ch) }, (_, i) =>
+        makeChallengeEnemy(w, h, ch, i < hunters)
+      )
       obstaclesRef.current = ch.modifiers.obstacles
-        ? spawnObstacles(w, h, playerRef.current, ch.modifiers.obstacles, arena)
+        ? spawnObstacles(w, h, player, ch.modifiers.obstacles, arena, ch.modifiers.movingHazards)
         : []
-      goalRef.current = spawnCataclysmGoals(w, h, playerRef.current.x, playerRef.current.y)[0]
-      if (goalRef.current) {
-        clampGoalToCanvas(goalRef.current, w, h)
-        if (arena) repositionGoalInBounds(goalRef.current, arena.x, arena.y, arena.width, arena.height)
+
+      const moving = !!ch.modifiers.movingOrbs
+      const place = (placed: Goal[]) =>
+        spawnSafeGoal(w, h, player, moving, obstaclesRef.current, placed, arena)
+
+      // A sweep puts the whole set on the board so the run is a route to plan,
+      // rather than the same chase-the-single-orb loop every other goal type
+      // already is.
+      if (ch.goal.type === 'collectAll') {
+        const placed: Goal[] = []
+        for (let i = 0; i < ch.goal.target; i++) placed.push(place(placed))
+        sweepGoalsRef.current = placed
+        goalRef.current = null
+      } else {
+        sweepGoalsRef.current = []
+        goalRef.current = place([])
       }
       tutorialGoalsRef.current = []
     } else {
@@ -783,18 +955,19 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       }
 
       const mods = propsRef.current.challenge?.modifiers ?? {}
+      const handling = challengeHandling(propsRef.current.challenge)
 
       // ===== MOMENTUM-BASED MOVEMENT =====
       // Disable movement when dead in tutorial OR during instructions
       if (!(props.gameMode === 'tutorial' && (tutorialStateRef.current.isDead || tutorialStateRef.current.showInstruction))) {
-        const acceleration = mods.acceleration ?? 1000
+        const acceleration = handling.acceleration
         const rev = mods.reverseControls ? -1 : 1
         if (activeKeysRef.current.has('ArrowRight') || activeKeysRef.current.has('KeyD')) applyAcceleration(player, rev * acceleration * dt, 0)
         if (activeKeysRef.current.has('ArrowLeft') || activeKeysRef.current.has('KeyA')) applyAcceleration(player, rev * -acceleration * dt, 0)
         if (activeKeysRef.current.has('ArrowDown') || activeKeysRef.current.has('KeyS')) applyAcceleration(player, 0, rev * acceleration * dt)
         if (activeKeysRef.current.has('ArrowUp') || activeKeysRef.current.has('KeyW')) applyAcceleration(player, 0, rev * -acceleration * dt)
 
-        applyDamping(player, mods.friction ?? 0.99)
+        applyDamping(player, handling.friction)
 
         const maxVel = 500
         const velMag = Math.hypot(player.vx, player.vy)
@@ -828,18 +1001,30 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         }
       }
 
-      const arena = props.gameMode === 'challenge' ? challengeArena(w, h, propsRef.current.challenge) : null
+      const arena =
+        props.gameMode === 'challenge'
+          ? challengeArena(w, h, propsRef.current.challenge, runStatsRef.current.elapsed)
+          : null
       const outOfPlay = arena
         ? isOutOfArena(player, arena.x, arena.y, arena.width, arena.height)
         : isOutOfBounds(player, w, h)
       if (outOfPlay) {
+        // Untouchable challenges score on this rather than ending the run: the
+        // wrap below still carries you through, but the clean route is the only
+        // one worth more than a single star.
         runStatsRef.current.wallTouched = true
         if (props.gameMode === 'zen' || mods.wraparound === true) {
-          // Wrap-around teleport to opposite side (Practice + wraparound challenges)
-          if (player.x - player.radius < 0) player.x = w - player.radius
-          if (player.x + player.radius > w) player.x = player.radius
-          if (player.y - player.radius < 0) player.y = h - player.radius
-          if (player.y + player.radius > h) player.y = player.radius
+          // Wrap-around teleport to the opposite side. Wrapping happens at the
+          // active play edge, so a shrunken or collapsing arena still wraps at
+          // its own border rather than the far-off canvas edge.
+          const left = arena ? arena.x : 0
+          const right = arena ? arena.x + arena.width : w
+          const top = arena ? arena.y : 0
+          const bottom = arena ? arena.y + arena.height : h
+          if (player.x - player.radius < left) player.x = right - player.radius
+          else if (player.x + player.radius > right) player.x = left + player.radius
+          if (player.y - player.radius < top) player.y = bottom - player.radius
+          else if (player.y + player.radius > bottom) player.y = top + player.radius
         } else if (props.gameMode === 'tutorial') {
           // In tutorial mode, mark as dead to restart current step
           tutorialStateRef.current.isDead = true
@@ -859,7 +1044,17 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       }
 
       for (const enemy of enemiesRef.current) {
+        // Hunters steer toward the player instead of coasting across the arena.
+        if (enemy.behavior === 'homing') applySeek(enemy, player.x, player.y, dt)
         integrate(enemy, dt)
+      }
+
+      // Drifting hazards and orbs move within the active play area.
+      if (props.gameMode === 'challenge') {
+        const bounds = arena ?? { x: 0, y: 0, width: w, height: h }
+        for (const o of obstaclesRef.current) driftInside(o, dt, bounds)
+        if (goalRef.current) driftInside(goalRef.current, dt, bounds)
+        for (const g of sweepGoalsRef.current) driftInside(g, dt, bounds)
       }
 
       // ===== TUTORIAL MODE LOGIC =====
@@ -1007,10 +1202,14 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       // ===== CHALLENGE: maintain fixed roster + resolve win/lose =====
       if (props.gameMode === 'challenge' && propsRef.current.challenge) {
         const ch = propsRef.current.challenge
-        while (enemiesRef.current.length < ch.enemyCount) {
-          enemiesRef.current.push(makeChallengeEnemy(w, h, ch))
+        // Hunters that wander off screen must come back as hunters, or a chase
+        // challenge quietly decays into a plain one.
+        while (enemiesRef.current.length < rosterSize(ch)) {
+          const hunters = enemiesRef.current.filter((e) => e.behavior === 'homing').length
+          enemiesRef.current.push(makeChallengeEnemy(w, h, ch, hunters < homingQuota(ch)))
         }
 
+        const deadline = challengeTimeLimit(ch, w, h)
         if (!challengeDoneRef.current && gameData.state === 'playing') {
           const rsC = runStatsRef.current
           if (challengeWon(ch, rsC.orbs, rsC.elapsed)) {
@@ -1019,7 +1218,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
             player.vx = 0
             player.vy = 0
             finalizeRun(true)
-          } else if (ch.timeLimit > 0 && ch.goal.type !== 'survive' && rsC.elapsed >= ch.timeLimit) {
+          } else if (deadline > 0 && ch.goal.type !== 'survive' && rsC.elapsed >= deadline) {
             // Timed collect goal expired without finishing — a loss.
             challengeDoneRef.current = true
             gameData.state = 'gameOver'
@@ -1028,6 +1227,22 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
             shakeIntensityRef.current = 16
             finalizeRun(false)
           }
+        }
+      }
+
+      // ===== SWEEP CHALLENGE: COLLECT THE WHOLE BOARD =====
+      if (gameData.state === 'playing' && sweepGoalsRef.current.length > 0) {
+        const remaining: Goal[] = []
+        for (const g of sweepGoalsRef.current) {
+          if (puckCollideGoal(player, g)) {
+            gameData.score += registerOrb(g.x, g.y)
+          } else {
+            remaining.push(g)
+          }
+        }
+        if (remaining.length !== sweepGoalsRef.current.length) {
+          sweepGoalsRef.current = remaining
+          updateGameState()
         }
       }
 
@@ -1054,12 +1269,21 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
               gameData.stage
             )
           } else {
-            const goals = spawnCataclysmGoals(w, h, player.x, player.y)
-            goalRef.current = goals[0]
-            if (goalRef.current) {
-              clampGoalToCanvas(goalRef.current, w, h)
-              const arenaC = props.gameMode === 'challenge' ? challengeArena(w, h, propsRef.current.challenge) : null
-              if (arenaC) repositionGoalInBounds(goalRef.current, arenaC.x, arenaC.y, arenaC.width, arenaC.height)
+            if (props.gameMode === 'challenge' && propsRef.current.challenge) {
+              // Respawns dodge the hazards too — a mid-run orb landing on a mine
+              // would stall the challenge just as badly as one placed there.
+              goalRef.current = spawnSafeGoal(
+                w,
+                h,
+                player,
+                !!propsRef.current.challenge.modifiers.movingOrbs,
+                obstaclesRef.current,
+                [],
+                arena
+              )
+            } else {
+              goalRef.current = spawnCataclysmGoals(w, h, player.x, player.y)[0]
+              if (goalRef.current) clampGoalToCanvas(goalRef.current, w, h)
             }
           }
           updateGameState()
@@ -1298,7 +1522,10 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       ctx.stroke()
 
       // ===== CHALLENGE ARENA BOUNDARY (tiny-arena challenges) =====
-      const chArena = propsRef.current.gameMode === 'challenge' ? challengeArena(w, h, propsRef.current.challenge) : null
+      const chArena =
+        propsRef.current.gameMode === 'challenge'
+          ? challengeArena(w, h, propsRef.current.challenge, runStatsRef.current.elapsed)
+          : null
       if (chArena) {
         ctx.strokeStyle = withAlpha(palette.hostile, 0.5)
         ctx.lineWidth = 2
@@ -1322,6 +1549,15 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
         drawGlowCircle(goal.x, goal.y, glowSize, palette.orb, 20, 0.3)
         drawGradientPuck(goal.x, goal.y, goal.radius, palette.orb, palette.orbDeep)
+      }
+
+      // ===== DRAW SWEEP CHALLENGE GOALS =====
+      if (gameData.state === 'playing' && sweepGoalsRef.current.length > 0) {
+        const pulse = (Math.sin(Date.now() / 260) + 1) / 2
+        for (const goal of sweepGoalsRef.current) {
+          drawGlowCircle(goal.x, goal.y, goal.radius + 7 + pulse * 3, palette.orb, 20, 0.3)
+          drawGradientPuck(goal.x, goal.y, goal.radius, palette.orb, palette.orbDeep)
+        }
       }
 
       // ===== DRAW CATACLYSM GOALS =====
@@ -1635,8 +1871,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         gameData.state === 'playing'
       ) {
         const ch = propsRef.current.challenge
-        const isSurvive = ch.goal.type === 'survive'
-        const limit = isSurvive ? ch.goal.target : ch.timeLimit
+        const limit = challengeTimeLimit(ch, w, h)
         if (limit > 0) {
           const secs = Math.max(0, Math.ceil(limit - runStatsRef.current.elapsed))
 
