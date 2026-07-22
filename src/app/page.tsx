@@ -9,6 +9,26 @@ import ChallengeSelect from '../components/ChallengeSelect'
 import SettingsModal from '../components/SettingsModal'
 import ProfileModal from '../components/ProfileModal'
 import EndScreen from '../components/EndScreen'
+import MultiplayerSelect from '../components/MultiplayerSelect'
+import VersusEndScreen from '../components/VersusEndScreen'
+import {
+  MP_VARIANT_NAMES,
+  type GameMode,
+  type MatchResult,
+  type MpSession,
+  type MpVariant,
+} from '../lib/modes'
+import {
+  DUEL_TARGET_SCORE,
+  DUEL_STUN_SECONDS,
+  DUEL_POST_STUN_IMMUNITY,
+  COOP_BLEEDOUT_SECONDS,
+  COOP_REVIVE_IMMUNITY,
+  TAG_ROUND_SECONDS,
+} from '../lib/multiplayer/rules'
+import { RoomClient } from '../lib/net/room'
+import { PROTOCOL_VERSION, type AnyMsg } from '../lib/net/protocol'
+import { MP_P2_BODY } from '../lib/multiplayer/players'
 import AchievementToast from '../components/AchievementToast'
 import { recordRun, loadStats, type RunSummary } from '../lib/stats'
 import { checkAchievements, type Achievement } from '../lib/achievements'
@@ -45,6 +65,10 @@ type HudState = {
   eventName?: string
   eventProgress?: number
   gameOver?: boolean
+  // Multiplayer-only fields (set by GameCanvas when gameMode === 'multiplayer')
+  p1Score?: number
+  p2Score?: number
+  matchTimeLeft?: number
 }
 
 export default function Home() {
@@ -56,9 +80,12 @@ export default function Home() {
     eventName: '',
     eventProgress: 0,
   })
-  const [gameMode, setGameMode] = useState<'survival' | 'zen' | 'tutorial' | 'challenge'>('survival')
+  const [gameMode, setGameMode] = useState<GameMode>('survival')
   const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null)
-  const [menuScreen, setMenuScreen] = useState<'challenges' | 'settings' | 'profile' | null>(null)
+  const [mpVariant, setMpVariant] = useState<MpVariant | null>(null)
+  const [mpSession, setMpSession] = useState<MpSession | null>(null)
+  const [matchResult, setMatchResult] = useState<MatchResult | null>(null)
+  const [menuScreen, setMenuScreen] = useState<'challenges' | 'settings' | 'profile' | 'multiplayer' | null>(null)
   const [endRun, setEndRun] = useState<{
     summary: RunSummary
     newPersonalBest: boolean
@@ -76,6 +103,11 @@ export default function Home() {
   const submittedDeathRef = useRef(false)
   const gameSessionTokenRef = useRef<string | null>(null)
   const gameAreaRef = useRef<HTMLElement | null>(null)
+  // Online play: one RoomClient for the whole session (lobby → match → end).
+  // The ref is the owner; the state mirror exists so effects/props re-run
+  // when the client is created or torn down.
+  const roomRef = useRef<RoomClient | null>(null)
+  const [room, setRoom] = useState<RoomClient | null>(null)
   // Par, deadlines and star bars all scale with the play surface, so the
   // briefing needs the same dimensions the canvas is about to use.
   const [arenaSize, setArenaSize] = useState(REFERENCE_ARENA)
@@ -107,6 +139,141 @@ export default function Home() {
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }))
     window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space', bubbles: true }))
   }, [])
+
+  // --- Online multiplayer: room lifecycle -----------------------------------
+
+  /** Lazily create the shared RoomClient (called by the lobby on first online action). */
+  const getRoom = useCallback((): RoomClient => {
+    if (!roomRef.current) {
+      roomRef.current = new RoomClient()
+      setRoom(roomRef.current)
+    }
+    return roomRef.current
+  }, [])
+
+  const closeRoom = useCallback(() => {
+    if (roomRef.current) {
+      roomRef.current.close()
+      roomRef.current = null
+      setRoom(null)
+    }
+  }, [])
+
+  /** Guest connected in the lobby: adopt the session; the host's `start` drives the rest. */
+  const handleGuestLobby = useCallback((code: string) => {
+    setGameMode('multiplayer')
+    setMpSession({ kind: 'online', role: 'guest', code })
+  }, [])
+
+  const isOnline = mpSession?.kind === 'online'
+  const onlineRole = mpSession?.kind === 'online' ? mpSession.role : null
+
+  // Close the room whenever we are back on the title screen without the
+  // versus lobby open (menu exits, disconnect-end Menu, etc.).
+  useEffect(() => {
+    if (uiState !== 'title' || menuScreen === 'multiplayer') return
+    closeRoom()
+    if (mpSession?.kind === 'online') {
+      setMpSession(null)
+      setMpVariant(null)
+    }
+  }, [uiState, menuScreen, mpSession, closeRoom])
+
+  // Close the socket if the page unmounts entirely.
+  useEffect(() => {
+    return () => {
+      roomRef.current?.close()
+      roomRef.current = null
+    }
+  }, [])
+
+  // Host mirrors its local pause state to the guest.
+  const prevUiStateRef = useRef(uiState)
+  useEffect(() => {
+    const prev = prevUiStateRef.current
+    prevUiStateRef.current = uiState
+    if (mpSession?.kind !== 'online' || mpSession.role !== 'host') return
+    if (prev === 'playing' && uiState === 'paused') roomRef.current?.send({ t: 'pause' })
+    else if (prev === 'paused' && uiState === 'playing') roomRef.current?.send({ t: 'resume' })
+  }, [uiState, mpSession])
+
+  // --- Online multiplayer: message handling ---------------------------------
+  // The listener is registered once per RoomClient; the ref indirection keeps
+  // it reading fresh state without re-subscribing every render.
+  const netMsgRef = useRef<(msg: AnyMsg) => void>(() => {})
+  useEffect(() => {
+    netMsgRef.current = (msg: AnyMsg) => {
+      if (mpSession?.kind !== 'online') return
+      const role = mpSession.role
+
+      switch (msg.t) {
+        case 'pauseRequest':
+          // Guest asked to pause; only the host owns pause state.
+          if (role === 'host' && uiState === 'playing') setUiState('paused')
+          break
+        case 'start':
+          // Host started (or restarted) the match. The guest skips the
+          // briefing — the host already read it — and goes straight in.
+          if (role === 'guest') {
+            setMpVariant(msg.variant)
+            setGameMode('multiplayer')
+            setMatchResult(null)
+            setMenuScreen(null)
+            setUiState('playing')
+          }
+          break
+        case 'pause':
+          if (role === 'guest' && uiState === 'playing') setUiState('paused')
+          break
+        case 'resume':
+          if (role === 'guest' && uiState === 'paused') setUiState('playing')
+          break
+        case 'end':
+          // Guests never run the sim, so this is their only end-screen path.
+          if (role === 'guest') setMatchResult(msg.result)
+          break
+        case 'peerLeft':
+          // Mid-match disconnect: remaining player wins by default.
+          if ((uiState === 'playing' || uiState === 'paused') && !matchResult) {
+            const elapsed =
+              mpVariant === 'tag'
+                ? Math.max(0, TAG_ROUND_SECONDS - (hud.matchTimeLeft ?? TAG_ROUND_SECONDS))
+                : 0
+            setMatchResult({
+              variant: mpVariant ?? 'duel',
+              winner: role === 'host' ? 0 : 1,
+              scores: [hud.p1Score ?? hud.score, hud.p2Score ?? 0],
+              elapsed,
+              reason: 'disconnect',
+            })
+            // 'paused' halts the sim; the pause modal is gated behind
+            // !matchResult so only the end screen shows.
+            setUiState('paused')
+            closeRoom()
+          } else if (uiState === 'rules' && role === 'host') {
+            // Guest bailed while the host was reading the briefing: there is
+            // no match to award, so drop back to the versus lobby.
+            closeRoom()
+            setMpSession(null)
+            setMpVariant(null)
+            setUiState('title')
+            setMenuScreen('multiplayer')
+          }
+          // In the lobby, MultiplayerSelect's own listener updates presence.
+          break
+        default:
+          // 'peers' / 'roomError' are lobby concerns (handled in
+          // MultiplayerSelect); 'snap' / 'input' belong to GameCanvas.
+          break
+      }
+    }
+  })
+
+  useEffect(() => {
+    if (!room) return
+    const unsubscribe = room.addMessageListener((msg) => netMsgRef.current(msg))
+    return unsubscribe
+  }, [room])
 
   useEffect(() => {
     setRegisteredName(loadRegisteredPlayerName())
@@ -237,6 +404,42 @@ export default function Home() {
     setUiState('rules')
   }, [])
 
+  const handleSelectMultiplayer = useCallback((variant: MpVariant, session: MpSession) => {
+    setMpVariant(variant)
+    setMpSession(session)
+    setGameMode('multiplayer')
+    setMenuScreen(null)
+    setUiState('rules')
+  }, [])
+
+  const handleVersusRematch = useCallback(() => {
+    if (mpSession?.kind === 'online') {
+      // Only the host can restart an online match. The guest's button is a
+      // no-op; their real transition is the fresh 'start' broadcast below.
+      if (mpSession.role !== 'host' || !roomRef.current || !mpVariant) return
+      setMatchResult(null)
+      roomRef.current.send({
+        t: 'start',
+        v: PROTOCOL_VERSION,
+        variant: mpVariant,
+        arena: { w: arenaSize.width, h: arenaSize.height },
+      })
+      setUiState('playing')
+      dispatchSpace()
+      return
+    }
+    setMatchResult(null)
+    dispatchSpace() // same in-canvas Space restart the single-player retry uses
+  }, [dispatchSpace, mpSession, mpVariant, arenaSize])
+
+  const handleVersusMenu = useCallback(() => {
+    setMatchResult(null)
+    setMpVariant(null)
+    setMpSession(null)
+    setUiState('title')
+    closeRoom()
+  }, [closeRoom])
+
   const handleEndRetry = useCallback(() => {
     setEndRun(null)
     setAchievementQueue([])
@@ -260,6 +463,29 @@ export default function Home() {
     setUiState('rules')
   }, [activeChallenge])
 
+  // Local versus + online host: GameCanvas resolves the match here. The
+  // online host additionally relays the verdict — the guest never simulates,
+  // so this broadcast is the guest's only path to an end screen.
+  const handleMatchEnd = useCallback(
+    (r: MatchResult) => {
+      setMatchResult(r)
+      if (mpSession?.kind === 'online' && mpSession.role === 'host') {
+        roomRef.current?.send({ t: 'end', result: r })
+      }
+    },
+    [mpSession]
+  )
+
+  // Pause control: an online guest may only *request* a pause — the host owns
+  // the pause state and mirrors it back via 'pause'/'resume'.
+  const handlePausePress = useCallback(() => {
+    if (mpSession?.kind === 'online' && mpSession.role === 'guest') {
+      roomRef.current?.send({ t: 'pauseRequest' })
+      return
+    }
+    setUiState('paused')
+  }, [mpSession])
+
   const handleStateUpdate = useCallback(
     (s: HudState) => {
       setHud({
@@ -269,6 +495,9 @@ export default function Home() {
         eventName: s.eventName ?? '',
         eventProgress: s.eventProgress ?? 0,
         gameOver: s.gameOver,
+        p1Score: s.p1Score,
+        p2Score: s.p2Score,
+        matchTimeLeft: s.matchTimeLeft,
       })
 
       if (gameMode === 'survival' && typeof s.score === 'number') {
@@ -362,6 +591,22 @@ export default function Home() {
       }
     }
 
+    // Online host: broadcast the match parameters before going live so the
+    // guest (who skips this briefing) enters in lockstep.
+    if (
+      gameMode === 'multiplayer' &&
+      mpSession?.kind === 'online' &&
+      mpSession.role === 'host' &&
+      mpVariant
+    ) {
+      roomRef.current?.send({
+        t: 'start',
+        v: PROTOCOL_VERSION,
+        variant: mpVariant,
+        arena: { w: arenaSize.width, h: arenaSize.height },
+      })
+    }
+
     setUiState('playing')
   }
 
@@ -377,16 +622,50 @@ export default function Home() {
       {(uiState === 'playing' || uiState === 'paused') && (
         <header className="hud-overlay">
           <div className="hud-left">
-            <div className="hud-box score-box">
-              <div className="box-label">Score</div>
-              <div className="box-value">{hud.score}</div>
-            </div>
+            {gameMode === 'multiplayer' ? (
+              mpVariant === 'coop' ? (
+                // Co-op: one shared score plus the survival-style event counter.
+                <>
+                  <div className="hud-box score-box">
+                    <div className="box-label">Score</div>
+                    <div className="box-value">{hud.score}</div>
+                  </div>
+                  <div className="hud-box score-box">
+                    <div className="box-label">Next</div>
+                    <div className="box-value">{hud.eventProgress}/10</div>
+                  </div>
+                </>
+              ) : (
+                // Duel: orbs collected. Tag: whole seconds of safe (not-it) time.
+                <>
+                  <div className="hud-box score-box">
+                    <div className="box-label">P1</div>
+                    <div className="box-value">
+                      {mpVariant === 'tag' ? `${hud.p1Score ?? 0}s` : hud.p1Score ?? 0}
+                    </div>
+                  </div>
+                  <div className="hud-box score-box">
+                    <div className="box-label">P2</div>
+                    <div className="box-value" style={{ color: MP_P2_BODY }}>
+                      {mpVariant === 'tag' ? `${hud.p2Score ?? 0}s` : hud.p2Score ?? 0}
+                    </div>
+                  </div>
+                </>
+              )
+            ) : (
+              <>
+                <div className="hud-box score-box">
+                  <div className="box-label">Score</div>
+                  <div className="box-value">{hud.score}</div>
+                </div>
 
-            {gameMode === 'survival' && (
-              <div className="hud-box score-box">
-                <div className="box-label">Next</div>
-                <div className="box-value">{hud.eventProgress}/10</div>
-              </div>
+                {gameMode === 'survival' && (
+                  <div className="hud-box score-box">
+                    <div className="box-label">Next</div>
+                    <div className="box-value">{hud.eventProgress}/10</div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -406,6 +685,17 @@ export default function Home() {
             {gameMode === 'challenge' && (
               <div className="status-text status-text-tutorial">{hud.eventName}</div>
             )}
+
+            {gameMode === 'multiplayer' && mpVariant === 'tag' && (
+              // Round countdown, styled like the event name when time runs low.
+              <div
+                className={`status-text${
+                  (hud.matchTimeLeft ?? TAG_ROUND_SECONDS) <= 10 ? ' event-name' : ''
+                }`}
+              >
+                {Math.ceil(hud.matchTimeLeft ?? TAG_ROUND_SECONDS)}s
+              </div>
+            )}
           </div>
 
           <div className="hud-right">
@@ -417,7 +707,7 @@ export default function Home() {
             )}
             <button
               className="menu-button"
-              onClick={() => setUiState('paused')}
+              onClick={handlePausePress}
               aria-label="Menu"
               title="Menu"
             >
@@ -441,6 +731,10 @@ export default function Home() {
             onSurvivalGameOver={handleSurvivalGameOver}
             onRunEnd={handleRunEnd}
             challenge={gameMode === 'challenge' ? activeChallenge : null}
+            mpVariant={gameMode === 'multiplayer' ? mpVariant : null}
+            onMatchEnd={handleMatchEnd}
+            netRole={gameMode === 'multiplayer' && isOnline ? onlineRole : null}
+            net={gameMode === 'multiplayer' && isOnline ? room : null}
           />
         )}
 
@@ -481,6 +775,7 @@ export default function Home() {
                   { i: '05', title: 'Leaderboard', desc: 'See who sits at the top.', on: () => setLeaderboardOpen(true) },
                   { i: '06', title: 'Profile', desc: 'Your lifetime stats and achievements.', on: () => setMenuScreen('profile') },
                   { i: '07', title: 'Settings', desc: 'Themes, skins and trails you’ve earned.', on: () => setMenuScreen('settings') },
+                  { i: '08', title: 'Versus', desc: 'Duel, co-op or tag — one keyboard, two pucks.', on: () => setMenuScreen('multiplayer') },
                 ].map((item) => (
                   <button key={item.i} type="button" className="menu-row" onClick={item.on}>
                     <span className="menu-index">{item.i}</span>
@@ -505,11 +800,13 @@ export default function Home() {
                   gameMode === 'zen' ? 'PRACTICE // BRIEFING' :
                   gameMode === 'tutorial' ? 'TUTORIAL // BRIEFING' :
                   gameMode === 'challenge' ? `CHALLENGE ${activeChallenge?.id ?? ''}`.trim() :
+                  gameMode === 'multiplayer' ? `VERSUS // ${MP_VARIANT_NAMES[mpVariant ?? 'duel'].toUpperCase()}` :
                   'SURVIVAL // BRIEFING'
                 const title =
                   gameMode === 'zen' ? 'Practice Mode' :
                   gameMode === 'tutorial' ? 'Tutorial' :
                   gameMode === 'challenge' ? (activeChallenge?.title ?? 'Challenge') :
+                  gameMode === 'multiplayer' ? MP_VARIANT_NAMES[mpVariant ?? 'duel'] :
                   'Survival Mode'
                 // Star bars scale with the arena, so the briefing quotes the
                 // numbers for the surface this run will actually be played on.
@@ -532,7 +829,24 @@ export default function Home() {
                     ...starRequirements(activeChallenge, arenaSize.width, arenaSize.height).map(
                       (req, i) => `${'★'.repeat(i + 1)} ${req}`
                     ),
-                  ] : gameMode === 'zen' ? [
+                  ] : gameMode === 'multiplayer' ? (
+                    mpVariant === 'coop' ? [
+                      'One shared score — collect orbs together.',
+                      'Every 10 orbs triggers a Cataclysm event. Clear it to advance the stage.',
+                      `Enemy or wall contact downs you — a teammate's touch revives you within ${COOP_BLEEDOUT_SECONDS}s.`,
+                      `Fresh revives are shielded for ${COOP_REVIVE_IMMUNITY}s.`,
+                      'Both down and the run is over. Co-op runs don’t post to the leaderboard.',
+                    ] : mpVariant === 'tag' ? [
+                      `One ${TAG_ROUND_SECONDS}s round — don’t be it when it ends.`,
+                      'Touch the other puck to pass it. Whoever is it moves faster.',
+                      'Borders wrap around — walls never hurt here.',
+                      'Least time spent as it wins.',
+                    ] : [
+                      `First to ${DUEL_TARGET_SCORE} orbs wins the duel.`,
+                      `Enemy contact knocks you back and staggers you for ${DUEL_STUN_SECONDS}s — staggered pucks can't collect.`,
+                      `After a stagger you're briefly untouchable (${DUEL_POST_STUN_IMMUNITY}s) — and walls just bounce you back.`,
+                    ]
+                  ) : gameMode === 'zen' ? [
                     'No enemies.',
                     'No death — you cannot lose.',
                     'Wrap-around borders teleport you to the opposite side.',
@@ -548,9 +862,29 @@ export default function Home() {
                     'Every few goals triggers a short Cataclysm event.',
                     'Stay inside the field — the edges will warn you.',
                   ]
+                // Versus briefings get a variant accent + a keycap control
+                // legend; single-player briefings render exactly as before.
+                const accent =
+                  gameMode === 'multiplayer'
+                    ? ({ duel: 'var(--glow-cyan)', coop: 'var(--glow-green)', tag: 'var(--glow-red)' } as const)[
+                        mpVariant ?? 'duel'
+                      ]
+                    : undefined
+                const onlineRole = mpSession?.kind === 'online' ? mpSession.role : null
+                const wasdKeys = ['W', 'A', 'S', 'D']
+                const arrowKeys = ['↑', '←', '↓', '→']
+                const keycaps = (keys: string[]) => (
+                  <span className="kbd-row">
+                    {keys.map((k) => (
+                      <kbd className="kbd" key={k}>{k}</kbd>
+                    ))}
+                  </span>
+                )
                 return (
                   <>
-                    <span className="modal-eyebrow">{eyebrow}</span>
+                    <span className="modal-eyebrow" style={accent ? { color: accent } : undefined}>
+                      {eyebrow}
+                    </span>
                     <h2>{title}</h2>
                     <div className="brief-list">
                       {items.map((text, i) => (
@@ -560,6 +894,36 @@ export default function Home() {
                         </div>
                       ))}
                     </div>
+                    {gameMode === 'multiplayer' && (
+                      <div className="mp-legend">
+                        {onlineRole ? (
+                          // Online, both key groups steer YOUR puck — one row,
+                          // tinted with the local slot's color.
+                          <div
+                            className="mp-legend-row"
+                            style={{ color: onlineRole === 'host' ? 'var(--glow-cyan)' : MP_P2_BODY }}
+                          >
+                            <span className="mp-legend-dot" />
+                            <span className="mp-legend-name">YOU</span>
+                            {keycaps(wasdKeys)}
+                            {keycaps(arrowKeys)}
+                          </div>
+                        ) : (
+                          <>
+                            <div className="mp-legend-row" style={{ color: 'var(--glow-cyan)' }}>
+                              <span className="mp-legend-dot" />
+                              <span className="mp-legend-name">PLAYER 1</span>
+                              {keycaps(wasdKeys)}
+                            </div>
+                            <div className="mp-legend-row" style={{ color: MP_P2_BODY }}>
+                              <span className="mp-legend-dot" />
+                              <span className="mp-legend-name">PLAYER 2</span>
+                              {keycaps(arrowKeys)}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </>
                 )
               })()}
@@ -631,33 +995,49 @@ export default function Home() {
           </div>
         )}
 
-        {uiState === 'paused' && (
+        {uiState === 'paused' && !matchResult && (
           <div className="overlay-center" style={{ position: 'absolute', inset: 0, zIndex: 90 }}>
             <div className="overlay-backdrop" />
-            <div className="rules-modal pause-modal">
-              <span className="modal-eyebrow">SESSION PAUSED</span>
-              <div className="pause-modal-title">Paused</div>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => setUiState('playing')}
-                >
-                  Resume
-                </button>
-                <button
-                  className="btn btn-ghost"
-                  onClick={() => setUiState('rules')}
-                >
-                  Restart
-                </button>
-                <button
-                  className="btn btn-ghost"
-                  onClick={() => setUiState('title')}
-                >
-                  Menu
-                </button>
+            {isOnline && onlineRole === 'guest' ? (
+              // Guests cannot resume — the host owns the pause state.
+              <div className="rules-modal pause-modal">
+                <span className="modal-eyebrow">HOST PAUSED</span>
+                <div className="pause-modal-title">Paused</div>
+                <p className="username-hint" style={{ textAlign: 'center', marginTop: 8 }}>
+                  The host paused the match — waiting for them to resume.
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
+                  <button className="btn btn-ghost" onClick={handleVersusMenu}>
+                    Menu
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="rules-modal pause-modal">
+                <span className="modal-eyebrow">SESSION PAUSED</span>
+                <div className="pause-modal-title">Paused</div>
+                <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => setUiState('playing')}
+                  >
+                    Resume
+                  </button>
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => setUiState('rules')}
+                  >
+                    Restart
+                  </button>
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => setUiState('title')}
+                  >
+                    Menu
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -669,6 +1049,14 @@ export default function Home() {
       )}
       {menuScreen === 'settings' && <SettingsModal onClose={() => setMenuScreen(null)} />}
       {menuScreen === 'profile' && <ProfileModal onClose={() => setMenuScreen(null)} />}
+      {menuScreen === 'multiplayer' && (
+        <MultiplayerSelect
+          onSelect={handleSelectMultiplayer}
+          onClose={() => setMenuScreen(null)}
+          getRoom={getRoom}
+          onGuestLobby={handleGuestLobby}
+        />
+      )}
 
       {endRun && (
         <EndScreen
@@ -682,6 +1070,21 @@ export default function Home() {
           onRetry={handleEndRetry}
           onMenu={handleEndMenu}
           onNext={handleEndNext}
+        />
+      )}
+
+      {matchResult && (
+        <VersusEndScreen
+          result={matchResult}
+          onRematch={handleVersusRematch}
+          onMenu={handleVersusMenu}
+          rematch={
+            matchResult.reason === 'disconnect'
+              ? 'hidden'
+              : mpSession?.kind === 'online' && mpSession.role === 'guest'
+                ? 'waiting'
+                : 'enabled'
+          }
         />
       )}
 

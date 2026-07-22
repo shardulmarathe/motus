@@ -1,4 +1,4 @@
-import { Puck, Goal, normalize, clampGoalToCanvas } from './physics'
+import { Puck, Goal, Vec, normalize, clampGoalToCanvas } from './physics'
 import { Enemy } from './physics'
 
 // Event types for Cataclysm mode
@@ -15,7 +15,7 @@ export type CataclysmEventType =
 /**
  * Create the player puck centered at (cx, cy)
  */
-export function createPlayer(cx: number, cy: number): Puck {
+export function createPlayer(cx: number, cy: number, id: string = 'player'): Puck {
   return {
     x: cx,
     y: cy,
@@ -23,7 +23,7 @@ export function createPlayer(cx: number, cy: number): Puck {
     vy: 0,
     radius: 14,
     isPlayer: true,
-    id: 'player',
+    id,
   }
 }
 
@@ -77,14 +77,14 @@ export function spawnEnemy(width: number, height: number, stage: number, diffMul
 }
 
 /**
- * Spawn a goal at a random position on the board
- * Avoid spawning too close to edges or the player
+ * Spawn a goal at a random position on the board, keeping the same minimum
+ * distance from EVERY avoid point (multiplayer needs the orb clear of both
+ * pucks). `spawnGoal` delegates here so single-player call sites are untouched.
  */
-export function spawnGoal(
+export function spawnGoalClearOf(
   width: number,
   height: number,
-  playerX: number,
-  playerY: number,
+  avoid: Vec[],
   isMoving: boolean = false
 ): Goal {
   const radius = 12
@@ -115,8 +115,9 @@ export function spawnGoal(
     x = maxX > minX ? minX + Math.random() * (maxX - minX) : width / 2
     y = maxY > minY ? minY + Math.random() * (maxY - minY) : height / 2
 
-    const dist = Math.hypot(x - playerX, y - playerY)
-    tooCloseToPlayer = dist < minDistanceFromPlayer
+    const px = x
+    const py = y
+    tooCloseToPlayer = avoid.some((a) => Math.hypot(px - a.x, py - a.y) < minDistanceFromPlayer)
     attempts++
   }
 
@@ -140,6 +141,20 @@ export function spawnGoal(
   }
 
   return goal
+}
+
+/**
+ * Spawn a goal at a random position on the board
+ * Avoid spawning too close to edges or the player
+ */
+export function spawnGoal(
+  width: number,
+  height: number,
+  playerX: number,
+  playerY: number,
+  isMoving: boolean = false
+): Goal {
+  return spawnGoalClearOf(width, height, [{ x: playerX, y: playerY }], isMoving)
 }
 
 /**

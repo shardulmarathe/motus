@@ -2,6 +2,7 @@ import {
   Enemy,
   Goal,
   Puck,
+  Vec,
   applySeek,
   integrate,
   integrateGoal,
@@ -13,7 +14,7 @@ import {
   CataclysmEventType,
   calculateArenaSize,
   getEventName,
-  spawnCataclysmGoals,
+  spawnGoalClearOf,
 } from '../gameLogic'
 import { palette, withAlpha } from '../palette'
 
@@ -35,7 +36,9 @@ export type CataclysmData = {
 
 type CataclysmContext = {
   cat: CataclysmData
+  /** Legacy alias — always equals players[0]. */
   player: Puck
+  players: Puck[]
   worldEnemies: Enemy[]
   width: number
   height: number
@@ -46,21 +49,54 @@ type CataclysmRenderContext = {
   ctx: CanvasRenderingContext2D
   cat: CataclysmData
   player?: Puck
+  players?: Puck[]
   width?: number
   height?: number
 }
 
 type CataclysmDefinition = {
-  onEnter: (width: number, height: number, player: Puck, stage: number) => CataclysmData
-  onUpdate?: (context: CataclysmContext) => 'gameOver' | void
+  onEnter: (width: number, height: number, players: Puck[], stage: number) => CataclysmData
+  onUpdate?: (context: CataclysmContext) => 'gameOver' | number[] | void
   onRender?: (context: CataclysmRenderContext) => void
+}
+
+/** Nearest puck in `players` to a point (players is never empty in practice). */
+function nearestPuck(players: Puck[], x: number, y: number): Puck {
+  let best = players[0]
+  let bestDist = Infinity
+  for (const p of players) {
+    const d = (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y)
+    if (d < bestDist) {
+      bestDist = d
+      best = p
+    }
+  }
+  return best
+}
+
+/**
+ * Spawn the 7 cataclysm goals clear of EVERY puck. Local multi-avoid version
+ * of gameLogic's spawnCataclysmGoals (which only takes one player position).
+ */
+function spawnGoalsClearOfAll(
+  width: number,
+  height: number,
+  players: Puck[],
+  isMoving = false
+): Goal[] {
+  const avoid: Vec[] = players.map((p) => ({ x: p.x, y: p.y }))
+  const goals: Goal[] = []
+  for (let i = 0; i < 7; i++) {
+    goals.push(spawnGoalClearOf(width, height, avoid, isMoving))
+  }
+  return goals
 }
 
 function makeEventBase(
   eventType: CataclysmEventType,
   width: number,
   height: number,
-  player: Puck,
+  players: Puck[],
   movingGoals = false
 ): CataclysmData {
   return {
@@ -69,18 +105,19 @@ function makeEventBase(
     goalsCollected: 0,
     eventType,
     eventName: getEventName(eventType),
-    goals: spawnCataclysmGoals(width, height, player.x, player.y, movingGoals),
+    goals: spawnGoalsClearOfAll(width, height, players, movingGoals),
     arenaWidth: width,
     arenaHeight: height,
     enterTime: 0,
   }
 }
 
-function spawnHunter(width: number, height: number, player: Puck, index: number, stage: number): Enemy {
+function spawnHunter(width: number, height: number, players: Puck[], index: number, stage: number): Enemy {
   const edge = index % 4
   const x = edge === 1 ? width + 24 : edge === 3 ? -24 : Math.random() * width
   const y = edge === 0 ? -24 : edge === 2 ? height + 24 : Math.random() * height
-  const dir = normalize({ x: player.x - x, y: player.y - y })
+  const target = nearestPuck(players, x, y)
+  const dir = normalize({ x: target.x - x, y: target.y - y })
   const baseSpeed = 115 + stage * 8
 
   return {
@@ -148,6 +185,53 @@ function renderBlackout(ctx: CanvasRenderingContext2D, player: Puck, width: numb
   ctx.fillRect(0, 0, width, height)
 }
 
+/** Reused offscreen layer for the multi-light blackout (avoids per-frame allocation). */
+let blackoutLayer: HTMLCanvasElement | null = null
+
+/**
+ * Multi-puck blackout: draw the full-darkness layer once offscreen, then punch
+ * one light hole per puck with destination-out so overlapping lights compose
+ * (never double-darken). Each hole's erase profile is tuned so a lone puck
+ * matches the single-player gradient (0 alpha at center, 0.72 mid, 0.97 edge).
+ */
+function renderBlackoutMulti(
+  ctx: CanvasRenderingContext2D,
+  players: Puck[],
+  width: number,
+  height: number
+) {
+  if (typeof document === 'undefined') return
+  if (!blackoutLayer) blackoutLayer = document.createElement('canvas')
+  if (blackoutLayer.width !== width || blackoutLayer.height !== height) {
+    blackoutLayer.width = width
+    blackoutLayer.height = height
+  }
+  const lctx = blackoutLayer.getContext('2d')
+  if (!lctx) return
+
+  const maxDark = 0.97
+  lctx.globalCompositeOperation = 'source-over'
+  lctx.clearRect(0, 0, width, height)
+  lctx.fillStyle = `rgba(1, 2, 6, ${maxDark})`
+  lctx.fillRect(0, 0, width, height)
+
+  lctx.globalCompositeOperation = 'destination-out'
+  const r = 128
+  for (const p of players) {
+    const hole = lctx.createRadialGradient(p.x, p.y, r * 0.35, p.x, p.y, r * 1.9)
+    // destination-out: remaining = maxDark * (1 - srcAlpha); stops chosen so a
+    // single hole leaves 0 at center, 0.72 at the 0.7 stop, 0.97 at the edge.
+    hole.addColorStop(0, 'rgba(0, 0, 0, 1)')
+    hole.addColorStop(0.7, `rgba(0, 0, 0, ${1 - 0.72 / maxDark})`)
+    hole.addColorStop(1, 'rgba(0, 0, 0, 0)')
+    lctx.fillStyle = hole
+    lctx.fillRect(0, 0, width, height)
+  }
+  lctx.globalCompositeOperation = 'source-over'
+
+  ctx.drawImage(blackoutLayer, 0, 0)
+}
+
 function renderShrinkingArena(ctx: CanvasRenderingContext2D, cat: CataclysmData) {
   if (!cat.arenaWidth || !cat.arenaHeight) return
 
@@ -187,17 +271,17 @@ function renderSwapWarning(ctx: CanvasRenderingContext2D, cat: CataclysmData) {
 
 export const cataclysmEvents: Record<CataclysmEventType, CataclysmDefinition> = {
   staticGoals: {
-    onEnter: (width, height, player) => makeEventBase('staticGoals', width, height, player),
+    onEnter: (width, height, players) => makeEventBase('staticGoals', width, height, players),
   },
   movingGoals: {
-    onEnter: (width, height, player) => makeEventBase('movingGoals', width, height, player, true),
+    onEnter: (width, height, players) => makeEventBase('movingGoals', width, height, players, true),
     onUpdate: ({ cat, width, height, dt }) => {
       for (const goal of cat.goals) integrateGoal(goal, dt, width, height)
     },
   },
   shrinkingArena: {
-    onEnter: (width, height, player) => makeEventBase('shrinkingArena', width, height, player),
-    onUpdate: ({ cat, player, worldEnemies }) => {
+    onEnter: (width, height, players) => makeEventBase('shrinkingArena', width, height, players),
+    onUpdate: ({ cat, players, worldEnemies }) => {
       if (!cat.arenaWidth || !cat.arenaHeight) return
       const arena = calculateArenaSize(cat.arenaWidth, cat.arenaHeight, cat.timeLeft, 30)
 
@@ -229,30 +313,37 @@ export const cataclysmEvents: Record<CataclysmEventType, CataclysmDefinition> = 
         }
       }
 
-      if (isOutOfArena(player, arena.x, arena.y, arena.width, arena.height)) return 'gameOver'
+      // Report which players are outside the safe rect; the caller decides
+      // the death policy (single-player: game over, co-op: down those players).
+      const caught: number[] = []
+      for (let i = 0; i < players.length; i++) {
+        if (isOutOfArena(players[i], arena.x, arena.y, arena.width, arena.height)) caught.push(i)
+      }
+      if (caught.length > 0) return caught
     },
     onRender: ({ ctx, cat }) => renderShrinkingArena(ctx, cat),
   },
   hunt: {
-    onEnter: (width, height, player, stage) => {
-      const cat = makeEventBase('hunt', width, height, player)
+    onEnter: (width, height, players, stage) => {
+      const cat = makeEventBase('hunt', width, height, players)
       const hunterCount = Math.min(5, 2 + Math.floor(stage / 2))
       cat.eventEnemies = Array.from({ length: hunterCount }, (_, index) =>
-        spawnHunter(width, height, player, index, stage)
+        spawnHunter(width, height, players, index, stage)
       )
       return cat
     },
-    onUpdate: ({ cat, player, dt }) => {
+    onUpdate: ({ cat, players, dt }) => {
       for (const enemy of cat.eventEnemies ?? []) {
-        applySeek(enemy, player.x, player.y, dt, 2.4)
+        const target = nearestPuck(players, enemy.x, enemy.y)
+        applySeek(enemy, target.x, target.y, dt, 2.4)
         integrate(enemy, dt)
       }
     },
   },
   swap: {
-    onEnter: (width, height, player) => {
-      const cat = makeEventBase('swap', width, height, player)
-      const enemySeeds = spawnCataclysmGoals(width, height, player.x, player.y)
+    onEnter: (width, height, players) => {
+      const cat = makeEventBase('swap', width, height, players)
+      const enemySeeds = spawnGoalsClearOfAll(width, height, players)
       cat.eventEnemies = enemySeeds.map(spawnSwapEnemy)
       cat.swapTimer = 5
       cat.swapWarning = 0
@@ -284,12 +375,13 @@ export const cataclysmEvents: Record<CataclysmEventType, CataclysmDefinition> = 
     onRender: ({ ctx, cat }) => renderSwapWarning(ctx, cat),
   },
   magnet: {
-    onEnter: (width, height, player) => makeEventBase('magnet', width, height, player),
-    onUpdate: ({ cat, player, width, height, dt }) => {
-      // Goals actively flee the player when approached.
+    onEnter: (width, height, players) => makeEventBase('magnet', width, height, players),
+    onUpdate: ({ cat, players, width, height, dt }) => {
+      // Goals actively flee the nearest puck when approached.
       for (const goal of cat.goals) {
-        const dx = goal.x - player.x
-        const dy = goal.y - player.y
+        const near = nearestPuck(players, goal.x, goal.y)
+        const dx = goal.x - near.x
+        const dy = goal.y - near.y
         const d = Math.hypot(dx, dy) || 1
         if (d < 200) {
           const push = (200 - d) * 3.4 * dt
@@ -303,14 +395,20 @@ export const cataclysmEvents: Record<CataclysmEventType, CataclysmDefinition> = 
     },
   },
   blackout: {
-    onEnter: (width, height, player) => makeEventBase('blackout', width, height, player),
-    onRender: ({ ctx, player, width, height }) => {
-      if (player && width && height) renderBlackout(ctx, player, width, height)
+    onEnter: (width, height, players) => makeEventBase('blackout', width, height, players),
+    onRender: ({ ctx, player, players, width, height }) => {
+      if (!width || !height) return
+      const pucks = players ?? (player ? [player] : [])
+      if (pucks.length === 0) return
+      // Single puck keeps the exact legacy gradient; multiple pucks punch one
+      // light hole each into a shared darkness layer.
+      if (pucks.length === 1) renderBlackout(ctx, pucks[0], width, height)
+      else renderBlackoutMulti(ctx, pucks, width, height)
     },
   },
   meteorStorm: {
-    onEnter: (width, height, player) => {
-      const cat = makeEventBase('meteorStorm', width, height, player)
+    onEnter: (width, height, players) => {
+      const cat = makeEventBase('meteorStorm', width, height, players)
       cat.eventEnemies = []
       cat.meteorTimer = 0.4
       return cat
@@ -335,10 +433,10 @@ export function createCataclysm(
   eventType: CataclysmEventType,
   width: number,
   height: number,
-  player: Puck,
+  players: Puck[],
   stage: number
 ) {
-  return cataclysmEvents[eventType].onEnter(width, height, player, stage)
+  return cataclysmEvents[eventType].onEnter(width, height, players, stage)
 }
 
 export function updateCataclysmEvent(context: CataclysmContext) {

@@ -1102,6 +1102,41 @@ body {
   color: var(--text-muted);
 }
 
+/* ── Keycaps + multiplayer control legend (Versus briefings) ── */
+.kbd-row { display: inline-flex; gap: 4px; }
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  padding: 4px 6px;
+  font-family: var(--font-game);
+  font-size: 11px;
+  line-height: 1;
+  color: var(--text-muted);
+  background: rgba(120, 150, 190, 0.06);
+  border: 1px solid var(--hair);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+}
+.mp-legend { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 24px; }
+.mp-legend-row { display: flex; align-items: center; gap: 12px; padding: 2px 4px; }
+.mp-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
+}
+.mp-legend-name {
+  font-family: var(--font-game);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+  min-width: 90px;
+}
+
 .challenge-modal,
 .settings-modal,
 .profile-modal {
