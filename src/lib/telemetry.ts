@@ -145,6 +145,12 @@ export interface TraceStyle {
   glow?: number
   /** Mark the final sample — used by the end screen to show where the run stopped. */
   endMark?: string | null
+  /**
+   * Horizontal band (CSS px) the plot must not draw into, so a label can sit
+   * over the chart. The chart breaks for its annotation the way a dimension
+   * line does — which is why nothing needs a backing box.
+   */
+  gap?: [number, number] | null
 }
 
 /**
@@ -168,6 +174,17 @@ export function drawTrace(
   const span = Math.max(1, h - pad * 2)
   const scale = Math.max(peak, MIN_PEAK)
 
+  // Clipping to everything-but-the-gap breaks the baseline, the line, the wash
+  // and the ticks in one move, rather than each having to know about it.
+  const gap = style.gap
+  if (gap) {
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(0, 0, Math.max(0, gap[0]), h)
+    ctx.rect(Math.min(w, gap[1]), 0, Math.max(0, w - gap[1]), h)
+    ctx.clip()
+  }
+
   if (style.baseline) {
     ctx.strokeStyle = style.baseline
     ctx.lineWidth = 1
@@ -177,7 +194,10 @@ export function drawTrace(
     ctx.stroke()
   }
 
-  if (count < 2) return
+  if (count < 2) {
+    if (gap) ctx.restore()
+    return
+  }
 
   const xAt = (i: number) => (i / (count - 1)) * w
   const yAt = (i: number) => baseY - Math.min(1, Math.max(0, samples[i] / scale)) * span
@@ -238,4 +258,6 @@ export function drawTrace(
     ctx.lineTo(x - 5, y + 5)
     ctx.stroke()
   }
+
+  if (gap) ctx.restore()
 }

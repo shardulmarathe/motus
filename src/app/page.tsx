@@ -691,7 +691,13 @@ export default function Home() {
         <header className="hud-overlay">
           {/* The bar is a live strip chart of your own speed; the readouts
               below are annotations on it. */}
-          <TraceStrip mode="live" className="hud-trace" height="100%" plotScale={0.6} />
+          <TraceStrip
+            mode="live"
+            className="hud-trace"
+            height="100%"
+            plotScale={0.6}
+            gapSelector=".status-text"
+          />
           <div className="hud-left">
             {gameMode === 'multiplayer' ? (
               mpVariant === 'coop' ? (

@@ -547,12 +547,8 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-  /* The strip chart runs behind this label, so the label cuts a feathered
-     break in it — the same device the arena uses for its gap readout, rather
-     than letting the trace strike through the type. */
-  padding: 2px 14px;
-  background: var(--field);
-  box-shadow: 0 0 16px 12px var(--field);
+  /* The chart itself breaks around this label (see TraceStrip's gapSelector),
+     so the type needs no backing box of its own. */
 }
 
 .hud-right {
