@@ -33,12 +33,6 @@ interface TraceStripProps {
   glow?: number
   /** Accessible description; without one the strip is decorative. */
   label?: string
-  /**
-   * CSS selector, resolved against the canvas's parent, for a label that sits
-   * over the chart. The plot breaks around it — a chart interrupted for its
-   * annotation, rather than the label needing a backing box.
-   */
-  gapSelector?: string
 }
 
 /**
@@ -60,7 +54,6 @@ export default function TraceStrip({
   // DOM type around it stays crisp.
   glow = 6,
   label,
-  gapSelector,
 }: TraceStripProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const seriesRef = useRef(series)
@@ -108,22 +101,9 @@ export default function TraceStrip({
       readTokens()
     }
 
-    /** Where the annotation sits, in canvas-local CSS px, plus breathing room. */
-    const resolveGap = (): [number, number] | null => {
-      if (!gapSelector) return null
-      const el = canvas.parentElement?.querySelector(gapSelector) as HTMLElement | null
-      if (!el || !el.textContent?.trim()) return null
-      const a = el.getBoundingClientRect()
-      if (a.width <= 0) return null
-      const b = canvas.getBoundingClientRect()
-      const PAD = 16
-      return [a.left - b.left - PAD, a.right - b.left + PAD]
-    }
-
     const paint = () => {
       if (width <= 0) return
       ctx.clearRect(0, 0, width, cssHeight)
-      style.gap = resolveGap()
       const bandH = cssHeight * Math.min(1, Math.max(0.1, plotScale))
       ctx.save()
       ctx.translate(0, cssHeight - bandH)

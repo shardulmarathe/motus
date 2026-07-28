@@ -54,6 +54,12 @@
   /* Phosphor bleed on live readouts. `none` on printed instruments. */
   --bloom: 0 0 14px rgba(70, 255, 140, 0.4);
 
+  /* For type sitting on the strip chart: field-coloured layers hugging the
+     letterforms, so the trace is knocked out behind the glyphs and nowhere
+     else. No rectangle, unlike a backing box. */
+  --label-shadow: 0 0 4px #04120a, 0 0 9px #04120a, 0 0 14px #04120a,
+    0 0 18px rgba(70, 255, 140, 0.45);
+
   /* ── Type ── */
   --font-display: Archivo, system-ui, sans-serif;  /* expanded via font-stretch */
   --font-body: Archivo, system-ui, sans-serif;
@@ -515,7 +521,7 @@ body {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.9;
+  opacity: 0.55;
   --pen-wash: rgba(70, 255, 140, 0.07);
   --phosphor-wash: rgba(70, 255, 140, 0.07);
 }
@@ -547,8 +553,9 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-  /* The chart itself breaks around this label (see TraceStrip's gapSelector),
-     so the type needs no backing box of its own. */
+  /* The wave runs continuously behind this label. Legibility comes from a
+     knockout that follows the glyph outlines, not from a panel behind them. */
+  text-shadow: var(--label-shadow);
 }
 
 .hud-right {

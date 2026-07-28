@@ -249,6 +249,13 @@ export function themeCssVars(theme: ArenaTheme): Record<string, string> {
     // them read as lit rather than printed. On paper instruments that would be
     // nonsense, so it resolves to `none` there.
     '--bloom': theme.luminous ? `0 0 14px ${rgba(c.player, 0.4)}` : 'none',
+    // For type sitting directly on the strip chart. Layers of the field colour
+    // hug the letterforms and knock the trace out from behind them — no
+    // rectangle anywhere, unlike a backing box or a box-shadow halo. The lit
+    // instruments add their bloom outside that, furthest back in the stack.
+    '--label-shadow': theme.luminous
+      ? `0 0 4px ${c.bgOuter}, 0 0 9px ${c.bgOuter}, 0 0 14px ${c.bgOuter}, 0 0 18px ${rgba(c.player, 0.45)}`
+      : `0 0 4px ${c.bgOuter}, 0 0 9px ${c.bgOuter}, 0 0 14px ${c.bgOuter}`,
     // A tube has no shadows, so lit instruments get a phosphor halo and
     // printed ones get an honest drop shadow.
     '--lift': theme.luminous
