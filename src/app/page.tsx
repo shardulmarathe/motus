@@ -113,6 +113,9 @@ export default function Home() {
   const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([])
   const [leaderboardNamesLoading, setLeaderboardNamesLoading] = useState(false)
   const [leaderboardOpen, setLeaderboardOpen] = useState(false)
+  const [leaderboardSubmitState, setLeaderboardSubmitState] = useState<
+    'ok' | 'unavailable' | 'failed'
+  >('ok')
   const [startingSession, setStartingSession] = useState(false)
   const [isTouch, setIsTouch] = useState(false)
   const submittedDeathRef = useRef(false)
@@ -362,7 +365,10 @@ export default function Home() {
       if (gameMode !== 'survival' || submittedDeathRef.current || !registeredName) return
 
       const sessionToken = gameSessionTokenRef.current
-      if (!sessionToken) return
+      if (!sessionToken) {
+        setLeaderboardSubmitState('unavailable')
+        return
+      }
 
       submittedDeathRef.current = true
       const username = registeredName
@@ -375,9 +381,13 @@ export default function Home() {
         })
         if (!res.ok) {
           submittedDeathRef.current = false
+          setLeaderboardSubmitState('failed')
+        } else {
+          setLeaderboardSubmitState('ok')
         }
       } catch {
         submittedDeathRef.current = false
+        setLeaderboardSubmitState('failed')
       } finally {
         gameSessionTokenRef.current = null
       }
@@ -411,10 +421,14 @@ export default function Home() {
         const data = await res.json()
         if (typeof data.sessionToken === 'string') {
           gameSessionTokenRef.current = data.sessionToken
+          setLeaderboardSubmitState('ok')
+          return
         }
       }
+      setLeaderboardSubmitState('unavailable')
     } catch {
       // Play without leaderboard submit if the session service is unavailable.
+      setLeaderboardSubmitState('unavailable')
     }
   }, [])
 
@@ -1184,6 +1198,9 @@ export default function Home() {
           challengeTitle={endRun.summary.mode === 'challenge' ? activeChallenge?.title : undefined}
           hasNextChallenge={
             !!activeChallenge && challenges.some((c) => c.id === activeChallenge.id + 1)
+          }
+          leaderboardSubmitState={
+            endRun.summary.mode === 'survival' ? leaderboardSubmitState : undefined
           }
           onRetry={handleEndRetry}
           onMenu={handleEndMenu}

@@ -11,6 +11,8 @@ interface EndScreenProps {
   stars?: number
   challengeTitle?: string
   hasNextChallenge?: boolean
+  /** Survival only — when not `ok`, the score never reached the leaderboard. */
+  leaderboardSubmitState?: 'ok' | 'unavailable' | 'failed'
   onRetry: () => void
   onMenu: () => void
   onNext?: () => void
@@ -43,6 +45,7 @@ export default function EndScreen({
   stars,
   challengeTitle,
   hasNextChallenge,
+  leaderboardSubmitState,
   onRetry,
   onMenu,
   onNext,
@@ -57,6 +60,8 @@ export default function EndScreen({
   // trace to draw, so we show none rather than inventing one.
   const hasTrace = samples.length >= 2
   const duration = formatDuration(summary.timeSurvived)
+  const leaderboardMissed =
+    leaderboardSubmitState != null && leaderboardSubmitState !== 'ok'
 
   return (
     <div className="overlay-center" style={{ position: 'absolute', inset: 0, zIndex: 95 }}>
@@ -110,6 +115,14 @@ export default function EndScreen({
         <div className="end-score-label">Final Score</div>
         <div className="end-score">{summary.score.toLocaleString()}</div>
         {newPersonalBest && <div className="pb-badge">New Personal Best</div>}
+        {leaderboardMissed && (
+          <div className="end-leaderboard-miss" role="status">
+            <div className="modal-eyebrow">Leaderboard</div>
+            <p className="end-leaderboard-miss-line">
+              Score not submitted — leaderboard unavailable
+            </p>
+          </div>
+        )}
 
         <div className="stat-grid end-stat-grid">
           <StatRow label="Time Survived" value={duration} />

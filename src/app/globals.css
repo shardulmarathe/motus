@@ -1456,6 +1456,25 @@ body {
   text-transform: uppercase;
 }
 
+.end-leaderboard-miss {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.end-leaderboard-miss .modal-eyebrow {
+  margin-bottom: 6px;
+}
+
+.end-leaderboard-miss-line {
+  margin: 0;
+  font-family: var(--font-data);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
+}
+
 .end-stat-grid {
   margin: 22px 0;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
