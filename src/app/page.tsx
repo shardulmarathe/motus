@@ -392,6 +392,48 @@ export default function Home() {
     [submitLeaderboardScore]
   )
 
+  /**
+   * Mint the signed session that authorises one survival score submission.
+   * Every run needs its own: the token is single-use server-side, and the
+   * anti-cheat bound is measured from the session's start time, so reusing an
+   * old one would both fail and widen the allowed score.
+   */
+  const mintSurvivalSession = useCallback(async (username: string | null) => {
+    gameSessionTokenRef.current = null
+    if (!username) return
+    try {
+      const res = await fetch('/api/leaderboard/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (typeof data.sessionToken === 'string') {
+          gameSessionTokenRef.current = data.sessionToken
+        }
+      }
+    } catch {
+      // Play without leaderboard submit if the session service is unavailable.
+    }
+  }, [])
+
+  // A survival run can restart *in place* — the Retry button, the touch
+  // restart, or Space in the canvas all reset the game without changing
+  // `uiState`. That means neither the session mint in `handleStartPlaying` nor
+  // the `submittedDeathRef` reset keyed on `uiState` fires again, so before
+  // this effect only the first run of a visit could ever reach the
+  // leaderboard. Re-arm both on the game-over → alive transition.
+  const prevGameOverRef = useRef(false)
+  useEffect(() => {
+    const wasOver = prevGameOverRef.current
+    prevGameOverRef.current = !!hud.gameOver
+    if (!wasOver || hud.gameOver) return
+    if (gameMode !== 'survival' || uiState !== 'playing') return
+    submittedDeathRef.current = false
+    void mintSurvivalSession(registeredName)
+  }, [hud.gameOver, gameMode, uiState, registeredName, mintSurvivalSession])
+
   // Process a finished run: persist stats, score challenge stars, unlock
   // achievements, then surface the end screen + any achievement toasts.
   const handleRunEnd = useCallback(
@@ -610,22 +652,8 @@ export default function Home() {
       }
 
       setStartingSession(true)
-      gameSessionTokenRef.current = null
-
       try {
-        const res = await fetch('/api/leaderboard/session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: survivalName }),
-        })
-        if (res.ok) {
-          const data = await res.json()
-          if (typeof data.sessionToken === 'string') {
-            gameSessionTokenRef.current = data.sessionToken
-          }
-        }
-      } catch {
-        // Play without leaderboard submit if session service is unavailable
+        await mintSurvivalSession(survivalName)
       } finally {
         setStartingSession(false)
       }
