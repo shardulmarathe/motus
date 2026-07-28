@@ -51,6 +51,9 @@
      these are the Phosphor Scope defaults rather than fixed constants. */
   --scrim: rgba(4, 18, 10, 0.84);
 
+  /* Phosphor bleed on live readouts. `none` on printed instruments. */
+  --bloom: 0 0 14px rgba(70, 255, 140, 0.4);
+
   /* ── Type ── */
   --font-display: Archivo, system-ui, sans-serif;  /* expanded via font-stretch */
   --font-body: Archivo, system-ui, sans-serif;
@@ -68,7 +71,7 @@
   --r-control: 2px;
 
   /* ── HUD bar ── */
-  --hud-bar-height: clamp(58px, 10vw, 74px);
+  --hud-bar-height: clamp(66px, 11vw, 84px);
   --hud-bar-pad-y: clamp(8px, 1.6vw, 13px);
   --hud-bar-pad-x: clamp(12px, 3vw, 22px);
   --hud-chip-width: clamp(56px, 17vw, 82px);
@@ -544,6 +547,12 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  /* The strip chart runs behind this label, so the label cuts a feathered
+     break in it — the same device the arena uses for its gap readout, rather
+     than letting the trace strike through the type. */
+  padding: 2px 14px;
+  background: var(--field);
+  box-shadow: 0 0 16px 12px var(--field);
 }
 
 .hud-right {
@@ -564,20 +573,24 @@ body {
   padding: 0;
 }
 
+/* The HUD is read at a glance, mid-panic, with something chasing you. It gets
+   the brightest type in the product: the channel name stays quiet, the number
+   does not. */
 .box-label {
-  font-size: 9.5px;
+  font-size: 10px;
   letter-spacing: 0.2em;
-  color: var(--ink-faint);
+  color: var(--ink-dim);
 }
 
 .box-value {
   font-family: var(--font-data);
-  font-weight: 500;
-  font-size: clamp(16px, 4.4vw, 21px);
+  font-weight: 600;
+  font-size: clamp(22px, 5.6vw, 31px);
   line-height: 1;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
+  text-shadow: var(--bloom);
 }
 
 /* The live value is the signal. */
@@ -587,11 +600,12 @@ body {
 
 .status-text {
   font-family: var(--font-data);
-  font-weight: 500;
-  font-size: clamp(12px, 3.2vw, 16px);
-  letter-spacing: 0.22em;
+  font-weight: 600;
+  font-size: clamp(15px, 4vw, 21px);
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--ink-dim);
+  color: var(--ink);
+  text-shadow: var(--bloom);
 }
 
 .status-text.status-text-tutorial {

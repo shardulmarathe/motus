@@ -245,6 +245,10 @@ export function themeCssVars(theme: ArenaTheme): Record<string, string> {
     '--rule': rgba(c.ink, 0.18),
     '--rule-strong': rgba(c.ink, 0.36),
     '--scrim': rgba(c.bgOuter, 0.84),
+    // Live readouts get a little phosphor bleed on a tube, which is what makes
+    // them read as lit rather than printed. On paper instruments that would be
+    // nonsense, so it resolves to `none` there.
+    '--bloom': theme.luminous ? `0 0 14px ${rgba(c.player, 0.4)}` : 'none',
     // A tube has no shadows, so lit instruments get a phosphor halo and
     // printed ones get an honest drop shadow.
     '--lift': theme.luminous
