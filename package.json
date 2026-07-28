@@ -8,8 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "og": "node scripts/capture-og.mjs",
-    "versus:dev": "wrangler dev --port 1999",
-    "versus:deploy": "wrangler deploy"
+    "versus:dev": "npx --yes wrangler@4.86.0 dev --port 1999",
+    "versus:deploy": "npx --yes wrangler@4.86.0 deploy"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
@@ -22,7 +22,6 @@
     "@types/node": "20.5.2",
     "@types/react": "18.2.14",
     "puppeteer": "^24.10.0",
-    "typescript": "5.4.2",
-    "wrangler": "^4.86.0"
+    "typescript": "5.4.2"
   }
 }

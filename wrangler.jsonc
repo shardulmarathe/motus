@@ -1,5 +1,8 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
+  // Public URL rather than node_modules: wrangler is deliberately NOT a
+  // dependency of this project — see the note in package.json's versus:*
+  // scripts — so there is no local copy of the schema to point at.
+  "$schema": "https://unpkg.com/wrangler@4.86.0/config-schema.json",
   "name": "motus-versus",
   "main": "worker/index.ts",
   // Must not be newer than the workerd binary bundled with the installed

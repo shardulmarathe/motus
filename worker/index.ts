@@ -21,6 +21,12 @@ import {
 // app's tsconfig (which includes `**/*.ts`) without pulling in
 // @cloudflare/workers-types. Wrangler bundles with esbuild and does not
 // typecheck, so the real runtime shapes apply at deploy time.
+//
+// Wrangler itself is intentionally NOT a dependency of this project. Installing
+// it pulled ~140MB of Cloudflare toolchain into node_modules, which crashed
+// Next's `collect-build-traces` on Vercel with a picomatch stack overflow while
+// building perfectly well locally. Nothing in the web app imports it, so the
+// `versus:*` scripts fetch a pinned wrangler through npx instead.
 
 interface WsLike {
   send(message: string): void
