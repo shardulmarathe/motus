@@ -11,3 +11,6 @@ tsconfig.tsbuildinfo
 
 # PartyKit dev cache
 .partykit/
+
+# Wrangler local dev state (miniflare SQLite for Durable Objects)
+.wrangler/

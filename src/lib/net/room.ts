@@ -8,12 +8,18 @@ const RECONNECT_MAX_MS = 8000
 const RECONNECT_MAX_ATTEMPTS = 6
 
 /**
- * Resolve the PartyKit websocket base URL from NEXT_PUBLIC_PARTYKIT_HOST.
- * Accepts a bare host ("localhost:1999", "motus.user.partykit.dev") or a
+ * Resolve the relay's websocket base URL from NEXT_PUBLIC_VERSUS_HOST.
+ * Accepts a bare host ("localhost:1999", "motus-versus.you.workers.dev") or a
  * value that already carries a scheme (http(s):// or ws(s)://).
+ *
+ * NEXT_PUBLIC_PARTYKIT_HOST is still read as a fallback: the relay moved from
+ * PartyKit to a plain Cloudflare Worker, and anyone who had already set the old
+ * name should keep working.
  */
 function resolveWsBase(): string {
-  const raw = (process.env.NEXT_PUBLIC_PARTYKIT_HOST || 'localhost:1999').trim()
+  const configured =
+    process.env.NEXT_PUBLIC_VERSUS_HOST || process.env.NEXT_PUBLIC_PARTYKIT_HOST
+  const raw = (configured || 'localhost:1999').trim()
   const schemeMatch = raw.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):\/\//)
   if (schemeMatch) {
     const scheme = schemeMatch[1].toLowerCase()
