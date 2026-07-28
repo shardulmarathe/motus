@@ -71,7 +71,7 @@ export default function Page() {
             onClick={handlePauseClick}
             title={isPaused ? 'Resume' : 'Pause'}
           >
-            <span className="menu-icon">{isPaused ? '▶' : '⏸'}</span>
+            <span aria-hidden="true">{isPaused ? '▶' : '❙❙'}</span>
             <span className="menu-text">{isPaused ? 'RESUME' : 'PAUSE'}</span>
           </button>
         </div>

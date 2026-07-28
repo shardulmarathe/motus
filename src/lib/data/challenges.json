@@ -3,2128 +3,2256 @@
     "id": 1,
     "tier": 1,
     "archetype": "collector",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
     "title": "Collector I",
     "description": "Collect 10 orbs. No timer — but the enemies won't wait.",
     "goal": {
       "type": "orbs",
       "target": 10
     },
-    "timeLimit": 0,
+    "deadlineMult": 0,
     "enemyCount": 2,
     "enemySpeed": 1,
-    "modifiers": {}
+    "modifiers": {},
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 2,
     "tier": 1,
-    "archetype": "navigate",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Navigator I",
-    "description": "Weave through 4 static hazards to collect 3 orbs.",
+    "archetype": "survivor",
+    "title": "Survivor I",
+    "description": "Stay alive for 20 seconds. Orbs you bank on the way earn stars.",
     "goal": {
-      "type": "orbs",
-      "target": 3
+      "type": "survive",
+      "target": 20
     },
-    "timeLimit": 0,
-    "enemyCount": 0,
-    "enemySpeed": 1.01,
-    "modifiers": {
-      "obstacles": 4
+    "deadlineMult": 0,
+    "enemyCount": 3,
+    "enemySpeed": 1.11,
+    "modifiers": {},
+    "stars": {
+      "two": 0.3,
+      "three": 0.5,
+      "mode": "survive"
     }
   },
   {
     "id": 3,
     "tier": 1,
     "archetype": "sprint",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
     "title": "Sprint I",
-    "description": "Collect 12 orbs in under 30 seconds.",
+    "description": "Collect 10 orbs before the clock runs out.",
     "goal": {
       "type": "orbs",
-      "target": 12
+      "target": 10
     },
-    "timeLimit": 30,
+    "deadlineMult": 1.94,
     "enemyCount": 1,
     "enemySpeed": 1.11,
-    "modifiers": {}
+    "modifiers": {},
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 4,
     "tier": 1,
-    "archetype": "survivor",
-    "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
-    },
-    "title": "Survivor I",
-    "description": "Stay alive for 22 seconds.",
-    "goal": {
-      "type": "survive",
-      "target": 22
-    },
-    "timeLimit": 22,
-    "enemyCount": 3,
-    "enemySpeed": 1.13,
-    "modifiers": {}
-  },
-  {
-    "id": 5,
-    "tier": 1,
     "archetype": "sweep",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
     "title": "Clean Sweep I",
-    "description": "Clear all 9 orbs before the timer runs out.",
+    "description": "Clear every one of the 9 orbs before the clock runs out.",
     "goal": {
       "type": "collectAll",
       "target": 9
     },
-    "timeLimit": 26,
+    "deadlineMult": 2.04,
     "enemyCount": 1,
     "enemySpeed": 1.02,
-    "modifiers": {}
+    "modifiers": {},
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
+  },
+  {
+    "id": 5,
+    "tier": 1,
+    "archetype": "navigate",
+    "title": "Navigator I",
+    "description": "Thread 5 orbs out of a field of 5 fixed hazards.",
+    "goal": {
+      "type": "orbs",
+      "target": 5
+    },
+    "deadlineMult": 0,
+    "enemyCount": 0,
+    "enemySpeed": 1.02,
+    "modifiers": {
+      "obstacles": 5
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 6,
     "tier": 1,
-    "archetype": "tiny",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Claustrophobia I",
-    "description": "Collect 8 orbs in a cramped arena.",
+    "archetype": "sweep",
+    "title": "Clean Sweep II",
+    "description": "Clear every one of the 10 orbs before the clock runs out.",
     "goal": {
-      "type": "orbs",
-      "target": 8
+      "type": "collectAll",
+      "target": 10
     },
-    "timeLimit": 0,
-    "enemyCount": 2,
+    "deadlineMult": 2.03,
+    "enemyCount": 1,
     "enemySpeed": 1.03,
-    "modifiers": {
-      "arenaScale": 0.61
+    "modifiers": {},
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 7,
     "tier": 1,
-    "archetype": "purist",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Untouchable I",
-    "description": "Collect 9 orbs without ever touching a wall.",
+    "archetype": "tiny",
+    "title": "Claustrophobia I",
+    "description": "Collect 8 orbs in a box with no room to breathe.",
     "goal": {
       "type": "orbs",
-      "target": 9
+      "target": 8
     },
-    "timeLimit": 0,
+    "deadlineMult": 0,
     "enemyCount": 2,
-    "enemySpeed": 1.04,
+    "enemySpeed": 1.03,
     "modifiers": {
-      "noWallTouch": true
+      "arenaScale": 0.59
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 8,
     "tier": 1,
-    "archetype": "swarm",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Swarm I",
-    "description": "Collect 11 orbs amid a swarm of fast enemies.",
+    "archetype": "collector",
+    "title": "Collector II",
+    "description": "Collect 11 orbs. No timer — but the enemies won't wait.",
     "goal": {
       "type": "orbs",
       "target": 11
     },
-    "timeLimit": 0,
-    "enemyCount": 7,
-    "enemySpeed": 1.66,
-    "modifiers": {}
+    "deadlineMult": 0,
+    "enemyCount": 2,
+    "enemySpeed": 1.05,
+    "modifiers": {},
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 9,
     "tier": 1,
-    "archetype": "void",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "The Void I",
-    "description": "Collect 13 orbs — walls are lethal, no wrap.",
+    "archetype": "mirror",
+    "title": "Mirror I",
+    "description": "Collect 9 orbs with every input inverted.",
     "goal": {
       "type": "orbs",
-      "target": 13
+      "target": 9
     },
-    "timeLimit": 0,
-    "enemyCount": 4,
-    "enemySpeed": 1.16,
+    "deadlineMult": 0,
+    "enemyCount": 2,
+    "enemySpeed": 1.04,
     "modifiers": {
-      "wraparound": false
+      "reverseControls": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 10,
     "tier": 1,
-    "archetype": "slippery",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Frictionless I",
-    "description": "Collect 11 orbs on ice — momentum barely fades.",
+    "archetype": "sprint",
+    "title": "Sprint II",
+    "description": "Collect 11 orbs before the clock runs out.",
     "goal": {
       "type": "orbs",
       "target": 11
     },
-    "timeLimit": 0,
-    "enemyCount": 3,
-    "enemySpeed": 1.05,
-    "modifiers": {
-      "friction": 0.997,
-      "acceleration": 1200
+    "deadlineMult": 1.92,
+    "enemyCount": 1,
+    "enemySpeed": 1.16,
+    "modifiers": {},
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 11,
     "tier": 1,
-    "archetype": "molasses",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Heavy I",
-    "description": "Collect 10 orbs with sluggish, heavy controls.",
+    "archetype": "survivor",
+    "title": "Survivor II",
+    "description": "Stay alive for 24 seconds. Orbs you bank on the way earn stars.",
     "goal": {
-      "type": "orbs",
-      "target": 10
+      "type": "survive",
+      "target": 24
     },
-    "timeLimit": 0,
-    "enemyCount": 3,
-    "enemySpeed": 1.06,
-    "modifiers": {
-      "friction": 0.97,
-      "acceleration": 760
+    "deadlineMult": 0,
+    "enemyCount": 4,
+    "enemySpeed": 1.17,
+    "modifiers": {},
+    "stars": {
+      "two": 0.31,
+      "three": 0.52,
+      "mode": "survive"
     }
   },
   {
     "id": 12,
     "tier": 1,
-    "archetype": "reversed",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Mirror I",
-    "description": "Collect 9 orbs with your controls reversed.",
+    "archetype": "ice",
+    "title": "Frictionless I",
+    "description": "Collect 11 orbs on ice — momentum barely fades. In a tighter arena.",
     "goal": {
       "type": "orbs",
-      "target": 9
+      "target": 11
     },
-    "timeLimit": 0,
+    "deadlineMult": 0,
     "enemyCount": 3,
     "enemySpeed": 1.07,
     "modifiers": {
-      "reverseControls": true
+      "feel": "ice",
+      "arenaScale": 0.72
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 13,
     "tier": 1,
-    "archetype": "suddendeath",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Sudden Death I",
-    "description": "Collect 12 orbs. One touch ends everything.",
+    "archetype": "heavy",
+    "title": "Deadweight I",
+    "description": "Collect 10 orbs hauling a puck that fights every turn. In a tighter arena.",
     "goal": {
       "type": "orbs",
-      "target": 12
+      "target": 10
     },
-    "timeLimit": 0,
-    "enemyCount": 5,
-    "enemySpeed": 1.4,
+    "deadlineMult": 0,
+    "enemyCount": 2,
+    "enemySpeed": 1.06,
     "modifiers": {
-      "oneLife": true
+      "feel": "heavy",
+      "arenaScale": 0.72
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 14,
     "tier": 1,
-    "archetype": "endurance",
+    "archetype": "navigate",
+    "title": "Navigator II",
+    "description": "Thread 6 orbs out of a field of 6 fixed hazards.",
+    "goal": {
+      "type": "orbs",
+      "target": 6
+    },
+    "deadlineMult": 0,
+    "enemyCount": 0,
+    "enemySpeed": 1.07,
+    "modifiers": {
+      "obstacles": 6
+    },
     "stars": {
       "two": 0,
       "three": 0,
-      "mode": "clear"
-    },
-    "title": "Endurance I",
-    "description": "Outlast 57 seconds of relentless pressure.",
-    "goal": {
-      "type": "survive",
-      "target": 57
-    },
-    "timeLimit": 57,
-    "enemyCount": 5,
-    "enemySpeed": 1.32,
-    "modifiers": {}
+      "mode": "par"
+    }
   },
   {
     "id": 15,
     "tier": 1,
-    "archetype": "collector",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Collector II",
-    "description": "Collect 14 orbs. No timer — but the enemies won't wait.",
+    "archetype": "tiny",
+    "title": "Claustrophobia II",
+    "description": "Collect 9 orbs in a box with no room to breathe.",
     "goal": {
       "type": "orbs",
-      "target": 14
+      "target": 9
     },
-    "timeLimit": 0,
+    "deadlineMult": 0,
     "enemyCount": 3,
-    "enemySpeed": 1.11,
-    "modifiers": {}
+    "enemySpeed": 1.07,
+    "modifiers": {
+      "arenaScale": 0.58
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 16,
     "tier": 1,
-    "archetype": "navigate",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Navigator II",
-    "description": "Weave through 6 static hazards to collect 4 orbs.",
+    "archetype": "weave",
+    "title": "The Weave I",
+    "description": "Collect 14 orbs. The walls are doors — run straight through them.",
     "goal": {
       "type": "orbs",
-      "target": 4
+      "target": 14
     },
-    "timeLimit": 0,
-    "enemyCount": 0,
-    "enemySpeed": 1.08,
+    "deadlineMult": 0,
+    "enemyCount": 8,
+    "enemySpeed": 1.31,
     "modifiers": {
-      "obstacles": 6
+      "wraparound": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 17,
     "tier": 1,
-    "archetype": "sprint",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Sprint II",
-    "description": "Collect 15 orbs in under 28 seconds.",
-    "goal": {
-      "type": "orbs",
-      "target": 15
-    },
-    "timeLimit": 28,
-    "enemyCount": 2,
-    "enemySpeed": 1.21,
-    "modifiers": {}
-  },
-  {
-    "id": 18,
-    "tier": 1,
-    "archetype": "survivor",
-    "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
-    },
-    "title": "Survivor II",
-    "description": "Stay alive for 32 seconds.",
-    "goal": {
-      "type": "survive",
-      "target": 32
-    },
-    "timeLimit": 32,
-    "enemyCount": 5,
-    "enemySpeed": 1.25,
-    "modifiers": {}
-  },
-  {
-    "id": 19,
-    "tier": 1,
     "archetype": "sweep",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Clean Sweep II",
-    "description": "Clear all 11 orbs before the timer runs out.",
+    "title": "Clean Sweep III",
+    "description": "Clear every one of the 11 orbs before the clock runs out. In a tighter arena.",
     "goal": {
       "type": "collectAll",
       "target": 11
     },
-    "timeLimit": 24,
+    "deadlineMult": 1.99,
     "enemyCount": 2,
-    "enemySpeed": 1.11,
-    "modifiers": {}
+    "enemySpeed": 1.1,
+    "modifiers": {
+      "arenaScale": 0.72
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
+  },
+  {
+    "id": 18,
+    "tier": 1,
+    "archetype": "chase",
+    "title": "Chase Sequence I",
+    "description": "Run down 11 orbs that won't hold still. In a tighter arena.",
+    "goal": {
+      "type": "orbs",
+      "target": 11
+    },
+    "deadlineMult": 0,
+    "enemyCount": 3,
+    "enemySpeed": 1.2,
+    "modifiers": {
+      "movingOrbs": true,
+      "arenaScale": 0.72
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
+  },
+  {
+    "id": 19,
+    "tier": 1,
+    "archetype": "sprint",
+    "title": "Sprint III",
+    "description": "Collect 12 orbs before the clock runs out. In a tighter arena.",
+    "goal": {
+      "type": "orbs",
+      "target": 12
+    },
+    "deadlineMult": 1.89,
+    "enemyCount": 2,
+    "enemySpeed": 1.22,
+    "modifiers": {
+      "arenaScale": 0.72
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 20,
     "tier": 1,
-    "archetype": "tiny",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Claustrophobia II",
-    "description": "Collect 10 orbs in a cramped arena.",
+    "archetype": "boss20",
+    "title": "Gatekeeper",
+    "description": "Clear all 14 orbs in a shrinking box, on the clock. Tier one ends here.",
     "goal": {
-      "type": "orbs",
-      "target": 10
+      "type": "collectAll",
+      "target": 14
     },
-    "timeLimit": 0,
-    "enemyCount": 3,
-    "enemySpeed": 1.12,
+    "deadlineMult": 1.75,
+    "enemyCount": 5,
+    "enemySpeed": 1.4,
     "modifiers": {
-      "arenaScale": 0.59
+      "arenaScale": 0.7,
+      "obstacles": 5
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 21,
     "tier": 2,
-    "archetype": "purist",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Untouchable II",
-    "description": "Collect 10 orbs without ever touching a wall.",
+    "archetype": "mirror",
+    "title": "Mirror II",
+    "description": "Collect 9 orbs with every input inverted. In a tighter arena.",
     "goal": {
       "type": "orbs",
-      "target": 10
+      "target": 9
     },
-    "timeLimit": 0,
+    "deadlineMult": 0,
     "enemyCount": 3,
-    "enemySpeed": 1.12,
+    "enemySpeed": 1.1,
     "modifiers": {
-      "noWallTouch": true
+      "reverseControls": true,
+      "arenaScale": 0.72
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 22,
     "tier": 2,
-    "archetype": "swarm",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Swarm II",
-    "description": "Collect 13 orbs amid a swarm of fast enemies.",
+    "archetype": "ice",
+    "title": "Frictionless II",
+    "description": "Collect 12 orbs on ice — momentum barely fades. In a tighter arena.",
     "goal": {
       "type": "orbs",
-      "target": 13
+      "target": 12
     },
-    "timeLimit": 0,
-    "enemyCount": 9,
-    "enemySpeed": 1.77,
-    "modifiers": {}
+    "deadlineMult": 0,
+    "enemyCount": 3,
+    "enemySpeed": 1.13,
+    "modifiers": {
+      "feel": "ice",
+      "arenaScale": 0.72
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 23,
     "tier": 2,
-    "archetype": "void",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "The Void II",
-    "description": "Collect 15 orbs — walls are lethal, no wrap.",
+    "archetype": "tiny",
+    "title": "Claustrophobia III",
+    "description": "Collect 10 orbs in a box with no room to breathe. With wrapping walls.",
     "goal": {
       "type": "orbs",
-      "target": 15
+      "target": 10
     },
-    "timeLimit": 0,
-    "enemyCount": 5,
-    "enemySpeed": 1.26,
+    "deadlineMult": 0,
+    "enemyCount": 3,
+    "enemySpeed": 1.11,
     "modifiers": {
-      "wraparound": false
+      "arenaScale": 0.56,
+      "wraparound": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 24,
     "tier": 2,
-    "archetype": "slippery",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Frictionless II",
-    "description": "Collect 12 orbs on ice — momentum barely fades.",
+    "archetype": "hunt",
+    "title": "The Hunt I",
+    "description": "Collect 12 orbs while 3 hunters track you across the arena. With wrapping walls.",
     "goal": {
       "type": "orbs",
       "target": 12
     },
-    "timeLimit": 0,
-    "enemyCount": 3,
-    "enemySpeed": 1.14,
+    "deadlineMult": 0,
+    "enemyCount": 4,
+    "enemySpeed": 1.22,
     "modifiers": {
-      "friction": 0.997,
-      "acceleration": 1200
+      "homingEnemies": 3,
+      "wraparound": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 25,
     "tier": 2,
-    "archetype": "molasses",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Heavy II",
-    "description": "Collect 11 orbs with sluggish, heavy controls.",
+    "archetype": "navigate",
+    "title": "Navigator III",
+    "description": "Thread 7 orbs out of a field of 7 fixed hazards. With wrapping walls.",
     "goal": {
       "type": "orbs",
-      "target": 11
+      "target": 7
     },
-    "timeLimit": 0,
-    "enemyCount": 3,
-    "enemySpeed": 1.15,
+    "deadlineMult": 0,
+    "enemyCount": 1,
+    "enemySpeed": 1.12,
     "modifiers": {
-      "friction": 0.97,
-      "acceleration": 760
+      "obstacles": 7,
+      "wraparound": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 26,
     "tier": 2,
-    "archetype": "reversed",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Mirror II",
-    "description": "Collect 10 orbs with your controls reversed.",
+    "archetype": "swarm",
+    "title": "Swarm I",
+    "description": "Collect 15 orbs inside a storm of traffic. With wrapping walls.",
     "goal": {
       "type": "orbs",
-      "target": 10
+      "target": 15
     },
-    "timeLimit": 0,
-    "enemyCount": 3,
-    "enemySpeed": 1.15,
+    "deadlineMult": 0,
+    "enemyCount": 13,
+    "enemySpeed": 1.75,
     "modifiers": {
-      "reverseControls": true
+      "wraparound": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 27,
     "tier": 2,
-    "archetype": "suddendeath",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Sudden Death II",
-    "description": "Collect 14 orbs. One touch ends everything.",
+    "archetype": "chase",
+    "title": "Chase Sequence II",
+    "description": "Run down 12 orbs that won't hold still. In a tighter arena.",
     "goal": {
       "type": "orbs",
-      "target": 14
+      "target": 12
     },
-    "timeLimit": 0,
-    "enemyCount": 6,
-    "enemySpeed": 1.51,
+    "deadlineMult": 0,
+    "enemyCount": 4,
+    "enemySpeed": 1.26,
     "modifiers": {
-      "oneLife": true
+      "movingOrbs": true,
+      "arenaScale": 0.72
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 28,
     "tier": 2,
-    "archetype": "endurance",
+    "archetype": "weave",
+    "title": "The Weave II",
+    "description": "Collect 15 orbs. The walls are doors — run straight through them. On ice.",
+    "goal": {
+      "type": "orbs",
+      "target": 15
+    },
+    "deadlineMult": 0,
+    "enemyCount": 9,
+    "enemySpeed": 1.39,
+    "modifiers": {
+      "wraparound": true,
+      "feel": "ice"
+    },
     "stars": {
       "two": 0,
       "three": 0,
-      "mode": "clear"
-    },
-    "title": "Endurance II",
-    "description": "Outlast 71 seconds of relentless pressure.",
-    "goal": {
-      "type": "survive",
-      "target": 71
-    },
-    "timeLimit": 71,
-    "enemyCount": 7,
-    "enemySpeed": 1.45,
-    "modifiers": {}
+      "mode": "par"
+    }
   },
   {
     "id": 29,
     "tier": 2,
     "archetype": "collector",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
     "title": "Collector III",
-    "description": "Collect 18 orbs. No timer — but the enemies won't wait.",
+    "description": "Collect 15 orbs. No timer — but the enemies won't wait. With wrapping walls.",
     "goal": {
       "type": "orbs",
-      "target": 18
+      "target": 15
     },
-    "timeLimit": 0,
+    "deadlineMult": 0,
     "enemyCount": 4,
-    "enemySpeed": 1.23,
-    "modifiers": {}
+    "enemySpeed": 1.2,
+    "modifiers": {
+      "wraparound": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 30,
     "tier": 2,
-    "archetype": "navigate",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Navigator III",
-    "description": "Weave through 7 static hazards to collect 5 orbs.",
+    "archetype": "heavy",
+    "title": "Deadweight II",
+    "description": "Collect 11 orbs hauling a puck that fights every turn. In a tighter arena.",
     "goal": {
       "type": "orbs",
-      "target": 5
+      "target": 11
     },
-    "timeLimit": 0,
-    "enemyCount": 1,
+    "deadlineMult": 0,
+    "enemyCount": 3,
     "enemySpeed": 1.15,
     "modifiers": {
-      "obstacles": 7
+      "feel": "heavy",
+      "arenaScale": 0.72
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 31,
     "tier": 2,
-    "archetype": "sprint",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Sprint III",
-    "description": "Collect 17 orbs in under 26 seconds.",
+    "archetype": "sweep",
+    "title": "Clean Sweep IV",
+    "description": "Clear every one of the 12 orbs before the clock runs out. As the orbs drift.",
     "goal": {
-      "type": "orbs",
-      "target": 17
+      "type": "collectAll",
+      "target": 12
     },
-    "timeLimit": 26,
-    "enemyCount": 3,
-    "enemySpeed": 1.31,
-    "modifiers": {}
+    "deadlineMult": 1.94,
+    "enemyCount": 2,
+    "enemySpeed": 1.18,
+    "modifiers": {
+      "movingOrbs": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 32,
     "tier": 2,
-    "archetype": "survivor",
+    "archetype": "mirror",
+    "title": "Mirror III",
+    "description": "Collect 10 orbs with every input inverted. With wrapping walls.",
+    "goal": {
+      "type": "orbs",
+      "target": 10
+    },
+    "deadlineMult": 0,
+    "enemyCount": 3,
+    "enemySpeed": 1.16,
+    "modifiers": {
+      "reverseControls": true,
+      "wraparound": true
+    },
     "stars": {
       "two": 0,
       "three": 0,
-      "mode": "clear"
-    },
-    "title": "Survivor III",
-    "description": "Stay alive for 42 seconds.",
-    "goal": {
-      "type": "survive",
-      "target": 42
-    },
-    "timeLimit": 42,
-    "enemyCount": 6,
-    "enemySpeed": 1.38,
-    "modifiers": {}
+      "mode": "par"
+    }
   },
   {
     "id": 33,
     "tier": 2,
-    "archetype": "sweep",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Clean Sweep III",
-    "description": "Clear all 13 orbs before the timer runs out.",
+    "archetype": "navigate",
+    "title": "Navigator IV",
+    "description": "Thread 8 orbs out of a field of 8 fixed hazards. As the orbs drift.",
     "goal": {
-      "type": "collectAll",
-      "target": 13
+      "type": "orbs",
+      "target": 8
     },
-    "timeLimit": 23,
-    "enemyCount": 3,
-    "enemySpeed": 1.19,
-    "modifiers": {}
+    "deadlineMult": 0,
+    "enemyCount": 1,
+    "enemySpeed": 1.16,
+    "modifiers": {
+      "obstacles": 8,
+      "movingOrbs": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 34,
     "tier": 2,
-    "archetype": "tiny",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Claustrophobia III",
-    "description": "Collect 11 orbs in a cramped arena.",
+    "archetype": "sprint",
+    "title": "Sprint IV",
+    "description": "Collect 14 orbs before the clock runs out. With wrapping walls.",
     "goal": {
       "type": "orbs",
-      "target": 11
+      "target": 14
     },
-    "timeLimit": 0,
-    "enemyCount": 4,
-    "enemySpeed": 1.2,
+    "deadlineMult": 1.84,
+    "enemyCount": 3,
+    "enemySpeed": 1.32,
     "modifiers": {
-      "arenaScale": 0.57
+      "wraparound": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 35,
     "tier": 2,
-    "archetype": "purist",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Untouchable III",
-    "description": "Collect 11 orbs without ever touching a wall.",
+    "archetype": "hunt",
+    "title": "The Hunt II",
+    "description": "Collect 13 orbs while 3 hunters track you across the arena. In a tighter arena.",
     "goal": {
       "type": "orbs",
-      "target": 11
+      "target": 13
     },
-    "timeLimit": 0,
-    "enemyCount": 4,
-    "enemySpeed": 1.21,
+    "deadlineMult": 0,
+    "enemyCount": 5,
+    "enemySpeed": 1.27,
     "modifiers": {
-      "noWallTouch": true
+      "homingEnemies": 3,
+      "arenaScale": 0.72
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 36,
     "tier": 2,
-    "archetype": "swarm",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Swarm III",
-    "description": "Collect 16 orbs amid a swarm of fast enemies.",
+    "archetype": "chase",
+    "title": "Chase Sequence III",
+    "description": "Run down 13 orbs that won't hold still. On ice.",
     "goal": {
       "type": "orbs",
-      "target": 16
+      "target": 13
     },
-    "timeLimit": 0,
-    "enemyCount": 10,
-    "enemySpeed": 1.88,
-    "modifiers": {}
+    "deadlineMult": 0,
+    "enemyCount": 4,
+    "enemySpeed": 1.31,
+    "modifiers": {
+      "movingOrbs": true,
+      "feel": "ice"
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 37,
     "tier": 2,
-    "archetype": "void",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "The Void III",
-    "description": "Collect 17 orbs — walls are lethal, no wrap.",
+    "archetype": "survivor",
+    "title": "Survivor III",
+    "description": "Stay alive for 35 seconds. Orbs you bank on the way earn stars. On ice.",
     "goal": {
-      "type": "orbs",
-      "target": 17
+      "type": "survive",
+      "target": 35
     },
-    "timeLimit": 0,
+    "deadlineMult": 0,
     "enemyCount": 6,
     "enemySpeed": 1.35,
     "modifiers": {
-      "wraparound": false
+      "feel": "ice"
+    },
+    "stars": {
+      "two": 0.34,
+      "three": 0.55,
+      "mode": "survive"
     }
   },
   {
     "id": 38,
     "tier": 2,
-    "archetype": "slippery",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Frictionless III",
-    "description": "Collect 14 orbs on ice — momentum barely fades.",
+    "archetype": "swarm",
+    "title": "Swarm II",
+    "description": "Collect 16 orbs inside a storm of traffic. In a tighter arena.",
     "goal": {
       "type": "orbs",
-      "target": 14
+      "target": 16
     },
-    "timeLimit": 0,
-    "enemyCount": 4,
-    "enemySpeed": 1.22,
+    "deadlineMult": 0,
+    "enemyCount": 14,
+    "enemySpeed": 1.82,
     "modifiers": {
-      "friction": 0.997,
-      "acceleration": 1200
+      "arenaScale": 0.72
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 39,
     "tier": 2,
-    "archetype": "molasses",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Heavy III",
-    "description": "Collect 12 orbs with sluggish, heavy controls.",
+    "archetype": "collapse",
+    "title": "Collapse I",
+    "description": "Collect 13 orbs as the arena closes in around you. With hunters on your tail.",
     "goal": {
       "type": "orbs",
-      "target": 12
+      "target": 13
     },
-    "timeLimit": 0,
-    "enemyCount": 4,
-    "enemySpeed": 1.23,
+    "deadlineMult": 0,
+    "enemyCount": 5,
+    "enemySpeed": 1.33,
     "modifiers": {
-      "friction": 0.97,
-      "acceleration": 760
+      "shrinkTo": 0.47,
+      "homingEnemies": 2
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 40,
     "tier": 2,
-    "archetype": "reversed",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Mirror III",
-    "description": "Collect 12 orbs with your controls reversed.",
+    "archetype": "boss40",
+    "title": "Hall of Mirrors",
+    "description": "Collect 18 orbs on ice, inverted, with the walls wide open.",
     "goal": {
       "type": "orbs",
-      "target": 12
+      "target": 18
     },
-    "timeLimit": 0,
-    "enemyCount": 4,
-    "enemySpeed": 1.24,
+    "deadlineMult": 0,
+    "enemyCount": 9,
+    "enemySpeed": 1.7,
     "modifiers": {
-      "reverseControls": true
+      "reverseControls": true,
+      "feel": "ice",
+      "wraparound": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 41,
     "tier": 3,
-    "archetype": "suddendeath",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Sudden Death III",
-    "description": "Collect 16 orbs. One touch ends everything.",
+    "archetype": "navigate",
+    "title": "Navigator V",
+    "description": "Thread 9 orbs out of a field of 9 fixed hazards. With heavy controls.",
     "goal": {
       "type": "orbs",
-      "target": 16
+      "target": 9
     },
-    "timeLimit": 0,
-    "enemyCount": 8,
-    "enemySpeed": 1.62,
+    "deadlineMult": 0,
+    "enemyCount": 1,
+    "enemySpeed": 1.2,
     "modifiers": {
-      "oneLife": true
+      "obstacles": 9,
+      "feel": "heavy"
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 42,
     "tier": 3,
     "archetype": "endurance",
-    "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
-    },
-    "title": "Endurance III",
-    "description": "Outlast 84 seconds of relentless pressure.",
+    "title": "Endurance I",
+    "description": "Outlast 81 seconds of relentless pressure. Bank orbs for stars. With hunters on your tail.",
     "goal": {
       "type": "survive",
-      "target": 84
+      "target": 81
     },
-    "timeLimit": 84,
+    "deadlineMult": 0,
     "enemyCount": 9,
-    "enemySpeed": 1.57,
-    "modifiers": {}
+    "enemySpeed": 1.59,
+    "modifiers": {
+      "homingEnemies": 2
+    },
+    "stars": {
+      "two": 0.34,
+      "three": 0.56,
+      "mode": "survive"
+    }
   },
   {
     "id": 43,
     "tier": 3,
-    "archetype": "collector",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Collector IV",
-    "description": "Collect 23 orbs. No timer — but the enemies won't wait.",
+    "archetype": "heavy",
+    "title": "Deadweight III",
+    "description": "Collect 12 orbs hauling a puck that fights every turn. With wrapping walls.",
     "goal": {
       "type": "orbs",
-      "target": 23
+      "target": 12
     },
-    "timeLimit": 0,
-    "enemyCount": 5,
-    "enemySpeed": 1.34,
-    "modifiers": {}
+    "deadlineMult": 0,
+    "enemyCount": 4,
+    "enemySpeed": 1.21,
+    "modifiers": {
+      "feel": "heavy",
+      "wraparound": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 44,
     "tier": 3,
-    "archetype": "navigate",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Navigator IV",
-    "description": "Weave through 9 static hazards to collect 6 orbs.",
+    "archetype": "mirror",
+    "title": "Mirror IV",
+    "description": "Collect 11 orbs with every input inverted. As the orbs drift.",
     "goal": {
       "type": "orbs",
-      "target": 6
+      "target": 11
     },
-    "timeLimit": 0,
-    "enemyCount": 1,
+    "deadlineMult": 0,
+    "enemyCount": 4,
     "enemySpeed": 1.22,
     "modifiers": {
-      "obstacles": 9
+      "reverseControls": true,
+      "movingOrbs": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 45,
     "tier": 3,
-    "archetype": "sprint",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Sprint IV",
-    "description": "Collect 19 orbs in under 24 seconds.",
+    "archetype": "ice",
+    "title": "Frictionless III",
+    "description": "Collect 14 orbs on ice — momentum barely fades. With wrapping walls.",
     "goal": {
       "type": "orbs",
-      "target": 19
+      "target": 14
     },
-    "timeLimit": 24,
+    "deadlineMult": 0,
     "enemyCount": 4,
-    "enemySpeed": 1.41,
-    "modifiers": {}
+    "enemySpeed": 1.27,
+    "modifiers": {
+      "feel": "ice",
+      "wraparound": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 46,
     "tier": 3,
-    "archetype": "survivor",
+    "archetype": "minefield",
+    "title": "Minefield I",
+    "description": "Collect 11 orbs while 9 live mines drift across your route. As the orbs drift.",
+    "goal": {
+      "type": "orbs",
+      "target": 11
+    },
+    "deadlineMult": 0,
+    "enemyCount": 2,
+    "enemySpeed": 1.23,
+    "modifiers": {
+      "obstacles": 9,
+      "movingHazards": true,
+      "movingOrbs": true
+    },
     "stars": {
       "two": 0,
       "three": 0,
-      "mode": "clear"
-    },
-    "title": "Survivor IV",
-    "description": "Stay alive for 52 seconds.",
-    "goal": {
-      "type": "survive",
-      "target": 52
-    },
-    "timeLimit": 52,
-    "enemyCount": 8,
-    "enemySpeed": 1.51,
-    "modifiers": {}
+      "mode": "par"
+    }
   },
   {
     "id": 47,
     "tier": 3,
-    "archetype": "sweep",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Clean Sweep IV",
-    "description": "Clear all 15 orbs before the timer runs out.",
+    "archetype": "chase",
+    "title": "Chase Sequence IV",
+    "description": "Run down 14 orbs that won't hold still. With wrapping walls.",
     "goal": {
-      "type": "collectAll",
-      "target": 15
+      "type": "orbs",
+      "target": 14
     },
-    "timeLimit": 21,
-    "enemyCount": 3,
-    "enemySpeed": 1.28,
-    "modifiers": {}
+    "deadlineMult": 0,
+    "enemyCount": 5,
+    "enemySpeed": 1.38,
+    "modifiers": {
+      "movingOrbs": true,
+      "wraparound": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 48,
     "tier": 3,
-    "archetype": "tiny",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Claustrophobia IV",
-    "description": "Collect 12 orbs in a cramped arena.",
+    "archetype": "collector",
+    "title": "Collector IV",
+    "description": "Collect 18 orbs. No timer — but the enemies won't wait. As the orbs drift.",
     "goal": {
       "type": "orbs",
-      "target": 12
+      "target": 18
     },
-    "timeLimit": 0,
-    "enemyCount": 4,
-    "enemySpeed": 1.28,
+    "deadlineMult": 0,
+    "enemyCount": 5,
+    "enemySpeed": 1.33,
     "modifiers": {
-      "arenaScale": 0.54
+      "movingOrbs": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 49,
     "tier": 3,
-    "archetype": "purist",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Untouchable IV",
-    "description": "Collect 13 orbs without ever touching a wall.",
+    "archetype": "sprint",
+    "title": "Sprint V",
+    "description": "Collect 16 orbs before the clock runs out. With hunters on your tail.",
     "goal": {
       "type": "orbs",
-      "target": 13
+      "target": 16
     },
-    "timeLimit": 0,
-    "enemyCount": 5,
-    "enemySpeed": 1.29,
+    "deadlineMult": 1.79,
+    "enemyCount": 3,
+    "enemySpeed": 1.42,
     "modifiers": {
-      "noWallTouch": true
+      "homingEnemies": 2
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 50,
     "tier": 3,
-    "archetype": "swarm",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Swarm IV",
-    "description": "Collect 18 orbs amid a swarm of fast enemies.",
+    "archetype": "endurance",
+    "title": "Endurance II",
+    "description": "Outlast 85 seconds of relentless pressure. Bank orbs for stars. In a tighter arena.",
     "goal": {
-      "type": "orbs",
-      "target": 18
+      "type": "survive",
+      "target": 85
     },
-    "timeLimit": 0,
-    "enemyCount": 12,
-    "enemySpeed": 2,
-    "modifiers": {}
+    "deadlineMult": 0,
+    "enemyCount": 10,
+    "enemySpeed": 1.65,
+    "modifiers": {
+      "arenaScale": 0.72
+    },
+    "stars": {
+      "two": 0.35,
+      "three": 0.57,
+      "mode": "survive"
+    }
   },
   {
     "id": 51,
     "tier": 3,
-    "archetype": "void",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "The Void IV",
-    "description": "Collect 19 orbs — walls are lethal, no wrap.",
+    "archetype": "tiny",
+    "title": "Claustrophobia IV",
+    "description": "Collect 12 orbs in a box with no room to breathe. As the orbs drift.",
     "goal": {
       "type": "orbs",
-      "target": 19
+      "target": 12
     },
-    "timeLimit": 0,
-    "enemyCount": 7,
-    "enemySpeed": 1.45,
+    "deadlineMult": 0,
+    "enemyCount": 4,
+    "enemySpeed": 1.25,
     "modifiers": {
-      "wraparound": false
+      "arenaScale": 0.52,
+      "movingOrbs": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 52,
     "tier": 3,
-    "archetype": "slippery",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Frictionless IV",
-    "description": "Collect 15 orbs on ice — momentum barely fades.",
+    "archetype": "navigate",
+    "title": "Navigator VI",
+    "description": "Thread 10 orbs out of a field of 10 fixed hazards. On ice.",
     "goal": {
       "type": "orbs",
-      "target": 15
+      "target": 10
     },
-    "timeLimit": 0,
-    "enemyCount": 5,
-    "enemySpeed": 1.31,
+    "deadlineMult": 0,
+    "enemyCount": 2,
+    "enemySpeed": 1.26,
     "modifiers": {
-      "friction": 0.997,
-      "acceleration": 1200
+      "obstacles": 10,
+      "feel": "ice"
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 53,
     "tier": 3,
-    "archetype": "molasses",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Heavy IV",
-    "description": "Collect 14 orbs with sluggish, heavy controls.",
+    "archetype": "swarm",
+    "title": "Swarm III",
+    "description": "Collect 17 orbs inside a storm of traffic. On ice.",
     "goal": {
       "type": "orbs",
-      "target": 14
+      "target": 17
     },
-    "timeLimit": 0,
-    "enemyCount": 5,
-    "enemySpeed": 1.32,
+    "deadlineMult": 0,
+    "enemyCount": 15,
+    "enemySpeed": 1.92,
     "modifiers": {
-      "friction": 0.97,
-      "acceleration": 760
+      "feel": "ice"
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 54,
     "tier": 3,
-    "archetype": "reversed",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Mirror IV",
-    "description": "Collect 13 orbs with your controls reversed.",
+    "archetype": "minefield",
+    "title": "Minefield II",
+    "description": "Collect 12 orbs while 9 live mines drift across your route. In a tighter arena.",
     "goal": {
       "type": "orbs",
-      "target": 13
+      "target": 12
     },
-    "timeLimit": 0,
-    "enemyCount": 5,
-    "enemySpeed": 1.32,
+    "deadlineMult": 0,
+    "enemyCount": 3,
+    "enemySpeed": 1.27,
     "modifiers": {
-      "reverseControls": true
+      "obstacles": 9,
+      "movingHazards": true,
+      "arenaScale": 0.72
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 55,
     "tier": 3,
-    "archetype": "suddendeath",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Sudden Death IV",
-    "description": "Collect 18 orbs. One touch ends everything.",
+    "archetype": "untouchable",
+    "title": "Untouchable I",
+    "description": "Collect 13 orbs. The walls carry you through — but graze one and the run caps at a single star. With reversed controls.",
     "goal": {
       "type": "orbs",
-      "target": 18
+      "target": 13
     },
-    "timeLimit": 0,
-    "enemyCount": 9,
-    "enemySpeed": 1.74,
+    "deadlineMult": 0,
+    "enemyCount": 6,
+    "enemySpeed": 1.37,
     "modifiers": {
-      "oneLife": true
+      "wraparound": true,
+      "noWallTouch": true,
+      "reverseControls": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 56,
     "tier": 3,
-    "archetype": "endurance",
+    "archetype": "collapse",
+    "title": "Collapse II",
+    "description": "Collect 14 orbs as the arena closes in around you. On ice.",
+    "goal": {
+      "type": "orbs",
+      "target": 14
+    },
+    "deadlineMult": 0,
+    "enemyCount": 6,
+    "enemySpeed": 1.43,
+    "modifiers": {
+      "shrinkTo": 0.43,
+      "feel": "ice"
+    },
     "stars": {
       "two": 0,
       "three": 0,
-      "mode": "clear"
-    },
-    "title": "Endurance IV",
-    "description": "Outlast 98 seconds of relentless pressure.",
-    "goal": {
-      "type": "survive",
-      "target": 98
-    },
-    "timeLimit": 98,
-    "enemyCount": 10,
-    "enemySpeed": 1.7,
-    "modifiers": {}
+      "mode": "par"
+    }
   },
   {
     "id": 57,
     "tier": 3,
-    "archetype": "collector",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Collector V",
-    "description": "Collect 27 orbs. No timer — but the enemies won't wait.",
+    "archetype": "chase",
+    "title": "Chase Sequence V",
+    "description": "Run down 15 orbs that won't hold still. With hunters on your tail.",
     "goal": {
       "type": "orbs",
-      "target": 27
+      "target": 15
     },
-    "timeLimit": 0,
-    "enemyCount": 7,
-    "enemySpeed": 1.45,
-    "modifiers": {}
+    "deadlineMult": 0,
+    "enemyCount": 5,
+    "enemySpeed": 1.44,
+    "modifiers": {
+      "movingOrbs": true,
+      "homingEnemies": 2
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 58,
     "tier": 3,
-    "archetype": "navigate",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Navigator V",
-    "description": "Weave through 10 static hazards to collect 7 orbs.",
+    "archetype": "ice",
+    "title": "Frictionless IV",
+    "description": "Collect 16 orbs on ice — momentum barely fades. As the orbs drift.",
     "goal": {
       "type": "orbs",
-      "target": 7
+      "target": 16
     },
-    "timeLimit": 0,
-    "enemyCount": 2,
-    "enemySpeed": 1.29,
+    "deadlineMult": 0,
+    "enemyCount": 5,
+    "enemySpeed": 1.35,
     "modifiers": {
-      "obstacles": 10
+      "feel": "ice",
+      "movingOrbs": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 59,
     "tier": 3,
-    "archetype": "sprint",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Sprint V",
-    "description": "Collect 21 orbs in under 22 seconds.",
+    "archetype": "survivor",
+    "title": "Survivor IV",
+    "description": "Stay alive for 43 seconds. Orbs you bank on the way earn stars. With wrapping walls.",
     "goal": {
-      "type": "orbs",
-      "target": 21
+      "type": "survive",
+      "target": 43
     },
-    "timeLimit": 22,
-    "enemyCount": 5,
+    "deadlineMult": 0,
+    "enemyCount": 7,
     "enemySpeed": 1.51,
-    "modifiers": {}
+    "modifiers": {
+      "wraparound": true
+    },
+    "stars": {
+      "two": 0.36,
+      "three": 0.59,
+      "mode": "survive"
+    }
   },
   {
     "id": 60,
     "tier": 3,
-    "archetype": "survivor",
-    "stars": {
-      "two": 0,
-      "three": 0,
-      "mode": "clear"
-    },
-    "title": "Survivor V",
-    "description": "Stay alive for 62 seconds.",
+    "archetype": "boss60",
+    "title": "Pack Hunt",
+    "description": "Outlast 90 seconds with the pack on you the whole way. Orbs still count.",
     "goal": {
       "type": "survive",
-      "target": 62
+      "target": 90
     },
-    "timeLimit": 62,
-    "enemyCount": 9,
-    "enemySpeed": 1.64,
-    "modifiers": {}
+    "deadlineMult": 0,
+    "enemyCount": 10,
+    "enemySpeed": 1.8,
+    "modifiers": {
+      "homingEnemies": 6
+    },
+    "stars": {
+      "two": 0.36,
+      "three": 0.59,
+      "mode": "survive"
+    }
   },
   {
     "id": 61,
     "tier": 4,
-    "archetype": "sweep",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Clean Sweep V",
-    "description": "Clear all 16 orbs before the timer runs out.",
+    "archetype": "hunt",
+    "title": "The Hunt III",
+    "description": "Collect 15 orbs while 4 hunters track you across the arena. On ice.",
     "goal": {
-      "type": "collectAll",
-      "target": 16
+      "type": "orbs",
+      "target": 15
     },
-    "timeLimit": 20,
-    "enemyCount": 4,
-    "enemySpeed": 1.36,
-    "modifiers": {}
+    "deadlineMult": 0,
+    "enemyCount": 6,
+    "enemySpeed": 1.4,
+    "modifiers": {
+      "homingEnemies": 4,
+      "feel": "ice"
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 62,
     "tier": 4,
-    "archetype": "tiny",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Claustrophobia V",
-    "description": "Collect 13 orbs in a cramped arena.",
+    "archetype": "swarm",
+    "title": "Swarm IV",
+    "description": "Collect 18 orbs inside a storm of traffic. With wrapping walls.",
     "goal": {
       "type": "orbs",
-      "target": 13
+      "target": 18
     },
-    "timeLimit": 0,
-    "enemyCount": 5,
-    "enemySpeed": 1.37,
+    "deadlineMult": 0,
+    "enemyCount": 16,
+    "enemySpeed": 1.97,
     "modifiers": {
-      "arenaScale": 0.52
+      "wraparound": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 63,
     "tier": 4,
-    "archetype": "purist",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Untouchable V",
-    "description": "Collect 14 orbs without ever touching a wall.",
+    "archetype": "weave",
+    "title": "The Weave III",
+    "description": "Collect 20 orbs. The walls are doors — run straight through them. As the orbs drift.",
     "goal": {
       "type": "orbs",
-      "target": 14
+      "target": 20
     },
-    "timeLimit": 0,
-    "enemyCount": 6,
-    "enemySpeed": 1.38,
+    "deadlineMult": 0,
+    "enemyCount": 12,
+    "enemySpeed": 1.64,
     "modifiers": {
-      "noWallTouch": true
+      "wraparound": true,
+      "movingOrbs": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 64,
     "tier": 4,
-    "archetype": "swarm",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Swarm V",
-    "description": "Collect 20 orbs amid a swarm of fast enemies.",
+    "archetype": "sprint",
+    "title": "Sprint VI",
+    "description": "Collect 18 orbs before the clock runs out. As mines drift past.",
     "goal": {
       "type": "orbs",
-      "target": 20
+      "target": 18
     },
-    "timeLimit": 0,
-    "enemyCount": 14,
-    "enemySpeed": 2.11,
-    "modifiers": {}
+    "deadlineMult": 1.74,
+    "enemyCount": 4,
+    "enemySpeed": 1.51,
+    "modifiers": {
+      "obstacles": 5,
+      "movingHazards": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 65,
     "tier": 4,
-    "archetype": "void",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "The Void V",
-    "description": "Collect 21 orbs — walls are lethal, no wrap.",
+    "archetype": "navigate",
+    "title": "Navigator VII",
+    "description": "Thread 11 orbs out of a field of 11 fixed hazards. With wrapping walls.",
     "goal": {
       "type": "orbs",
-      "target": 21
+      "target": 11
     },
-    "timeLimit": 0,
-    "enemyCount": 8,
-    "enemySpeed": 1.55,
+    "deadlineMult": 0,
+    "enemyCount": 2,
+    "enemySpeed": 1.32,
     "modifiers": {
-      "wraparound": false
+      "obstacles": 11,
+      "wraparound": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 66,
     "tier": 4,
-    "archetype": "slippery",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Frictionless V",
-    "description": "Collect 17 orbs on ice — momentum barely fades.",
+    "archetype": "collapse",
+    "title": "Collapse III",
+    "description": "Collect 15 orbs as the arena closes in around you. As the orbs drift.",
     "goal": {
       "type": "orbs",
-      "target": 17
+      "target": 15
     },
-    "timeLimit": 0,
+    "deadlineMult": 0,
     "enemyCount": 6,
-    "enemySpeed": 1.39,
+    "enemySpeed": 1.49,
     "modifiers": {
-      "friction": 0.997,
-      "acceleration": 1200
+      "shrinkTo": 0.41,
+      "movingOrbs": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 67,
     "tier": 4,
-    "archetype": "molasses",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Heavy V",
-    "description": "Collect 15 orbs with sluggish, heavy controls.",
+    "archetype": "tiny",
+    "title": "Claustrophobia V",
+    "description": "Collect 13 orbs in a box with no room to breathe. With hunters on your tail.",
     "goal": {
       "type": "orbs",
-      "target": 15
+      "target": 13
     },
-    "timeLimit": 0,
-    "enemyCount": 6,
-    "enemySpeed": 1.4,
+    "deadlineMult": 0,
+    "enemyCount": 5,
+    "enemySpeed": 1.33,
     "modifiers": {
-      "friction": 0.97,
-      "acceleration": 760
+      "arenaScale": 0.49,
+      "homingEnemies": 2
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 68,
     "tier": 4,
-    "archetype": "reversed",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Mirror V",
-    "description": "Collect 14 orbs with your controls reversed.",
+    "archetype": "survivor",
+    "title": "Survivor V",
+    "description": "Stay alive for 47 seconds. Orbs you bank on the way earn stars. With hunters on your tail.",
     "goal": {
-      "type": "orbs",
-      "target": 14
+      "type": "survive",
+      "target": 47
     },
-    "timeLimit": 0,
-    "enemyCount": 5,
-    "enemySpeed": 1.41,
+    "deadlineMult": 0,
+    "enemyCount": 8,
+    "enemySpeed": 1.57,
     "modifiers": {
-      "reverseControls": true
+      "homingEnemies": 2
+    },
+    "stars": {
+      "two": 0.37,
+      "three": 0.6,
+      "mode": "survive"
     }
   },
   {
     "id": 69,
     "tier": 4,
-    "archetype": "suddendeath",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Sudden Death V",
-    "description": "Collect 20 orbs. One touch ends everything.",
+    "archetype": "chase",
+    "title": "Chase Sequence VI",
+    "description": "Run down 15 orbs that won't hold still. With reversed controls.",
     "goal": {
       "type": "orbs",
-      "target": 20
+      "target": 15
     },
-    "timeLimit": 0,
-    "enemyCount": 10,
-    "enemySpeed": 1.85,
+    "deadlineMult": 0,
+    "enemyCount": 6,
+    "enemySpeed": 1.51,
     "modifiers": {
-      "oneLife": true
+      "movingOrbs": true,
+      "reverseControls": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 70,
     "tier": 4,
-    "archetype": "endurance",
+    "archetype": "swarm",
+    "title": "Swarm V",
+    "description": "Collect 19 orbs inside a storm of traffic. As the orbs drift.",
+    "goal": {
+      "type": "orbs",
+      "target": 19
+    },
+    "deadlineMult": 0,
+    "enemyCount": 17,
+    "enemySpeed": 2.02,
+    "modifiers": {
+      "movingOrbs": true
+    },
     "stars": {
       "two": 0,
       "three": 0,
-      "mode": "clear"
-    },
-    "title": "Endurance V",
-    "description": "Outlast 111 seconds of relentless pressure.",
-    "goal": {
-      "type": "survive",
-      "target": 111
-    },
-    "timeLimit": 111,
-    "enemyCount": 12,
-    "enemySpeed": 1.83,
-    "modifiers": {}
+      "mode": "par"
+    }
   },
   {
     "id": 71,
     "tier": 4,
-    "archetype": "collector",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Collector VI",
-    "description": "Collect 31 orbs. No timer — but the enemies won't wait.",
+    "archetype": "hunt",
+    "title": "The Hunt IV",
+    "description": "Collect 16 orbs while 5 hunters track you across the arena. With wrapping walls.",
     "goal": {
       "type": "orbs",
-      "target": 31
+      "target": 16
     },
-    "timeLimit": 0,
-    "enemyCount": 8,
-    "enemySpeed": 1.57,
-    "modifiers": {}
+    "deadlineMult": 0,
+    "enemyCount": 7,
+    "enemySpeed": 1.45,
+    "modifiers": {
+      "homingEnemies": 5,
+      "wraparound": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 72,
     "tier": 4,
-    "archetype": "navigate",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Navigator VI",
-    "description": "Weave through 12 static hazards to collect 8 orbs.",
+    "archetype": "sweep",
+    "title": "Clean Sweep V",
+    "description": "Clear every one of the 17 orbs before the clock runs out. Through a minefield.",
     "goal": {
-      "type": "orbs",
-      "target": 8
+      "type": "collectAll",
+      "target": 17
     },
-    "timeLimit": 0,
-    "enemyCount": 2,
-    "enemySpeed": 1.36,
+    "deadlineMult": 1.78,
+    "enemyCount": 4,
+    "enemySpeed": 1.43,
     "modifiers": {
-      "obstacles": 12
+      "obstacles": 6
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 73,
     "tier": 4,
-    "archetype": "sprint",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Sprint VI",
-    "description": "Collect 24 orbs in under 20 seconds.",
+    "archetype": "collapse",
+    "title": "Collapse IV",
+    "description": "Collect 16 orbs as the arena closes in around you. With hunters on your tail.",
     "goal": {
       "type": "orbs",
-      "target": 24
+      "target": 16
     },
-    "timeLimit": 20,
-    "enemyCount": 5,
-    "enemySpeed": 1.61,
-    "modifiers": {}
+    "deadlineMult": 0,
+    "enemyCount": 7,
+    "enemySpeed": 1.54,
+    "modifiers": {
+      "shrinkTo": 0.4,
+      "homingEnemies": 2
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 74,
     "tier": 4,
-    "archetype": "survivor",
+    "archetype": "minefield",
+    "title": "Minefield III",
+    "description": "Collect 13 orbs while 10 live mines drift across your route. On ice.",
+    "goal": {
+      "type": "orbs",
+      "target": 13
+    },
+    "deadlineMult": 0,
+    "enemyCount": 3,
+    "enemySpeed": 1.37,
+    "modifiers": {
+      "obstacles": 10,
+      "movingHazards": true,
+      "feel": "ice"
+    },
     "stars": {
       "two": 0,
       "three": 0,
-      "mode": "clear"
-    },
-    "title": "Survivor VI",
-    "description": "Stay alive for 72 seconds.",
-    "goal": {
-      "type": "survive",
-      "target": 72
-    },
-    "timeLimit": 72,
-    "enemyCount": 10,
-    "enemySpeed": 1.76,
-    "modifiers": {}
+      "mode": "par"
+    }
   },
   {
     "id": 75,
     "tier": 4,
-    "archetype": "sweep",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Clean Sweep VI",
-    "description": "Clear all 18 orbs before the timer runs out.",
+    "archetype": "ice",
+    "title": "Frictionless V",
+    "description": "Collect 17 orbs on ice — momentum barely fades. With hunters on your tail.",
     "goal": {
-      "type": "collectAll",
-      "target": 18
+      "type": "orbs",
+      "target": 17
     },
-    "timeLimit": 19,
-    "enemyCount": 5,
+    "deadlineMult": 0,
+    "enemyCount": 6,
     "enemySpeed": 1.45,
-    "modifiers": {}
+    "modifiers": {
+      "feel": "ice",
+      "homingEnemies": 2
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 76,
     "tier": 4,
-    "archetype": "tiny",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Claustrophobia VI",
-    "description": "Collect 14 orbs in a cramped arena.",
+    "archetype": "navigate",
+    "title": "Navigator VIII",
+    "description": "Thread 12 orbs out of a field of 12 fixed hazards. With wrapping walls.",
     "goal": {
       "type": "orbs",
-      "target": 14
+      "target": 12
     },
-    "timeLimit": 0,
-    "enemyCount": 6,
-    "enemySpeed": 1.45,
+    "deadlineMult": 0,
+    "enemyCount": 2,
+    "enemySpeed": 1.38,
     "modifiers": {
-      "arenaScale": 0.5
+      "obstacles": 12,
+      "wraparound": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 77,
     "tier": 4,
-    "archetype": "purist",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Untouchable VI",
-    "description": "Collect 16 orbs without ever touching a wall.",
+    "archetype": "tiny",
+    "title": "Claustrophobia VI",
+    "description": "Collect 14 orbs in a box with no room to breathe. With reversed controls.",
     "goal": {
       "type": "orbs",
-      "target": 16
+      "target": 14
     },
-    "timeLimit": 0,
-    "enemyCount": 7,
-    "enemySpeed": 1.46,
+    "deadlineMult": 0,
+    "enemyCount": 5,
+    "enemySpeed": 1.38,
     "modifiers": {
-      "noWallTouch": true
+      "arenaScale": 0.48,
+      "reverseControls": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 78,
     "tier": 4,
-    "archetype": "swarm",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Swarm VI",
-    "description": "Collect 22 orbs amid a swarm of fast enemies.",
+    "archetype": "mirror",
+    "title": "Mirror V",
+    "description": "Collect 13 orbs with every input inverted. Through a minefield.",
     "goal": {
       "type": "orbs",
-      "target": 22
+      "target": 13
     },
-    "timeLimit": 0,
-    "enemyCount": 15,
-    "enemySpeed": 2.22,
-    "modifiers": {}
+    "deadlineMult": 0,
+    "enemyCount": 5,
+    "enemySpeed": 1.39,
+    "modifiers": {
+      "reverseControls": true,
+      "obstacles": 6
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 79,
     "tier": 4,
-    "archetype": "void",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "The Void VI",
-    "description": "Collect 23 orbs — walls are lethal, no wrap.",
+    "archetype": "collector",
+    "title": "Collector V",
+    "description": "Collect 23 orbs. No timer — but the enemies won't wait. With hunters on your tail.",
     "goal": {
       "type": "orbs",
       "target": 23
     },
-    "timeLimit": 0,
-    "enemyCount": 9,
-    "enemySpeed": 1.65,
+    "deadlineMult": 0,
+    "enemyCount": 8,
+    "enemySpeed": 1.55,
     "modifiers": {
-      "wraparound": false
+      "homingEnemies": 2
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 80,
     "tier": 4,
-    "archetype": "slippery",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Frictionless VI",
-    "description": "Collect 18 orbs on ice — momentum barely fades.",
+    "archetype": "boss80",
+    "title": "No Quarter",
+    "description": "Collect 15 drifting orbs through a live minefield. Ride the walls if you must, but only a clean run scores.",
     "goal": {
       "type": "orbs",
-      "target": 18
+      "target": 15
     },
-    "timeLimit": 0,
-    "enemyCount": 7,
-    "enemySpeed": 1.48,
+    "deadlineMult": 0,
+    "enemyCount": 6,
+    "enemySpeed": 1.7,
     "modifiers": {
-      "friction": 0.997,
-      "acceleration": 1200
+      "obstacles": 10,
+      "movingHazards": true,
+      "movingOrbs": true,
+      "wraparound": true,
+      "noWallTouch": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 81,
     "tier": 5,
-    "archetype": "molasses",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Heavy VI",
-    "description": "Collect 16 orbs with sluggish, heavy controls.",
+    "archetype": "endurance",
+    "title": "Endurance III",
+    "description": "Outlast 100 seconds of relentless pressure. Bank orbs for stars. On ice.",
     "goal": {
-      "type": "orbs",
-      "target": 16
+      "type": "survive",
+      "target": 100
     },
-    "timeLimit": 0,
-    "enemyCount": 7,
-    "enemySpeed": 1.48,
+    "deadlineMult": 0,
+    "enemyCount": 12,
+    "enemySpeed": 1.87,
     "modifiers": {
-      "friction": 0.97,
-      "acceleration": 760
+      "feel": "ice"
+    },
+    "stars": {
+      "two": 0.38,
+      "three": 0.62,
+      "mode": "survive"
     }
   },
   {
     "id": 82,
     "tier": 5,
-    "archetype": "reversed",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Mirror VI",
-    "description": "Collect 15 orbs with your controls reversed.",
+    "archetype": "weave",
+    "title": "The Weave IV",
+    "description": "Collect 22 orbs. The walls are doors — run straight through them. With hunters on your tail.",
     "goal": {
       "type": "orbs",
-      "target": 15
+      "target": 22
     },
-    "timeLimit": 0,
-    "enemyCount": 6,
-    "enemySpeed": 1.49,
+    "deadlineMult": 0,
+    "enemyCount": 14,
+    "enemySpeed": 1.77,
     "modifiers": {
-      "reverseControls": true
+      "wraparound": true,
+      "homingEnemies": 2
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 83,
     "tier": 5,
-    "archetype": "suddendeath",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Sudden Death VI",
-    "description": "Collect 22 orbs. One touch ends everything.",
+    "archetype": "collapse",
+    "title": "Collapse V",
+    "description": "Collect 17 orbs as the arena closes in around you. With reversed controls.",
     "goal": {
       "type": "orbs",
-      "target": 22
+      "target": 17
     },
-    "timeLimit": 0,
-    "enemyCount": 11,
-    "enemySpeed": 1.96,
+    "deadlineMult": 0,
+    "enemyCount": 7,
+    "enemySpeed": 1.6,
     "modifiers": {
-      "oneLife": true
+      "shrinkTo": 0.38,
+      "reverseControls": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 84,
     "tier": 5,
-    "archetype": "endurance",
+    "archetype": "untouchable",
+    "title": "Untouchable II",
+    "description": "Collect 15 orbs. The walls carry you through — but graze one and the run caps at a single star. On ice.",
+    "goal": {
+      "type": "orbs",
+      "target": 15
+    },
+    "deadlineMult": 0,
+    "enemyCount": 7,
+    "enemySpeed": 1.52,
+    "modifiers": {
+      "wraparound": true,
+      "noWallTouch": true,
+      "feel": "ice"
+    },
     "stars": {
       "two": 0,
       "three": 0,
-      "mode": "clear"
-    },
-    "title": "Endurance VI",
-    "description": "Outlast 125 seconds of relentless pressure.",
-    "goal": {
-      "type": "survive",
-      "target": 125
-    },
-    "timeLimit": 125,
-    "enemyCount": 13,
-    "enemySpeed": 1.95,
-    "modifiers": {}
+      "mode": "par"
+    }
   },
   {
     "id": 85,
     "tier": 5,
-    "archetype": "collector",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Collector VII",
-    "description": "Collect 35 orbs. No timer — but the enemies won't wait.",
+    "archetype": "ice",
+    "title": "Frictionless VI",
+    "description": "Collect 18 orbs on ice — momentum barely fades. Through a minefield.",
     "goal": {
       "type": "orbs",
-      "target": 35
+      "target": 18
     },
-    "timeLimit": 0,
-    "enemyCount": 9,
-    "enemySpeed": 1.68,
-    "modifiers": {}
+    "deadlineMult": 0,
+    "enemyCount": 6,
+    "enemySpeed": 1.51,
+    "modifiers": {
+      "feel": "ice",
+      "obstacles": 6
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 86,
     "tier": 5,
-    "archetype": "navigate",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Navigator VII",
-    "description": "Weave through 13 static hazards to collect 9 orbs.",
+    "archetype": "heavy",
+    "title": "Deadweight IV",
+    "description": "Collect 15 orbs hauling a puck that fights every turn. As the orbs drift.",
     "goal": {
       "type": "orbs",
-      "target": 9
+      "target": 15
     },
-    "timeLimit": 0,
-    "enemyCount": 3,
+    "deadlineMult": 0,
+    "enemyCount": 5,
     "enemySpeed": 1.43,
     "modifiers": {
-      "obstacles": 13
+      "feel": "heavy",
+      "movingOrbs": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 87,
     "tier": 5,
-    "archetype": "sprint",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Sprint VII",
-    "description": "Collect 26 orbs in under 18 seconds.",
+    "archetype": "navigate",
+    "title": "Navigator IX",
+    "description": "Thread 13 orbs out of a field of 13 fixed hazards. As the orbs drift.",
     "goal": {
       "type": "orbs",
-      "target": 26
+      "target": 13
     },
-    "timeLimit": 18,
-    "enemyCount": 6,
-    "enemySpeed": 1.71,
-    "modifiers": {}
+    "deadlineMult": 0,
+    "enemyCount": 3,
+    "enemySpeed": 1.43,
+    "modifiers": {
+      "obstacles": 13,
+      "movingOrbs": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 88,
     "tier": 5,
-    "archetype": "survivor",
+    "archetype": "hunt",
+    "title": "The Hunt V",
+    "description": "Collect 17 orbs while 6 hunters track you across the arena. As the orbs drift.",
+    "goal": {
+      "type": "orbs",
+      "target": 17
+    },
+    "deadlineMult": 0,
+    "enemyCount": 7,
+    "enemySpeed": 1.54,
+    "modifiers": {
+      "homingEnemies": 6,
+      "movingOrbs": true
+    },
     "stars": {
       "two": 0,
       "three": 0,
-      "mode": "clear"
-    },
-    "title": "Survivor VII",
-    "description": "Stay alive for 82 seconds.",
-    "goal": {
-      "type": "survive",
-      "target": 82
-    },
-    "timeLimit": 82,
-    "enemyCount": 12,
-    "enemySpeed": 1.89,
-    "modifiers": {}
+      "mode": "par"
+    }
   },
   {
     "id": 89,
     "tier": 5,
     "archetype": "sweep",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Clean Sweep VII",
-    "description": "Clear all 20 orbs before the timer runs out.",
+    "title": "Clean Sweep VI",
+    "description": "Clear every one of the 19 orbs before the clock runs out. As the walls close in.",
     "goal": {
       "type": "collectAll",
-      "target": 20
+      "target": 19
     },
-    "timeLimit": 17,
+    "deadlineMult": 1.72,
     "enemyCount": 5,
     "enemySpeed": 1.53,
-    "modifiers": {}
+    "modifiers": {
+      "shrinkTo": 0.6
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 90,
     "tier": 5,
-    "archetype": "tiny",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Claustrophobia VII",
-    "description": "Collect 15 orbs in a cramped arena.",
+    "archetype": "survivor",
+    "title": "Survivor VI",
+    "description": "Stay alive for 56 seconds. Orbs you bank on the way earn stars. Through a minefield.",
     "goal": {
-      "type": "orbs",
-      "target": 15
+      "type": "survive",
+      "target": 56
     },
-    "timeLimit": 0,
-    "enemyCount": 6,
-    "enemySpeed": 1.54,
+    "deadlineMult": 0,
+    "enemyCount": 9,
+    "enemySpeed": 1.73,
     "modifiers": {
-      "arenaScale": 0.48
+      "obstacles": 6
+    },
+    "stars": {
+      "two": 0.39,
+      "three": 0.63,
+      "mode": "survive"
     }
   },
   {
     "id": 91,
     "tier": 5,
-    "archetype": "purist",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Untouchable VII",
-    "description": "Collect 17 orbs without ever touching a wall.",
+    "archetype": "collector",
+    "title": "Collector VI",
+    "description": "Collect 25 orbs. No timer — but the enemies won't wait. With reversed controls.",
     "goal": {
       "type": "orbs",
-      "target": 17
+      "target": 25
     },
-    "timeLimit": 0,
-    "enemyCount": 7,
-    "enemySpeed": 1.55,
+    "deadlineMult": 0,
+    "enemyCount": 8,
+    "enemySpeed": 1.64,
     "modifiers": {
-      "noWallTouch": true
+      "reverseControls": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 92,
     "tier": 5,
-    "archetype": "swarm",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Swarm VII",
-    "description": "Collect 25 orbs amid a swarm of fast enemies.",
+    "archetype": "chase",
+    "title": "Chase Sequence VII",
+    "description": "Run down 17 orbs that won't hold still. In a tighter arena.",
     "goal": {
       "type": "orbs",
-      "target": 25
+      "target": 17
     },
-    "timeLimit": 0,
-    "enemyCount": 17,
-    "enemySpeed": 2.34,
-    "modifiers": {}
+    "deadlineMult": 0,
+    "enemyCount": 8,
+    "enemySpeed": 1.65,
+    "modifiers": {
+      "movingOrbs": true,
+      "arenaScale": 0.72
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 93,
     "tier": 5,
-    "archetype": "void",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "The Void VII",
-    "description": "Collect 25 orbs — walls are lethal, no wrap.",
+    "archetype": "untouchable",
+    "title": "Untouchable III",
+    "description": "Collect 16 orbs. The walls carry you through — but graze one and the run caps at a single star. As the orbs drift.",
     "goal": {
       "type": "orbs",
-      "target": 25
+      "target": 16
     },
-    "timeLimit": 0,
-    "enemyCount": 10,
-    "enemySpeed": 1.75,
+    "deadlineMult": 0,
+    "enemyCount": 8,
+    "enemySpeed": 1.56,
     "modifiers": {
-      "wraparound": false
+      "wraparound": true,
+      "noWallTouch": true,
+      "movingOrbs": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 94,
     "tier": 5,
-    "archetype": "slippery",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Frictionless VII",
-    "description": "Collect 19 orbs on ice — momentum barely fades.",
+    "archetype": "swarm",
+    "title": "Swarm VI",
+    "description": "Collect 21 orbs inside a storm of traffic. As the walls close in.",
     "goal": {
       "type": "orbs",
-      "target": 19
+      "target": 21
     },
-    "timeLimit": 0,
-    "enemyCount": 8,
-    "enemySpeed": 1.56,
+    "deadlineMult": 0,
+    "enemyCount": 19,
+    "enemySpeed": 2.16,
     "modifiers": {
-      "friction": 0.997,
-      "acceleration": 1200
+      "shrinkTo": 0.6
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 95,
     "tier": 5,
-    "archetype": "molasses",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Heavy VII",
-    "description": "Collect 18 orbs with sluggish, heavy controls.",
+    "archetype": "hunt",
+    "title": "The Hunt VI",
+    "description": "Collect 18 orbs while 6 hunters track you across the arena. Through a minefield.",
     "goal": {
       "type": "orbs",
       "target": 18
     },
-    "timeLimit": 0,
+    "deadlineMult": 0,
     "enemyCount": 8,
     "enemySpeed": 1.57,
     "modifiers": {
-      "friction": 0.97,
-      "acceleration": 760
+      "homingEnemies": 6,
+      "obstacles": 6
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 96,
     "tier": 5,
-    "archetype": "reversed",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Mirror VII",
-    "description": "Collect 17 orbs with your controls reversed.",
+    "archetype": "navigate",
+    "title": "Navigator X",
+    "description": "Thread 14 orbs out of a field of 14 fixed hazards. With heavy controls.",
     "goal": {
       "type": "orbs",
-      "target": 17
+      "target": 14
     },
-    "timeLimit": 0,
-    "enemyCount": 7,
-    "enemySpeed": 1.58,
+    "deadlineMult": 0,
+    "enemyCount": 3,
+    "enemySpeed": 1.48,
     "modifiers": {
-      "reverseControls": true
+      "obstacles": 14,
+      "feel": "heavy"
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 97,
     "tier": 5,
-    "archetype": "suddendeath",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Sudden Death VII",
-    "description": "Collect 24 orbs. One touch ends everything.",
+    "archetype": "tiny",
+    "title": "Claustrophobia VII",
+    "description": "Collect 16 orbs in a box with no room to breathe. On ice.",
     "goal": {
       "type": "orbs",
-      "target": 24
+      "target": 16
     },
-    "timeLimit": 0,
-    "enemyCount": 13,
-    "enemySpeed": 2.08,
+    "deadlineMult": 0,
+    "enemyCount": 6,
+    "enemySpeed": 1.48,
     "modifiers": {
-      "oneLife": true
+      "arenaScale": 0.44,
+      "feel": "ice"
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   },
   {
     "id": 98,
     "tier": 5,
-    "archetype": "endurance",
+    "archetype": "collapse",
+    "title": "Collapse VI",
+    "description": "Collect 18 orbs as the arena closes in around you. Through a minefield.",
+    "goal": {
+      "type": "orbs",
+      "target": 18
+    },
+    "deadlineMult": 0,
+    "enemyCount": 8,
+    "enemySpeed": 1.69,
+    "modifiers": {
+      "shrinkTo": 0.34,
+      "obstacles": 6
+    },
     "stars": {
       "two": 0,
       "three": 0,
-      "mode": "clear"
-    },
-    "title": "Endurance VII",
-    "description": "Outlast 138 seconds of relentless pressure.",
-    "goal": {
-      "type": "survive",
-      "target": 138
-    },
-    "timeLimit": 138,
-    "enemyCount": 15,
-    "enemySpeed": 2.08,
-    "modifiers": {}
+      "mode": "par"
+    }
   },
   {
     "id": 99,
     "tier": 5,
-    "archetype": "collector",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Collector VIII",
-    "description": "Collect 40 orbs. No timer — but the enemies won't wait.",
+    "archetype": "sweep",
+    "title": "Clean Sweep VII",
+    "description": "Clear every one of the 20 orbs before the clock runs out. In a tighter arena.",
     "goal": {
-      "type": "orbs",
-      "target": 40
+      "type": "collectAll",
+      "target": 20
     },
-    "timeLimit": 0,
-    "enemyCount": 10,
-    "enemySpeed": 1.79,
-    "modifiers": {}
+    "deadlineMult": 1.68,
+    "enemyCount": 5,
+    "enemySpeed": 1.59,
+    "modifiers": {
+      "arenaScale": 0.72
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
+    }
   },
   {
     "id": 100,
     "tier": 5,
-    "archetype": "navigate",
-    "stars": {
-      "two": 0.2,
-      "three": 0.45,
-      "mode": "time"
-    },
-    "title": "Navigator VIII",
-    "description": "Weave through 15 static hazards to collect 10 orbs.",
+    "archetype": "boss100",
+    "title": "Signal in the Void",
+    "description": "Everything at once. Collect 20 orbs and the campaign is yours.",
     "goal": {
       "type": "orbs",
-      "target": 10
+      "target": 20
     },
-    "timeLimit": 0,
-    "enemyCount": 3,
-    "enemySpeed": 1.5,
+    "deadlineMult": 1.7,
+    "enemyCount": 14,
+    "enemySpeed": 2.1,
     "modifiers": {
-      "obstacles": 15
+      "shrinkTo": 0.4,
+      "homingEnemies": 5,
+      "feel": "ice",
+      "movingOrbs": true
+    },
+    "stars": {
+      "two": 0,
+      "three": 0,
+      "mode": "par"
     }
   }
 ]

@@ -7,19 +7,21 @@ export default function Rules() {
       style={{ alignItems: 'center', justifyContent: 'center', padding: 16 }}
     >
       <div className="rules-modal">
-        <h1 className="title-logo glow-text" style={{ fontSize: 'clamp(40px, 12vw, 64px)', marginBottom: 12 }}>
+        <span className="modal-eyebrow">Reference</span>
+        <h1 className="title-logo" style={{ fontSize: 'clamp(38px, 11vw, 60px)', marginBottom: 14 }}>
           Motus
         </h1>
-        <h2 className="glow-text">Rules</h2>
+
         <ul>
-          <li>Practice Mode: No enemies, no death, wrap-around borders.</li>
-          <li>Practice Mode: Focus on collecting green orbs and movement.</li>
-          <li>Survival Mode: Move using arrow keys or WASD.</li>
-          <li>Survival Mode: Avoid red enemies and collect green goals to score.</li>
-          <li>Survival Mode: Every 10 goals may trigger a challenge.</li>
+          <li>Move with the arrow keys or WASD. You have mass — you drift.</li>
+          <li>Touch an orb to score. Touch a hazard and the run ends.</li>
+          <li>Stay off the limit rails. The edge reads out your distance as you close on it.</li>
+          <li>Every ten orbs triggers a Cataclysm. Clear it to advance a stage.</li>
+          <li>Practice has no hazards and no death. The borders wrap.</li>
         </ul>
+
         <Link href="/game">
-          <button className="rules-modal-play">PLAY</button>
+          <button className="rules-modal-play">Play</button>
         </Link>
       </div>
     </div>

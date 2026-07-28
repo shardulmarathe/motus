@@ -1,30 +1,125 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from 'react'
+import { drawTrace, type TraceStyle } from '../lib/telemetry'
+import { THEME_CHANGE_EVENT } from '../lib/customization'
 
-type Streak = {
-  x: number
-  y: number
-  vx: number
-  vy: number
-  bvx: number // baseline drift the streak always eases back toward
-  bvy: number
-  hue: number // 0 = cyan, 1 = violet blend
-  weight: number
+/** Samples per second written to the title trace. */
+const SAMPLE_HZ = 30
+const SAMPLE_INTERVAL = 1 / SAMPLE_HZ
+
+/**
+ * Vertical floor for the trace's auto-scale, in px/s. Without it a resting
+ * cursor's jitter would fill the plot and read as noise instead of stillness.
+ */
+const MIN_PEAK = 600
+
+/** How fast the scale ceiling relaxes back down after a fast sweep. */
+const PEAK_DECAY = 0.997
+
+/** Measurement-field spacing, in CSS px. */
+const GRID = 56
+
+/** Fallbacks used before the stylesheet resolves (SSR hydration, mostly). */
+const STOCK = '#04120a'
+const PEN = '#46ff8c'
+
+type Tokens = {
+  ground: string
+  phosphor: string
+  rule: string
+  ruleStrong: string
 }
 
 /**
- * Streaky, cursor-reactive backdrop. Particles drift slowly and leave light
- * trails (motion blur via a low-alpha fade instead of a hard clear). Moving the
- * cursor "combs" nearby streaks along the cursor's own velocity, so the field
- * reacts as fast, directional streaks rather than a soft wave.
+ * Alpha-blend a resolved CSS colour. Tokens reach us as either `#rrggbb` or
+ * `rgb(r, g, b)` depending on whether the instrument supplied the value or it
+ * was derived by mixing, so this has to accept both.
+ */
+function toRgba(color: string, alpha: number): string {
+  const hex = color.trim().match(/^#([0-9a-f]{6})$/i)
+  if (hex) {
+    const n = parseInt(hex[1], 16)
+    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
+  }
+  const rgb = color.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
+  if (rgb) return `rgba(${rgb[1]}, ${rgb[2]}, ${rgb[3]}, ${alpha})`
+  return `rgba(70, 255, 140, ${alpha})`
+}
+
+/**
+ * Draw the measurement field: graph-paper intersections plus edge rulers.
+ * Rendered once to an offscreen canvas and blitted per frame — it never
+ * changes, and it must stay quiet enough for the wordmark to sit on top of it.
+ */
+function paintField(ctx: CanvasRenderingContext2D, w: number, h: number, t: Tokens): void {
+  // A scope graticule: the full etched grid a tube carries, faint minor lines
+  // every cell and a firmer line every fifth division. Both stay well under the
+  // type so the wordmark still sits on top of it.
+  const grid = (step: number, alpha: number) => {
+    ctx.strokeStyle = t.rule
+    ctx.globalAlpha = alpha
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    for (let x = step; x < w; x += step) {
+      const cx = Math.round(x) + 0.5
+      ctx.moveTo(cx, 0)
+      ctx.lineTo(cx, h)
+    }
+    for (let y = step; y < h; y += step) {
+      const cy = Math.round(y) + 0.5
+      ctx.moveTo(0, cy)
+      ctx.lineTo(w, cy)
+    }
+    ctx.stroke()
+  }
+  grid(GRID, 0.42)
+  grid(GRID * 5, 0.78)
+  ctx.globalAlpha = 1
+
+  // Edge rulers: minor tick every cell, major every fifth.
+  const ruler = (major: boolean) => {
+    ctx.strokeStyle = major ? t.ruleStrong : t.rule
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    const step = major ? GRID * 5 : GRID
+    const len = major ? 10 : 5
+    for (let x = step; x < w; x += step) {
+      const cx = Math.round(x) + 0.5
+      ctx.moveTo(cx, 0)
+      ctx.lineTo(cx, len)
+      ctx.moveTo(cx, h)
+      ctx.lineTo(cx, h - len)
+    }
+    for (let y = step; y < h; y += step) {
+      const cy = Math.round(y) + 0.5
+      ctx.moveTo(0, cy)
+      ctx.lineTo(len, cy)
+      ctx.moveTo(w, cy)
+      ctx.lineTo(w - len, cy)
+    }
+    ctx.stroke()
+  }
+  ruler(false)
+  ruler(true)
+}
+
+/**
+ * The title screen's instrument backdrop.
+ *
+ * One plotted channel — the cursor's own velocity over time — on a sparse
+ * measurement field. The visitor moves the pointer and the instrument responds,
+ * which states the game's premise before a key is pressed. It is real data:
+ * a still pointer plots a still line.
  */
 export default function NeonBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const streaksRef = useRef<Streak[]>([])
-  const mouseRef = useRef({ x: -9999, y: -9999, px: -9999, py: -9999, vx: 0, vy: 0 })
+  const mouseRef = useRef({ x: -9999, y: -9999, px: -9999, py: -9999, vx: 0, vy: 0, seen: false })
   const animationRef = useRef<number>()
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
+  // Tokens are sampled once per setup, so a change of instrument has to force
+  // a re-run rather than waiting for the next resize.
+  const [themeTick, setThemeTick] = useState(0)
 
   useEffect(() => {
     const update = () => setDimensions({ width: window.innerWidth, height: window.innerHeight })
@@ -34,34 +129,27 @@ export default function NeonBackground() {
   }, [])
 
   useEffect(() => {
-    if (dimensions.width === 0 || dimensions.height === 0) return
-    const count = Math.min(150, Math.max(70, Math.floor((dimensions.width * dimensions.height) / 15000)))
-    const drift = 26 // base drift speed (px/s equivalent, scaled per frame)
-    streaksRef.current = Array.from({ length: count }, () => {
-      const angle = Math.PI * 0.72 + (Math.random() - 0.5) * 0.5 // mostly down-left flow
-      const speed = (drift / 30) * (0.5 + Math.random() * 0.8) // gentle per-frame drift
-      const bvx = Math.cos(angle) * speed
-      const bvy = Math.sin(angle) * speed
-      return {
-        x: Math.random() * dimensions.width,
-        y: Math.random() * dimensions.height,
-        vx: bvx,
-        vy: bvy,
-        bvx,
-        bvy,
-        hue: Math.random(),
-        weight: 0.6 + Math.random() * 1.4,
-      }
-    })
-  }, [dimensions])
+    const onTheme = () => setThemeTick((n) => n + 1)
+    window.addEventListener(THEME_CHANGE_EVENT, onTheme)
+    return () => window.removeEventListener(THEME_CHANGE_EVENT, onTheme)
+  }, [])
 
   useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      mouseRef.current.x = e.clientX
-      mouseRef.current.y = e.clientY
+    // Pointer events, not mouse events, so a touch drag is measured too.
+    const onMove = (e: PointerEvent) => {
+      const m = mouseRef.current
+      if (!m.seen) {
+        // Seed both positions on first sight, or the jump from the sentinel
+        // origin would register as one enormous fake sample.
+        m.px = e.clientX
+        m.py = e.clientY
+        m.seen = true
+      }
+      m.x = e.clientX
+      m.y = e.clientY
     }
-    window.addEventListener('mousemove', onMove)
-    return () => window.removeEventListener('mousemove', onMove)
+    window.addEventListener('pointermove', onMove)
+    return () => window.removeEventListener('pointermove', onMove)
   }, [])
 
   useEffect(() => {
@@ -79,24 +167,86 @@ export default function NeonBackground() {
 
     const W = dimensions.width
     const H = dimensions.height
+
+    // Resolve tokens off the element so the backdrop follows the stylesheet
+    // rather than hardcoding the palette a second time.
+    const cs = getComputedStyle(canvas)
+    const token = (name: string, fallback: string) => cs.getPropertyValue(name).trim() || fallback
+    const tokens: Tokens = {
+      ground: token('--stock', STOCK),
+      phosphor: token('--pen', PEN),
+      rule: token('--rule', 'rgba(22, 32, 43, 0.16)'),
+      ruleStrong: token('--rule-strong', 'rgba(22, 32, 43, 0.34)'),
+    }
+
+    const style: TraceStyle = {
+      stroke: tokens.phosphor,
+      // Lighter than the strip chart's wash: this band is large and the
+      // wordmark sits beside it.
+      // Lighter than the strip chart's wash — this band is large — but still
+      // the instrument's own signal, not a fixed colour.
+      fill: toRgba(tokens.phosphor, 0.05),
+      baseline: tokens.rule,
+      tick: tokens.ruleStrong,
+      tickEvery: 20,
+      lineWidth: 1.5,
+      glow: 8,
+      endMark: null,
+    }
+
+    // The channel spans the whole display — it is the instrument's readout, not
+    // an ornament parked in one column. Anchoring the band to the bottom edge
+    // is what makes the full width safe: a resting pointer plots a dead-flat
+    // line, and at the baseline that reads as the trace's zero rather than as a
+    // stray rule through the type.
+    const bandH = Math.max(150, Math.min(360, H * 0.34))
+    const bandTop = Math.round(H - 20 - bandH)
+    const traceW = W
+
+    // The field is static; render it once and blit.
+    const field = document.createElement('canvas')
+    field.width = canvas.width
+    field.height = canvas.height
+    const fctx = field.getContext('2d')
+    if (fctx) {
+      fctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      paintField(fctx, W, H, tokens)
+    }
+
+    const paintGround = () => {
+      ctx.fillStyle = tokens.ground
+      ctx.fillRect(0, 0, W, H)
+      if (fctx) ctx.drawImage(field, 0, 0, W, H)
+    }
+
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-    // Static, calm render for reduced-motion users.
+    // One sample per column of a few px — enough resolution to read a flick,
+    // cheap enough to redraw every frame.
+    const capacity = Math.max(120, Math.min(480, Math.round(W / 3)))
+    const samples = new Float32Array(capacity)
+    const ordered = new Float32Array(capacity)
+
+    const plot = (data: Float32Array, ceiling: number) => {
+      if (traceW <= 0) return
+      ctx.save()
+      ctx.translate(0, bandTop)
+      drawTrace(ctx, data, capacity, ceiling, traceW, bandH, style)
+      ctx.restore()
+    }
+
+    // Static equivalent for reduced motion: the field and a settled trace.
     if (reduced) {
-      ctx.fillStyle = '#04060c'
-      ctx.fillRect(0, 0, W, H)
-      const g = ctx.createRadialGradient(W / 2, H * 0.4, 0, W / 2, H * 0.5, Math.max(W, H) * 0.7)
-      g.addColorStop(0, 'rgba(20, 46, 92, 0.35)')
-      g.addColorStop(1, 'rgba(3, 5, 9, 0)')
-      ctx.fillStyle = g
-      ctx.fillRect(0, 0, W, H)
+      paintGround()
+      plot(ordered, MIN_PEAK)
       return
     }
 
-    // Paint an opaque dark base once; subsequent frames only fade partially.
-    ctx.fillStyle = '#04060c'
-    ctx.fillRect(0, 0, W, H)
-
+    let head = 0
+    let accTime = 0
+    let accSum = 0
+    let accCount = 0
+    let peak = MIN_PEAK
     let last = performance.now()
 
     const frame = (now: number) => {
@@ -104,8 +254,8 @@ export default function NeonBackground() {
       last = now
 
       const m = mouseRef.current
-      // Low-pass + cap the cursor velocity so a fast flick reads as a gentle
-      // current rather than a whip that snaps every streak at once.
+      // Low-pass + cap the cursor velocity so a fast flick reads as a measured
+      // excursion rather than a single-frame spike.
       const CAP = 30
       const rawVx = Math.max(-CAP, Math.min(CAP, m.x - m.px))
       const rawVy = Math.max(-CAP, Math.min(CAP, m.y - m.py))
@@ -113,87 +263,31 @@ export default function NeonBackground() {
       m.py = m.y
       m.vx += (rawVx - m.vx) * 0.22
       m.vy += (rawVy - m.vy) * 0.22
-      const mouseSpeed = Math.hypot(m.vx, m.vy)
+      // Report in px/s so the channel carries a real unit, like every other
+      // trace in the game.
+      const speed = m.seen ? Math.hypot(m.vx, m.vy) / Math.max(dt, 1 / 240) : 0
 
-      // Fully repaint the base each frame — NO trail accumulation. (The old
-      // partial fade smeared fast streaks into ghost lines that looked glitchy
-      // and left a faint full-width grid.) Each streak draws its own tail below.
-      ctx.fillStyle = '#04060c'
-      ctx.fillRect(0, 0, W, H)
-
-      // Soft cool vignette toward the top so the wordmark reads.
-      const g = ctx.createRadialGradient(W / 2, H * 0.34, 0, W / 2, H * 0.46, Math.max(W, H) * 0.7)
-      g.addColorStop(0, 'rgba(18, 42, 86, 0.05)')
-      g.addColorStop(1, 'rgba(4, 6, 12, 0)')
-      ctx.fillStyle = g
-      ctx.fillRect(0, 0, W, H)
-
-      const influence = 190
-      const MAX_SPEED = 6 // hard cap so streaks never whip into glitchy lines
-      for (const s of streaksRef.current) {
-        // Cursor nudges nearby streaks along its (smoothed) motion vector.
-        if (mouseSpeed > 0.4) {
-          const dx = s.x - m.x
-          const dy = s.y - m.y
-          const d = Math.hypot(dx, dy)
-          if (d < influence) {
-            const force = (1 - d / influence) * 0.13
-            s.vx += m.vx * force
-            s.vy += m.vy * force
-          }
-        }
-
-        // Ease back toward the persistent baseline drift so the field always
-        // keeps a calm current and combed streaks relax smoothly (no snap).
-        s.vx += (s.bvx - s.vx) * 0.05
-        s.vy += (s.bvy - s.vy) * 0.05
-
-        // Clamp speed to keep motion smooth on rapid cursor moves.
-        const sp = Math.hypot(s.vx, s.vy)
-        if (sp > MAX_SPEED) {
-          s.vx = (s.vx / sp) * MAX_SPEED
-          s.vy = (s.vy / sp) * MAX_SPEED
-        }
-
-        s.x += s.vx * dt * 60
-        s.y += s.vy * dt * 60
-
-        // Wrap around edges.
-        if (s.x < -20) s.x = W + 20
-        if (s.x > W + 20) s.x = -20
-        if (s.y < -20) s.y = H + 20
-        if (s.y > H + 20) s.y = -20
-
-        // Draw a comet: gradient tail (transparent -> head) plus a bright head.
-        // Fully redrawn each frame — nothing accumulates, so no ghost lines.
-        const speed = Math.hypot(s.vx, s.vy)
-        const len = Math.min(20, 3 + speed * 1.6)
-        const nx = speed > 0.01 ? s.vx / speed : 0
-        const ny = speed > 0.01 ? s.vy / speed : 0
-        const r = Math.round(90 + s.hue * 90)
-        const gg = Math.round(200 - s.hue * 40)
-        const b = 240
-        const alpha = Math.min(0.42, 0.14 + speed * 0.025)
-
-        const tailX = s.x - nx * len
-        const tailY = s.y - ny * len
-        const grad = ctx.createLinearGradient(tailX, tailY, s.x, s.y)
-        grad.addColorStop(0, `rgba(${r}, ${gg}, ${b}, 0)`)
-        grad.addColorStop(1, `rgba(${r}, ${gg}, ${b}, ${alpha})`)
-        ctx.strokeStyle = grad
-        ctx.lineWidth = s.weight
-        ctx.lineCap = 'round'
-        ctx.beginPath()
-        ctx.moveTo(tailX, tailY)
-        ctx.lineTo(s.x, s.y)
-        ctx.stroke()
-
-        // Bright head.
-        ctx.fillStyle = `rgba(210, 244, 255, ${Math.min(0.6, alpha + 0.18)})`
-        ctx.beginPath()
-        ctx.arc(s.x, s.y, s.weight * 0.9, 0, Math.PI * 2)
-        ctx.fill()
+      // Time-bucket the samples so the plotted shape is frame-rate independent.
+      accSum += speed
+      accCount += 1
+      accTime += dt
+      if (accTime >= SAMPLE_INTERVAL) {
+        samples[head] = accSum / accCount
+        head = (head + 1) % capacity
+        accSum = 0
+        accCount = 0
+        accTime = 0
       }
+
+      // Ceiling follows the fastest recent sweep and relaxes back down, so the
+      // plot rescales instead of clipping or flattening.
+      peak = Math.max(MIN_PEAK, speed, peak * PEAK_DECAY)
+
+      // `head` is the next write slot, which is also the oldest sample.
+      for (let i = 0; i < capacity; i++) ordered[i] = samples[(head + i) % capacity]
+
+      paintGround()
+      plot(ordered, peak)
 
       animationRef.current = requestAnimationFrame(frame)
     }
@@ -202,7 +296,7 @@ export default function NeonBackground() {
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current)
     }
-  }, [dimensions])
+  }, [dimensions, themeTick])
 
   return <canvas ref={canvasRef} aria-hidden="true" className="neon-background" />
 }
