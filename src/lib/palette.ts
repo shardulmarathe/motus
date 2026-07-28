@@ -1,18 +1,53 @@
+// "Phosphor Scope" palette — Motus presents itself as an instrument measuring a
+// body in motion, and the instrument is a long-persistence phosphor tube.
+//
+// The governing rule is **the beam writes, the phosphor remembers**. The whole
+// display is one monochrome green tube: marks, graduations and labels are all
+// phosphor at different brightnesses, so brightness is the only hierarchy. Red
+// is the one colour the tube cannot produce, which is exactly why it means
+// danger and nothing else.
+//
+// Arena themes (src/lib/customization.ts) swap the medium: other tubes, and
+// three genuinely printed instruments (Thermal, Plotter, Blackline) which set
+// `luminous: false`. Nothing here may assume either case.
+
 export const palette = {
-  void: '#05070f',
-  panel: '#0c1220',
+  // ── Field ──────────────────────────────────────────────────────────────
+  /** The screen. */
+  void: '#04120a',
+  /** Raised surfaces: in-canvas panels and cards. */
+  panel: '#0a1f13',
+  /**
+   * Foreground marks. Printed themes flip this to a dark value, so nothing in
+   * the renderer may assume `ink` is bright.
+   */
+  ink: '#c8ffdf',
+  /** Beam centre — the hottest the tube gets. */
   white: '#ffffff',
-  text: '#e6eef8',
-  muted: '#9fb0c8',
-  player: '#2de2e6',
-  playerLight: '#a7f7ff',
-  orb: '#7bffb2',
-  orbDeep: '#23c876',
-  hostile: '#ff4d6d',
-  hostileLight: '#ff9aac',
-  hunter: '#b06bff',
-  hunterLight: '#dfc2ff',
-  warn: '#ffcf5c',
+  text: '#c8ffdf',
+  muted: '#6bc98f',
+
+  // ── Signal: the measured body ──────────────────────────────────────────
+  player: '#46ff8c',
+  playerLight: '#a6ffc6',
+
+  // ── Targets: graduated marks written by the same beam ───────────────────
+  orb: '#c8ffdf',
+  orbDeep: '#4f9e6d',
+
+  // ── Hazard: the colour the tube cannot make ────────────────────────────
+  hostile: '#ff3b21',
+  hostileLight: '#ff8566',
+
+  /**
+   * Hunters share the hazard colour on purpose — they are differentiated by
+   * silhouette (a dashed pursuit ring and a lead line), not by a third hue.
+   */
+  hunter: '#ff3b21',
+  hunterLight: '#ff8566',
+
+  /** Advisory. A hotter phosphor, not a new colour. */
+  warn: '#a6ffc6',
 }
 
 export function withAlpha(hex: string, alpha: number) {

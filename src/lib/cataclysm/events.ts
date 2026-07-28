@@ -45,6 +45,9 @@ type CataclysmContext = {
   dt: number
 }
 
+/** The active render palette (themes rebuild this per run). */
+type Pal = typeof palette
+
 type CataclysmRenderContext = {
   ctx: CanvasRenderingContext2D
   cat: CataclysmData
@@ -52,6 +55,14 @@ type CataclysmRenderContext = {
   players?: Puck[]
   width?: number
   height?: number
+  /**
+   * The run's resolved palette. Cataclysm marks used to draw from the base
+   * import, which printed Plotter's pens onto every other instrument; passing
+   * the live palette keeps the closing limit in the theme's own red pen.
+   */
+  pal?: Pal
+  /** True only on the three lit instruments. Chooses which value reads as "dark". */
+  luminous?: boolean
 }
 
 type CataclysmDefinition = {
@@ -175,12 +186,28 @@ function spawnMeteor(width: number, height: number): Enemy {
   }
 }
 
-function renderBlackout(ctx: CanvasRenderingContext2D, player: Puck, width: number, height: number) {
+/**
+ * The blackout mask is "the dark of this medium", which is a different role on
+ * each: on a lit instrument the field itself is dark (`void`), on paper the
+ * only dark available is the pen (`ink`). Either way the sheet outside the
+ * light hole stops carrying marks, which is the whole event.
+ */
+function maskColor(pal: Pal, luminous: boolean): string {
+  return luminous ? pal.void : pal.ink
+}
+
+function renderBlackout(
+  ctx: CanvasRenderingContext2D,
+  player: Puck,
+  width: number,
+  height: number,
+  mask: string
+) {
   const r = 128
   const grad = ctx.createRadialGradient(player.x, player.y, r * 0.35, player.x, player.y, r * 1.9)
-  grad.addColorStop(0, 'rgba(0, 0, 0, 0)')
-  grad.addColorStop(0.7, 'rgba(2, 4, 10, 0.72)')
-  grad.addColorStop(1, 'rgba(1, 2, 6, 0.97)')
+  grad.addColorStop(0, withAlpha(mask, 0))
+  grad.addColorStop(0.7, withAlpha(mask, 0.72))
+  grad.addColorStop(1, withAlpha(mask, 0.97))
   ctx.fillStyle = grad
   ctx.fillRect(0, 0, width, height)
 }
@@ -198,7 +225,8 @@ function renderBlackoutMulti(
   ctx: CanvasRenderingContext2D,
   players: Puck[],
   width: number,
-  height: number
+  height: number,
+  mask: string
 ) {
   if (typeof document === 'undefined') return
   if (!blackoutLayer) blackoutLayer = document.createElement('canvas')
@@ -212,7 +240,7 @@ function renderBlackoutMulti(
   const maxDark = 0.97
   lctx.globalCompositeOperation = 'source-over'
   lctx.clearRect(0, 0, width, height)
-  lctx.fillStyle = `rgba(1, 2, 6, ${maxDark})`
+  lctx.fillStyle = withAlpha(mask, maxDark)
   lctx.fillRect(0, 0, width, height)
 
   lctx.globalCompositeOperation = 'destination-out'
@@ -232,39 +260,88 @@ function renderBlackoutMulti(
   ctx.drawImage(blackoutLayer, 0, 0)
 }
 
-function renderShrinkingArena(ctx: CanvasRenderingContext2D, cat: CataclysmData) {
+/**
+ * The closing limit, drawn as a moving rail rather than a glowing box: a red-pen
+ * hairline, inward graduation ticks, and corner brackets that mark it as an
+ * instrument boundary. Crossing it is lethal, so it stays the most legible mark
+ * on the field without resorting to bloom — weight and graduation do the work
+ * a halo used to.
+ */
+function renderShrinkingArena(ctx: CanvasRenderingContext2D, cat: CataclysmData, pal: Pal) {
   if (!cat.arenaWidth || !cat.arenaHeight) return
 
   const arena = calculateArenaSize(cat.arenaWidth, cat.arenaHeight, cat.timeLeft, 30)
-  ctx.strokeStyle = withAlpha(palette.warn, 0.44)
-  ctx.lineWidth = 2
-  ctx.shadowColor = palette.warn
-  ctx.shadowBlur = 16
-  ctx.strokeRect(arena.x, arena.y, arena.width, arena.height)
-  ctx.shadowColor = 'transparent'
-  ctx.shadowBlur = 0
+  const x0 = Math.round(arena.x) + 0.5
+  const y0 = Math.round(arena.y) + 0.5
+  const x1 = Math.round(arena.x + arena.width) - 0.5
+  const y1 = Math.round(arena.y + arena.height) - 0.5
+
+  ctx.save()
+
+  // Graduation ticks stepping inward — the rail reads as a ruled scale.
+  const step = 26
+  const tick = 6
+  // Bumped from 0.4: a 40%-alpha red on bone stock washes out to pink, where on
+  // a dark tube it read as a lit hairline.
+  ctx.strokeStyle = withAlpha(pal.hostile, 0.55)
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  for (let x = x0 + step; x < x1; x += step) {
+    ctx.moveTo(x, y0)
+    ctx.lineTo(x, y0 + tick)
+    ctx.moveTo(x, y1)
+    ctx.lineTo(x, y1 - tick)
+  }
+  for (let y = y0 + step; y < y1; y += step) {
+    ctx.moveTo(x0, y)
+    ctx.lineTo(x0 + tick, y)
+    ctx.moveTo(x1, y)
+    ctx.lineTo(x1 - tick, y)
+  }
+  ctx.stroke()
+
+  // The limit itself — struck at full pen weight on both media.
+  ctx.strokeStyle = pal.hostile
+  ctx.lineWidth = 1.75
+  ctx.beginPath()
+  ctx.rect(x0, y0, x1 - x0, y1 - y0)
+  ctx.stroke()
+
+  // Corner brackets.
+  const arm = 18
+  ctx.lineWidth = 2.5
+  ctx.beginPath()
+  ctx.moveTo(x0, y0 + arm); ctx.lineTo(x0, y0); ctx.lineTo(x0 + arm, y0)
+  ctx.moveTo(x1 - arm, y0); ctx.lineTo(x1, y0); ctx.lineTo(x1, y0 + arm)
+  ctx.moveTo(x1, y1 - arm); ctx.lineTo(x1, y1); ctx.lineTo(x1 - arm, y1)
+  ctx.moveTo(x0 + arm, y1); ctx.lineTo(x0, y1); ctx.lineTo(x0, y1 - arm)
+  ctx.stroke()
+
+  ctx.restore()
 }
 
-function renderSwapWarning(ctx: CanvasRenderingContext2D, cat: CataclysmData) {
+function renderSwapWarning(ctx: CanvasRenderingContext2D, cat: CataclysmData, pal: Pal) {
   if (!cat.swapWarning || cat.swapWarning <= 0) return
 
+  // Transfer lines: hairline vermilion leaders showing which mark is about to
+  // become which. Batched into one path — this fires for every pair at once.
   const alpha = Math.min(1, cat.swapWarning / 0.6)
   ctx.save()
   ctx.globalAlpha = alpha
-  ctx.strokeStyle = withAlpha(palette.warn, 0.55)
-  ctx.lineWidth = 2
-  ctx.setLineDash([8, 10])
+  ctx.strokeStyle = withAlpha(pal.hostile, 0.8)
+  ctx.lineWidth = 1
+  ctx.setLineDash([3, 5])
 
   const enemies = cat.eventEnemies ?? []
   const pairs = Math.min(cat.goals.length, enemies.length)
+  ctx.beginPath()
   for (let i = 0; i < pairs; i++) {
     const goal = cat.goals[i]
     const enemy = enemies[i]
-    ctx.beginPath()
     ctx.moveTo(goal.x, goal.y)
     ctx.lineTo(enemy.x, enemy.y)
-    ctx.stroke()
   }
+  ctx.stroke()
 
   ctx.restore()
 }
@@ -321,7 +398,7 @@ export const cataclysmEvents: Record<CataclysmEventType, CataclysmDefinition> = 
       }
       if (caught.length > 0) return caught
     },
-    onRender: ({ ctx, cat }) => renderShrinkingArena(ctx, cat),
+    onRender: ({ ctx, cat, pal }) => renderShrinkingArena(ctx, cat, pal ?? palette),
   },
   hunt: {
     onEnter: (width, height, players, stage) => {
@@ -372,7 +449,7 @@ export const cataclysmEvents: Record<CataclysmEventType, CataclysmDefinition> = 
         cat.swapWarning = 0
       }
     },
-    onRender: ({ ctx, cat }) => renderSwapWarning(ctx, cat),
+    onRender: ({ ctx, cat, pal }) => renderSwapWarning(ctx, cat, pal ?? palette),
   },
   magnet: {
     onEnter: (width, height, players) => makeEventBase('magnet', width, height, players),
@@ -396,14 +473,15 @@ export const cataclysmEvents: Record<CataclysmEventType, CataclysmDefinition> = 
   },
   blackout: {
     onEnter: (width, height, players) => makeEventBase('blackout', width, height, players),
-    onRender: ({ ctx, player, players, width, height }) => {
+    onRender: ({ ctx, player, players, width, height, pal, luminous }) => {
       if (!width || !height) return
       const pucks = players ?? (player ? [player] : [])
       if (pucks.length === 0) return
+      const mask = maskColor(pal ?? palette, luminous ?? false)
       // Single puck keeps the exact legacy gradient; multiple pucks punch one
       // light hole each into a shared darkness layer.
-      if (pucks.length === 1) renderBlackout(ctx, pucks[0], width, height)
-      else renderBlackoutMulti(ctx, pucks, width, height)
+      if (pucks.length === 1) renderBlackout(ctx, pucks[0], width, height, mask)
+      else renderBlackoutMulti(ctx, pucks, width, height, mask)
     },
   },
   meteorStorm: {

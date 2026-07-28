@@ -26,13 +26,24 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
       <div className="overlay-backdrop" onClick={onClose} />
       <div className="rules-modal profile-modal">
         <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
-        <h2 className="glow-text">Profile</h2>
+        <span className="modal-eyebrow">PROFILE // LIFETIME RECORD</span>
+        <h2>Profile</h2>
 
         <div className="tabs">
-          <button className={`tab${tab === 'stats' ? ' active' : ''}`} onClick={() => setTab('stats')}>
+          <button
+            type="button"
+            className={`tab${tab === 'stats' ? ' active' : ''}`}
+            aria-pressed={tab === 'stats'}
+            onClick={() => setTab('stats')}
+          >
             Statistics
           </button>
-          <button className={`tab${tab === 'achievements' ? ' active' : ''}`} onClick={() => setTab('achievements')}>
+          <button
+            type="button"
+            className={`tab${tab === 'achievements' ? ' active' : ''}`}
+            aria-pressed={tab === 'achievements'}
+            onClick={() => setTab('achievements')}
+          >
             Achievements {unlockedCount}/{achievements.length}
           </button>
         </div>
@@ -47,10 +58,16 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
             ))}
           </div>
         ) : (
-          <div className="achv-list">
+          <div className="achv-list" role="list">
             {achievements.map((a) => (
-              <div className={`achv-row${a.unlocked ? ' unlocked' : ''}`} key={a.id}>
-                <span className="achv-icon">{a.unlocked ? a.icon : '🔒'}</span>
+              <div
+                className={`achv-row${a.unlocked ? ' unlocked' : ''}`}
+                key={a.id}
+                role="listitem"
+                aria-label={`${a.name}. ${a.description}. ${a.unlocked ? 'Unlocked.' : 'Locked.'}`}
+              >
+                {/* The tile is the frame; an empty socket reads as not-yet-lit. */}
+                <span className="achv-icon" aria-hidden="true">{a.unlocked ? a.icon : '—'}</span>
                 <span className="achv-text">
                   <span className="achv-name">{a.name}</span>
                   <span className="achv-desc">{a.description}</span>

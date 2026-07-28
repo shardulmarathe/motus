@@ -9,11 +9,21 @@ import {
   saveSettings,
   isConditionMet,
   unlockLabel,
+  type ArenaTheme,
   type Settings,
 } from '../lib/customization'
 
 interface SettingsModalProps {
   onClose: () => void
+}
+
+/**
+ * An instrument is a medium *and* a mark, so its sample shows both: the stock it
+ * draws on, split against the pen it draws with. A pen-only swatch cannot tell
+ * the eight apart on paper — Blueprint's white pen would vanish into the sheet.
+ */
+function instrumentSwatch(theme: ArenaTheme): string {
+  return `linear-gradient(135deg, ${theme.colors.bgOuter} 0 50%, ${theme.colors.player} 50% 100%)`
 }
 
 /** A row of selectable, unlock-gated cosmetic chips. */
@@ -35,21 +45,25 @@ function OptionRow<T extends { id: string; name: string; unlock: any }>({
       {items.map((item) => {
         const unlocked = isConditionMet(item.unlock)
         const active = selected === item.id
-        const lockHint = unlocked ? null : `${item.name} — ${unlockLabel(item.unlock)}`
+        const lockHint = unlocked ? null : `${item.name} · ${unlockLabel(item.unlock)}`
         return (
           <button
             key={item.id}
+            type="button"
             className={`cos-chip${active ? ' active' : ''}${unlocked ? '' : ' locked'}`}
             onClick={() => unlocked && onPick(item.id)}
             aria-disabled={!unlocked}
-            title={unlocked ? item.name : unlockLabel(item.unlock)}
+            aria-pressed={active}
+            title={unlocked ? item.name : `Locked. ${unlockLabel(item.unlock)}.`}
             onMouseEnter={() => onHint(lockHint)}
             onMouseLeave={() => onHint(null)}
             onFocus={() => onHint(lockHint)}
             onBlur={() => onHint(null)}
           >
             {swatchOf && <span className="cos-swatch" style={{ background: swatchOf(item) }} />}
-            <span className="cos-name">{unlocked ? item.name : `🔒 ${item.name}`}</span>
+            {/* A locked control is marked, not padlocked — the chip is already
+                mono caps, so the state reads as a plate on the faceplate. */}
+            <span className="cos-name">{unlocked ? item.name : `${item.name} · Locked`}</span>
           </button>
         )
       })}
@@ -57,7 +71,8 @@ function OptionRow<T extends { id: string; name: string; unlock: any }>({
   )
 }
 
-/** Customization screen: arena theme, player skin, and trail — all earned. */
+/** Customization screen: the instrument, the pen loaded in it, and the pen's
+    weight — all earned through play. */
 export default function SettingsModal({ onClose }: SettingsModalProps) {
   const [settings, setSettings] = useState<Settings>(() => loadSettings())
   const [hint, setHint] = useState<string | null>(null)
@@ -73,14 +88,15 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
       <div className="overlay-backdrop" onClick={onClose} />
       <div className="rules-modal settings-modal">
         <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
-        <h2 className="glow-text">Settings</h2>
+        <span className="modal-eyebrow">SETTINGS // COSMETICS</span>
+        <h2>Settings</h2>
 
         <div className="settings-section">
-          <div className="settings-label">Arena Theme</div>
+          <div className="settings-label">Arena Instrument</div>
           <OptionRow
             items={themes}
             selected={settings.randomTheme ? '__random' : settings.themeId}
-            swatchOf={(t) => t.colors.player}
+            swatchOf={instrumentSwatch}
             onPick={(id) => update({ themeId: id, randomTheme: false })}
             onHint={setHint}
           />
@@ -90,23 +106,23 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
               checked={settings.randomTheme}
               onChange={(e) => update({ randomTheme: e.target.checked })}
             />
-            Random unlocked theme each run
+            Random unlocked instrument each run
           </label>
         </div>
 
         <div className="settings-section">
-          <div className="settings-label">Player Skin</div>
+          <div className="settings-label">Player Mark</div>
           <OptionRow
             items={playerSkins}
             selected={settings.skinId}
-            swatchOf={(s) => s.color ?? '#b06bff'}
+            swatchOf={(s) => s.color ?? 'var(--pen)'}
             onPick={(id) => update({ skinId: id })}
             onHint={setHint}
           />
         </div>
 
         <div className="settings-section">
-          <div className="settings-label">Trail</div>
+          <div className="settings-label">Trail Persistence</div>
           <OptionRow
             items={trailStyles}
             selected={settings.trailId}
@@ -116,7 +132,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
         </div>
 
         <p className={`settings-hint${hint ? ' settings-hint-active' : ''}`} aria-live="polite">
-          {hint ? `Unlock — ${hint}` : 'Hover a locked item to see how to earn it. Everything is unlocked through play.'}
+          {hint ?? 'Everything unlocks through play. Hover a locked item to read its condition.'}
         </p>
       </div>
     </div>

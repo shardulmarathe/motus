@@ -21,6 +21,12 @@ export interface RunSummary {
   won: boolean
   challengeId?: number
   starsEarned?: number
+  /**
+   * The run's speed trace (px/s, oldest first), sampled by src/lib/telemetry.
+   * Plotted on the end screen. In-memory only — `recordRun` folds scalars into
+   * `LifetimeStats` and the summary itself is never persisted.
+   */
+  speedSamples?: number[]
 }
 
 export interface LifetimeStats {

@@ -34,19 +34,24 @@ type LobbyView = 'variants' | 'create' | 'join'
 type JoinPhase = 'input' | 'connecting' | 'connected'
 
 const ROOM_ERROR_TEXT: Record<string, string> = {
-  full: 'That room is already full.',
-  noHost: 'No room with that code — check it and try again.',
-  badRole: 'Connection rejected — try again.',
+  full: 'That room is full.',
+  noHost: 'No room with that code. Check it and try again.',
+  badRole: 'Connection rejected. Try again.',
 }
 
-const codeStyle: React.CSSProperties = {
-  fontFamily: "'SF Mono', ui-monospace, Menlo, monospace",
-  fontSize: '2.4rem',
-  fontWeight: 700,
-  letterSpacing: '0.4em',
-  textIndent: '0.4em', // recenters: letterSpacing pads only the right edge
-  textAlign: 'center',
-  margin: '10px 0 4px',
+/**
+ * The lobby's status line. Nothing lights up here — the line is stamped in the
+ * ink its condition calls for: red pen for a fault, pen for a live link, and
+ * plain graphite while the room is still waiting.
+ */
+function StatusLine({ text, tone }: { text: string; tone: 'idle' | 'live' | 'fault' }) {
+  const color =
+    tone === 'fault' ? 'var(--red-pen)' : tone === 'live' ? 'var(--pen)' : 'var(--ink-dim)'
+  return (
+    <p className="modal-eyebrow" style={{ color, marginBottom: 18 }} role="status" aria-live="polite">
+      {text}
+    </p>
+  )
 }
 
 /** Versus lobby: pick a variant, then start a local (shared-keyboard) or online match. */
@@ -133,7 +138,7 @@ export default function MultiplayerSelect({
   const handleJoinConnect = useCallback(() => {
     const code = joinInput.trim().toUpperCase()
     if (!isValidRoomCode(code)) {
-      setErrorMsg(`Codes are ${ROOM_CODE_LENGTH} characters — letters and digits.`)
+      setErrorMsg(`Codes are ${ROOM_CODE_LENGTH} characters: letters and digits.`)
       return
     }
     setJoinCode(code)
@@ -174,24 +179,20 @@ export default function MultiplayerSelect({
             <span className="modal-eyebrow">VERSUS // SELECT</span>
             <h2>Versus</h2>
 
+            {/* Three modes are not a sequence, so there is no index to show:
+                the title and its description carry the row, and the arrow
+                marks the current selection. */}
             <nav className="menu-list" aria-label="Versus variants" style={{ margin: '18px 0 24px' }}>
-              {VARIANT_ORDER.map((variant, idx) => {
+              {VARIANT_ORDER.map((variant) => {
                 const active = selected === variant
                 return (
                   <button
                     key={variant}
                     type="button"
-                    className="menu-row"
+                    className={`menu-row${active ? ' selected' : ''}`}
                     onClick={() => setSelected(variant)}
                     aria-pressed={active}
-                    title={MP_VARIANT_NAMES[variant]}
-                    style={
-                      active
-                        ? { background: 'linear-gradient(90deg, rgba(45, 226, 230, 0.09), transparent 70%)' }
-                        : undefined
-                    }
                   >
-                    <span className="menu-index">{String(idx + 1).padStart(2, '0')}</span>
                     <span className="menu-row-body">
                       <span className="menu-row-title">{MP_VARIANT_NAMES[variant]}</span>
                       <span className="menu-row-desc">{VARIANT_DESCS[variant]}</span>
@@ -223,8 +224,8 @@ export default function MultiplayerSelect({
                 </button>
               </div>
               {isTouch && (
-                <p className="username-hint">
-                  Local versus needs a keyboard — but online rooms work with touch controls.
+                <p className="settings-hint">
+                  Local versus needs a keyboard. Online rooms work with touch controls.
                 </p>
               )}
             </div>
@@ -238,23 +239,22 @@ export default function MultiplayerSelect({
             </span>
             <h2>Room created</h2>
 
-            <p className="menu-index" style={{ letterSpacing: '0.22em', marginTop: 16 }}>
-              SHARE THIS CODE
-            </p>
-            <div className="glow-text" style={codeStyle} aria-label={`Room code ${hostCode}`}>
+            <span className="username-label" style={{ marginTop: 16 }}>
+              Share this code
+            </span>
+            <div className="room-code" role="img" aria-label={`Room code ${hostCode}`}>
               {hostCode}
             </div>
-            <p
-              className="menu-index"
-              style={{ letterSpacing: '0.22em', textAlign: 'center', marginBottom: 18 }}
-              aria-live="polite"
-            >
-              {connectionIssue
-                ? 'CONNECTION LOST'
-                : guestPresent
-                  ? 'PLAYER CONNECTED'
-                  : 'WAITING FOR PLAYER…'}
-            </p>
+            <StatusLine
+              tone={connectionIssue ? 'fault' : guestPresent ? 'live' : 'idle'}
+              text={
+                connectionIssue
+                  ? 'CONNECTION LOST'
+                  : guestPresent
+                    ? 'PLAYER CONNECTED'
+                    : 'WAITING FOR PLAYER'
+              }
+            />
 
             {errorMsg && <p className="username-hint">{errorMsg}</p>}
 
@@ -294,11 +294,7 @@ export default function MultiplayerSelect({
                   <input
                     id="room-code"
                     className="username-input"
-                    style={{
-                      fontFamily: "'SF Mono', ui-monospace, Menlo, monospace",
-                      letterSpacing: '0.3em',
-                      textTransform: 'uppercase',
-                    }}
+                    style={{ letterSpacing: '0.3em', textTransform: 'uppercase' }}
                     type="text"
                     maxLength={ROOM_CODE_LENGTH}
                     placeholder="ABC12"
@@ -319,9 +315,15 @@ export default function MultiplayerSelect({
                   />
                   {errorMsg && <p className="username-hint">{errorMsg}</p>}
                   {joinPhase === 'connecting' && !errorMsg && (
-                    <p className="username-hint" style={{ color: '#94a3b8' }} aria-live="polite">
-                      {connectionIssue ? 'CONNECTION LOST — retry below.' : 'CONNECTING…'}
-                    </p>
+                    connectionIssue ? (
+                      <p className="username-hint" aria-live="polite">
+                        Connection lost. Retry below.
+                      </p>
+                    ) : (
+                      <p className="username-meta" aria-live="polite">
+                        CONNECTING…
+                      </p>
+                    )
                   )}
                 </div>
 
@@ -345,16 +347,14 @@ export default function MultiplayerSelect({
               </>
             ) : (
               <>
-                <div className="glow-text" style={codeStyle} aria-label={`Room code ${joinCode}`}>
+                <div className="room-code" role="img" aria-label={`Room code ${joinCode}`}>
                   {joinCode}
                 </div>
-                <p
-                  className="menu-index"
-                  style={{ letterSpacing: '0.22em', textAlign: 'center', marginBottom: 18 }}
-                  aria-live="polite"
-                >
-                  {connectionIssue ? 'CONNECTION LOST' : 'CONNECTED — WAITING FOR HOST TO START…'}
-                </p>
+                <StatusLine
+                  tone={connectionIssue ? 'fault' : 'live'}
+                  text={connectionIssue ? 'CONNECTION LOST' : 'CONNECTED — WAITING FOR HOST'}
+                />
+
                 {errorMsg && <p className="username-hint">{errorMsg}</p>}
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                   {connectionIssue && (

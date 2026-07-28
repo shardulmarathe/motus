@@ -84,42 +84,80 @@ export function livingPlayers(slots: PlayerSlot[]): PlayerSlot[] {
 }
 
 // --- P2 colors ---
-// P1 always uses the active theme palette. P2 uses the Ember amber pair,
-// falling back to Synthwave magenta when P1's resolved body color sits too
-// close to amber on the hue wheel (e.g. Cyberpunk yellow, Ember/Gold skins).
+//
+// P2 is a *second pen*, not a second lamp. P1 already holds the instrument's
+// own signal color, hazards hold red, and targets hold the foreground mark —
+// so P2 takes the one hue none of the eight instruments spends: violet. It
+// stays clear of the signal on every theme (green scope, amber tube, white
+// blueprint, blue plotter), clear of hazard red, and clear of graphite.
+//
+// One hex cannot hold contrast against light stock *and* a near-black tube, so
+// the pen has two nibs: a deep violet that presses into paper and a pale violet
+// that reads on a lit instrument. `pickP2Colors` picks by medium. `MP_P2_BODY`
+// is the mid value the DOM uses, which survives either chassis.
+//
+// Hue is NOT the load-bearing distinction. The renderer draws P2 as an annulus
+// (hollow puck) against P1's solid disc, so the two read apart in monochrome,
+// at speed, and for protan/deutan players. The colors below are the second
+// signal, not the first.
 
-export const MP_P2_BODY = '#ff8a3d'
-export const MP_P2_LIGHT = '#ffd0a8'
-export const MP_P2_ALT_BODY = '#ff5cf0'
-export const MP_P2_ALT_LIGHT = '#ffc2f7'
+/** Mid violet — the DOM value, legible on a dark chassis and on stock. */
+export const MP_P2_BODY = '#8f5cf0'
+export const MP_P2_LIGHT = '#bfa1f7'
+/** The same pen pressed into paper, where a pale violet would not register. */
+export const MP_P2_PRINT_BODY = '#5b2d91'
+export const MP_P2_PRINT_LIGHT = '#8a63bd'
+/** And driven on a tube, where a deep violet sinks into the field. */
+export const MP_P2_LUMINOUS_BODY = '#b47ae8'
+export const MP_P2_LUMINOUS_LIGHT = '#dcbcf6'
 
-const AMBER_HUE = 28
-const HUE_CLASH_DEGREES = 45
+// Fallback pen, used only when P1 is itself violet (the Violet skin). Green is
+// the next hue clear of red, of every theme's signal, and of violet.
+export const MP_P2_ALT_BODY = '#126b4a'
+export const MP_P2_ALT_LIGHT = '#3f9c78'
+export const MP_P2_ALT_LUMINOUS_BODY = '#43c98d'
+export const MP_P2_ALT_LUMINOUS_LIGHT = '#9fe9c6'
 
-function hexToHue(hex: string): number | null {
+/**
+ * RGB distance below which two body colors read as "the same mark". Wide enough
+ * to catch two violets of different value, which the eye merges at speed even
+ * though their components are far apart.
+ */
+const COLOR_CLASH_DISTANCE = 122
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim())
   if (!m) return null
   const n = parseInt(m[1], 16)
-  const r = ((n >> 16) & 0xff) / 255
-  const g = ((n >> 8) & 0xff) / 255
-  const b = (n & 0xff) / 255
-  const max = Math.max(r, g, b)
-  const min = Math.min(r, g, b)
-  const d = max - min
-  if (d === 0) return null // achromatic — never clashes
-  let h: number
-  if (max === r) h = ((g - b) / d) % 6
-  else if (max === g) h = (b - r) / d + 2
-  else h = (r - g) / d + 4
-  h *= 60
-  return h < 0 ? h + 360 : h
+  return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff }
 }
 
-export function pickP2Colors(p1Body: string): { body: string; light: string } {
-  const hue = hexToHue(p1Body)
-  if (hue !== null) {
-    const diff = Math.min(Math.abs(hue - AMBER_HUE), 360 - Math.abs(hue - AMBER_HUE))
-    if (diff < HUE_CLASH_DEGREES) return { body: MP_P2_ALT_BODY, light: MP_P2_ALT_LIGHT }
+/** Plain RGB distance — enough to catch "these are the same gray". */
+function colorDistance(a: string, b: string): number | null {
+  const ca = hexToRgb(a)
+  const cb = hexToRgb(b)
+  if (!ca || !cb) return null
+  return Math.hypot(ca.r - cb.r, ca.g - cb.g, ca.b - cb.b)
+}
+
+/**
+ * The second pen, chosen for the medium. `luminous` is the theme's own flag, so
+ * a printed instrument gets the deep nib and a tube the pale one. If P1 is
+ * itself violet, both fall back to green rather than asking the player to tell
+ * two violets apart mid-drift.
+ */
+export function pickP2Colors(
+  p1Body: string,
+  luminous = false
+): { body: string; light: string } {
+  const violet = luminous
+    ? { body: MP_P2_LUMINOUS_BODY, light: MP_P2_LUMINOUS_LIGHT }
+    : { body: MP_P2_PRINT_BODY, light: MP_P2_PRINT_LIGHT }
+  const d = colorDistance(p1Body, violet.body)
+  if (d !== null && d < COLOR_CLASH_DISTANCE) {
+    return luminous
+      ? { body: MP_P2_ALT_LUMINOUS_BODY, light: MP_P2_ALT_LUMINOUS_LIGHT }
+      : { body: MP_P2_ALT_BODY, light: MP_P2_ALT_LIGHT }
   }
-  return { body: MP_P2_BODY, light: MP_P2_LIGHT }
+  return violet
 }

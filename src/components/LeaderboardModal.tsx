@@ -24,7 +24,7 @@ export default function LeaderboardModal({ open, onClose }: LeaderboardModalProp
       setEntries(filterPublicLeaderboardEntries(data.entries ?? []))
       setError(null)
     } catch {
-      setError('Could not load leaderboard.')
+      setError(`Leaderboard unavailable. Retrying every ${POLL_MS / 1000} seconds.`)
     } finally {
       setLoading(false)
     }
@@ -54,33 +54,36 @@ export default function LeaderboardModal({ open, onClose }: LeaderboardModalProp
         className="rules-modal leaderboard-modal"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
+        aria-modal="true"
         aria-labelledby="leaderboard-title"
       >
         <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
         <span className="modal-eyebrow">SURVIVAL // GLOBAL</span>
         <h2 id="leaderboard-title" className="leaderboard-modal-title">
-          Top 7 Leaderboard
+          Leaderboard
         </h2>
-        <p className="leaderboard-modal-subtitle">Highest scores across all runs</p>
+        <p className="leaderboard-modal-subtitle">Top 7 · highest score per player</p>
 
-        {loading && <p className="leaderboard-status">Loading…</p>}
-        {error && <p className="leaderboard-status leaderboard-error">{error}</p>}
+        <div aria-live="polite">
+          {loading && <p className="leaderboard-status">Loading…</p>}
+          {error && <p className="leaderboard-status leaderboard-error">{error}</p>}
 
-        {!loading && !error && (
-          <ol className="leaderboard-list">
-            {entries.length === 0 ? (
-              <li className="leaderboard-empty">No scores yet — be the first!</li>
-            ) : (
-              entries.map((entry, i) => (
-                <li key={entry.username} className="leaderboard-row">
-                  <span className="leaderboard-rank">{i + 1}</span>
-                  <span className="leaderboard-name">{entry.username}</span>
-                  <span className="leaderboard-score">{entry.score}</span>
-                </li>
-              ))
-            )}
-          </ol>
-        )}
+          {!loading && !error && (
+            <ol className="leaderboard-list">
+              {entries.length === 0 ? (
+                <li className="leaderboard-empty">No runs logged yet.</li>
+              ) : (
+                entries.map((entry, i) => (
+                  <li key={entry.username} className="leaderboard-row">
+                    <span className="leaderboard-rank">{String(i + 1).padStart(2, '0')}</span>
+                    <span className="leaderboard-name">{entry.username}</span>
+                    <span className="leaderboard-score">{entry.score.toLocaleString()}</span>
+                  </li>
+                ))
+              )}
+            </ol>
+          )}
+        </div>
 
         <button type="button" className="btn btn-ghost" onClick={onClose}>
           Close

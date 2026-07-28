@@ -72,8 +72,9 @@ import {
   advanceStep,
   restartCurrentStep,
 } from '../lib/tutorialLogic'
-import { FONT_UI_BODY, FONT_UI_DISPLAY, FONT_GAME } from '../lib/fonts'
+import { FONT_DATA } from '../lib/fonts'
 import { palette, withAlpha } from '../lib/palette'
+import { recordSpeed, resetTelemetry, runSeries } from '../lib/telemetry'
 import type { RunSummary } from '../lib/stats'
 import { resolveActiveTheme, activeTrailStyle, type ResolvedTheme, type TrailStyle } from '../lib/customization'
 import type { Challenge } from '../lib/challenges'
@@ -310,6 +311,109 @@ function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: n
   return lines
 }
 
+/**
+ * The active render palette. Themes rebuild this object per run (see
+ * `resolveActiveTheme`), so every canvas-text helper takes it rather than
+ * closing over the module import — two of the eight themes print dark marks on
+ * light stock and nothing here may assume a dark field.
+ */
+type Pal = typeof palette
+
+/** Corner radius for every instrument panel. Panels are cut, not rounded. */
+const PANEL_RADIUS = 2
+
+const TAU = Math.PI * 2
+
+/**
+ * The bullseye's dial face. A target is a *graduated* mark — two concentric
+ * rings, a solid centre, and a scale of graduations around the outside, the way
+ * a range finder or a dial gauge is ruled. The unit vectors are precomputed
+ * once at module load; the ring rotates by transforming the context, so nothing
+ * here is recalculated per target per frame.
+ */
+// 16 graduations, majors every fourth. 24 was tried first and at an orb's
+// actual radius it closed into a sunburst; 16 keeps ~7px between marks, which
+// is the point at which a scale still reads as a scale.
+const BULLSEYE_TICK_COUNT = 16
+const BULLSEYE_TICKS: { c: number; s: number; major: boolean }[] = Array.from(
+  { length: BULLSEYE_TICK_COUNT },
+  (_, i) => {
+    const a = (i / BULLSEYE_TICK_COUNT) * TAU
+    return { c: Math.cos(a), s: Math.sin(a), major: i % 4 === 0 }
+  }
+)
+/** One revolution of the graduation scale, in ms. Slow — a settling instrument. */
+const BULLSEYE_SPIN_MS = 14000
+
+/**
+ * `withAlpha` only parses hex. Theme background values are authored as `rgba()`
+ * strings, and on light-stock themes those doubles as the panel/wash color, so
+ * overlays need an alpha helper that accepts either form.
+ */
+function withAlphaAny(color: string, alpha: number): string {
+  if (color.startsWith('#')) return withAlpha(color, alpha)
+  const m = /rgba?\(([^)]+)\)/.exec(color)
+  if (!m) return color
+  const parts = m[1].split(',').map((s) => s.trim())
+  if (parts.length < 3) return color
+  const base = parts.length > 3 ? parseFloat(parts[3]) : 1
+  return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${base * alpha})`
+}
+
+/**
+ * Mono text with manual tracking. `ctx.letterSpacing` is not in lib.dom and is
+ * unevenly supported, so wide-tracked control-panel labels are drawn per glyph.
+ * Only used for short overlay headings, never in the hot entity loop.
+ */
+function drawTrackedText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  cx: number,
+  y: number,
+  spacing: number
+) {
+  const widths: number[] = []
+  let total = 0
+  for (const ch of text) {
+    const cw = ctx.measureText(ch).width
+    widths.push(cw)
+    total += cw + spacing
+  }
+  total -= spacing
+  const prevAlign = ctx.textAlign
+  ctx.textAlign = 'left'
+  let x = cx - total / 2
+  let i = 0
+  for (const ch of text) {
+    ctx.fillText(ch, x, y)
+    x += widths[i++] + spacing
+  }
+  ctx.textAlign = prevAlign
+}
+
+/**
+ * Flat instrument panel: `panel` fill, 1px hairline border, ~2px corners, no
+ * bloom. Every canvas card in the arena is built from this.
+ */
+function drawPanel(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fill: string,
+  border: string,
+  borderWidth = 1
+) {
+  ctx.fillStyle = fill
+  ctx.beginPath()
+  ctx.roundRect(Math.round(x) + 0.5, Math.round(y) + 0.5, Math.round(w), Math.round(h), PANEL_RADIUS)
+  ctx.fill()
+  ctx.strokeStyle = border
+  ctx.lineWidth = borderWidth
+  ctx.stroke()
+}
+
 function drawRoundedTextBox(
   ctx: CanvasRenderingContext2D,
   w: number,
@@ -323,7 +427,9 @@ function drawRoundedTextBox(
     fillStyle: string
     strokeStyle: string
     textColor: string
-    fontWeight?: string
+    /** Optional wide-tracked label stamped above the body copy. */
+    label?: string
+    labelColor?: string
     globalAlpha?: number
   }
 ) {
@@ -335,35 +441,32 @@ function drawRoundedTextBox(
     fillStyle,
     strokeStyle,
     textColor,
-    fontWeight = '600',
+    label,
+    labelColor,
     globalAlpha = 1,
   } = options
 
-  const boxHeight = paddingY * 2 + lines.length * lineHeight
+  const labelBlock = label ? 20 : 0
+  const boxHeight = paddingY * 2 + labelBlock + lines.length * lineHeight
   const boxX = (w - boxWidth) / 2
   const boxY = (h - boxHeight) / 2
 
   ctx.save()
   ctx.globalAlpha = globalAlpha
-  ctx.fillStyle = fillStyle
-  ctx.strokeStyle = strokeStyle
-  ctx.lineWidth = 2
-  ctx.shadowColor = withAlpha(palette.player, 0.3)
-  ctx.shadowBlur = 20
+  drawPanel(ctx, boxX, boxY, boxWidth, boxHeight, fillStyle, strokeStyle)
 
-  ctx.beginPath()
-  ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 12)
-  ctx.fill()
-  ctx.stroke()
-
-  ctx.fillStyle = textColor
-  ctx.font = `${fontWeight} ${fontSize}px ${FONT_UI_BODY}`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.shadowColor = 'transparent'
-  ctx.shadowBlur = 0
 
-  const startY = boxY + paddingY + lineHeight / 2
+  if (label) {
+    ctx.fillStyle = labelColor ?? textColor
+    ctx.font = `500 10px ${FONT_DATA}`
+    drawTrackedText(ctx, label, w / 2, boxY + paddingY + 4, 2.6)
+  }
+
+  ctx.fillStyle = textColor
+  ctx.font = `400 ${fontSize}px ${FONT_DATA}`
+  const startY = boxY + paddingY + labelBlock + lineHeight / 2
   lines.forEach((line, index) => {
     ctx.fillText(line, w / 2, startY + index * lineHeight)
   })
@@ -372,20 +475,21 @@ function drawRoundedTextBox(
   return { boxX, boxY, boxHeight }
 }
 
-/** Rules-modal style card for tutorial step instructions */
+/** Instrument panel carrying a tutorial step's instruction. */
 function drawInstructionCard(
   ctx: CanvasRenderingContext2D,
   w: number,
   stepLabel: string,
   lines: string[],
+  pal: Pal,
   options: { boxWidth: number; globalAlpha: number; topOffset?: number }
 ) {
   const boxWidth = options.boxWidth
-  const padTop = 24
-  const padBottom = 24
-  const titleBlock = 38
-  const bodyFontSize = 16
-  const bodyLineHeight = Math.round(bodyFontSize * 1.7) // matches .rules-modal ul line-height
+  const padTop = 20
+  const padBottom = 22
+  const titleBlock = 30
+  const bodyFontSize = 14
+  const bodyLineHeight = Math.round(bodyFontSize * 1.7)
   const bodyHeight = lines.length * bodyLineHeight
   const boxHeight = padTop + titleBlock + bodyHeight + padBottom
   const boxX = (w - boxWidth) / 2
@@ -394,30 +498,27 @@ function drawInstructionCard(
   ctx.save()
   ctx.globalAlpha = options.globalAlpha
 
-  // Match .rules-modal panel
-  ctx.fillStyle = withAlpha(palette.panel, 0.78)
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.45)'
-  ctx.shadowBlur = 24
+  drawPanel(ctx, boxX, boxY, boxWidth, boxHeight, pal.panel, withAlpha(pal.ink, 0.5))
+
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+
+  // Step label — wide-tracked mono caps, the control-panel register.
+  ctx.fillStyle = pal.player
+  ctx.font = `500 11px ${FONT_DATA}`
+  drawTrackedText(ctx, stepLabel.toUpperCase(), w / 2, boxY + padTop + 6, 3)
+
+  // Hairline rule between label and body.
+  const ruleY = Math.round(boxY + padTop + titleBlock - 8) + 0.5
+  ctx.strokeStyle = withAlpha(pal.ink, 0.18)
+  ctx.lineWidth = 1
   ctx.beginPath()
-  ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 14)
-  ctx.fill()
-  ctx.shadowBlur = 0
+  ctx.moveTo(boxX + 16, ruleY)
+  ctx.lineTo(boxX + boxWidth - 16, ruleY)
+  ctx.stroke()
 
-  // Match .rules-modal h2
-  ctx.fillStyle = palette.playerLight
-  ctx.font = `700 22px ${FONT_UI_DISPLAY}`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.shadowColor = withAlpha(palette.player, 0.35)
-  ctx.shadowBlur = 12
-  ctx.fillText(stepLabel, w / 2, boxY + padTop + titleBlock / 2 - 4)
-  ctx.shadowBlur = 0
-
-  // Instruction body — centered
-  ctx.fillStyle = palette.text
-  ctx.font = `600 ${bodyFontSize}px ${FONT_UI_BODY}`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
+  ctx.fillStyle = pal.text
+  ctx.font = `400 ${bodyFontSize}px ${FONT_DATA}`
   const textStartY = boxY + padTop + titleBlock + bodyLineHeight / 2
   lines.forEach((line, index) => {
     ctx.fillText(line, w / 2, textStartY + index * bodyLineHeight)
@@ -426,40 +527,57 @@ function drawInstructionCard(
   ctx.restore()
 }
 
-/** Survival game-over arcade overlay (also used for tutorial death) */
+/**
+ * Run-terminated panel (tutorial death, and the fallback game-over for modes
+ * without a React end screen). A readout, not a marquee: flat panel, hairline
+ * border, mono throughout.
+ */
 function drawArcadeGameOverOverlay(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
+  pal: Pal,
   config: {
     title: string
     middle: string
     hint: string
   }
 ) {
-  ctx.fillStyle = withAlpha(palette.panel, 0.85)
+  ctx.save()
+  ctx.fillStyle = withAlphaAny(pal.void, 0.86)
   ctx.fillRect(0, 0, w, h)
+
+  const boxWidth = Math.min(420, Math.max(220, w - 64))
+  const boxHeight = 148
+  const boxX = (w - boxWidth) / 2
+  const boxY = (h - boxHeight) / 2
+  drawPanel(ctx, boxX, boxY, boxWidth, boxHeight, pal.panel, withAlpha(pal.ink, 0.55))
 
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 
-  ctx.fillStyle = palette.hostile
-  ctx.font = `bold 72px ${FONT_GAME}`
-  ctx.shadowColor = withAlpha(palette.hostile, 0.8)
-  ctx.shadowBlur = 30
-  ctx.fillText(config.title, w / 2, h / 2 - 60)
+  // Vermilion status line — the only alarm color on the panel.
+  ctx.fillStyle = pal.hostile
+  ctx.font = `600 15px ${FONT_DATA}`
+  drawTrackedText(ctx, config.title.toUpperCase(), w / 2, boxY + 34, 4)
 
-  ctx.fillStyle = palette.warn
-  ctx.font = `bold 48px ${FONT_GAME}`
-  ctx.shadowColor = withAlpha(palette.warn, 0.6)
-  ctx.shadowBlur = 20
-  ctx.fillText(config.middle, w / 2, h / 2)
+  const ruleY = Math.round(boxY + 54) + 0.5
+  ctx.strokeStyle = withAlpha(pal.ink, 0.18)
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(boxX + 18, ruleY)
+  ctx.lineTo(boxX + boxWidth - 18, ruleY)
+  ctx.stroke()
 
-  ctx.fillStyle = palette.muted
-  ctx.font = `bold 24px ${FONT_GAME}`
-  ctx.shadowColor = 'transparent'
-  ctx.shadowBlur = 0
-  ctx.fillText(config.hint, w / 2, h / 2 + 60)
+  ctx.fillStyle = pal.ink
+  ctx.font = `500 22px ${FONT_DATA}`
+  ctx.fillText(config.middle, w / 2, boxY + 84)
+
+  ctx.fillStyle = pal.muted
+  ctx.font = `400 11px ${FONT_DATA}`
+  drawTrackedText(ctx, config.hint.toUpperCase(), w / 2, boxY + boxHeight - 26, 1.6)
+
+  ctx.restore()
 }
 
 interface Particle {
@@ -471,7 +589,6 @@ interface Particle {
   centerX?: number
   centerY?: number
   angle?: number
-  maxRadius?: number
   currentRadius?: number
   rotationSpeed?: number
   radiusGrowth?: number
@@ -553,7 +670,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
   const obstaclesRef = useRef<Goal[]>([])
   /** Every orb of a `collectAll` challenge, on the board at once. */
   const sweepGoalsRef = useRef<Goal[]>([])
-  const bgStreaksRef = useRef<{ x: number; y: number; depth: number }[]>([])
+  /** Honors prefers-reduced-motion for every instrument animation added below. */
+  const reducedMotionRef = useRef(false)
   const gameDataRef = useRef<GameData>({
     score: 0,
     stage: 1,
@@ -615,6 +733,18 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     uiStateRef.current = props.uiState
   }, [props.uiState])
 
+  // Reduced motion: sweeps, pulses and scan rules settle to a static reading.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    reducedMotionRef.current = mq.matches
+    const onChange = () => {
+      reducedMotionRef.current = mq.matches
+    }
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
   useEffect(() => {
     gameModeRef.current = props.gameMode
   }, [props.gameMode])
@@ -674,6 +804,9 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       cataclysmsTriggered: rs.cataclysms,
       won,
       challengeId: p.challenge?.id,
+      // The run's own speed trace — the end screen plots it and marks the
+      // point the run stopped.
+      speedSamples: runSeries(),
     }
     // Stars are scored against the arena the run was actually played on, so the
     // dimensions travel with the result.
@@ -857,7 +990,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       playerRef.current = p1
       playersRef.current = [
         makeSlot(p1, 0, P1_KEYS, { body: pal.player, light: pal.playerLight }),
-        makeSlot(p2, 1, P2_KEYS, pickP2Colors(pal.player)),
+        makeSlot(p2, 1, P2_KEYS, pickP2Colors(pal.player, themeRef.current.luminous)),
       ]
     } else {
       // Single slot whose puck IS playerRef.current (aliased, not copied).
@@ -965,6 +1098,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
     // V2: reset run-scoped progression state (cosmetics were re-resolved above,
     // before the slot colors referenced them)
+    // The speed trace is run-scoped too: a restart starts a fresh chart.
+    resetTelemetry()
     runStatsRef.current = freshRunStats()
     challengeDoneRef.current = false
     runFinalizedRef.current = false
@@ -990,9 +1125,12 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
   }
 
   const spawnBurst = (x: number, y: number, color?: string, scale = 1) => {
-    const particleCount = 8 // Reduced from 10
-    const rotationSpeed = 0.08 // Slower rotation (was 0.15)
-    const radiusGrowth = 0.8 // Slower growth (was 1.5)
+    const particleCount = 8
+    // Both rates are per SECOND and integrated with dt. They used to be applied
+    // per frame, which made the spiral grow larger on a high-refresh display
+    // than on a 60Hz one.
+    const rotationSpeed = 4.8 // rad/s
+    const radiusGrowth = 72 * scale // px/s — `scale` reaches the spiral now
 
     for (let i = 0; i < particleCount; i++) {
       const baseAngle = (i / particleCount) * Math.PI * 2
@@ -1002,14 +1140,13 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         y,
         vx: 0,
         vy: 0,
-        life: 0.8, // Slightly longer life for smoother fade
+        life: 0.8,
         centerX: x,
         centerY: y,
         angle: baseAngle,
-        maxRadius: (25 + Math.random() * 15) * scale, // Smaller max radius
         currentRadius: 0,
-        rotationSpeed: rotationSpeed,
-        radiusGrowth: radiusGrowth,
+        rotationSpeed,
+        radiusGrowth,
         color,
       })
     }
@@ -1035,28 +1172,6 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     if (isDirectionHeld(keys, slot.inputMap.left)) applyAcceleration(p, rev * -acceleration * dt, 0)
     if (isDirectionHeld(keys, slot.inputMap.down)) applyAcceleration(p, 0, rev * acceleration * dt)
     if (isDirectionHeld(keys, slot.inputMap.up)) applyAcceleration(p, 0, rev * -acceleration * dt)
-  }
-
-  /**
-   * Velocity driving the parallax streak field: the player's own in
-   * single-player (slot 0 is the only slot, so this is bit-identical to the
-   * old playerRef read), the living players' average in multiplayer.
-   */
-  const avgPlayerVelocity = (): { vx: number; vy: number } => {
-    const slots = playersRef.current
-    if (propsRef.current.gameMode !== 'multiplayer' || slots.length === 0) {
-      const p = playerRef.current
-      return { vx: p?.vx ?? 0, vy: p?.vy ?? 0 }
-    }
-    const living = livingPlayers(slots)
-    const src = living.length > 0 ? living : slots
-    let vx = 0
-    let vy = 0
-    for (const s of src) {
-      vx += s.puck.vx
-      vy += s.puck.vy
-    }
-    return { vx: vx / src.length, vy: vy / src.length }
   }
 
   // Handle pause events
@@ -1286,7 +1401,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
                 if (p.x - p.radius < 0 || p.x + p.radius > w) p.vx = -p.vx * WALL_BOUNCE_DAMPING
                 if (p.y - p.radius < 0 || p.y + p.radius > h) p.vy = -p.vy * WALL_BOUNCE_DAMPING
                 clampToBounds(p, w, h)
-                spawnBurst(p.x, p.y, '#ffffff', 0.6)
+                spawnBurst(p.x, p.y, themeRef.current.palette.ink, 0.6)
                 shakeIntensityRef.current = Math.max(shakeIntensityRef.current, 5)
                 return
               }
@@ -1388,6 +1503,11 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           rs.currentDrift = 0
         }
       }
+
+      // Feed the shared speed trace — the HUD strip chart, the arena trail and
+      // the end-screen plot are all this one channel. Runs unconditionally so a
+      // stalled or frozen puck still plots a flat line rather than a gap.
+      recordSpeed(Math.hypot(player.vx, player.vy), dt)
 
       const arena =
         props.gameMode === 'challenge'
@@ -2024,39 +2144,26 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         }
       }
 
-      updateEffects(dt, w, h)
+      updateEffects(dt)
     }
 
     /**
      * Purely-cosmetic per-frame systems shared by the local sim and the
-     * online guest (which runs no sim but still animates these): parallax
-     * streak drift, particle motion, trail decay, shake/flash decay.
-     * `w`/`h` are the coordinate space the streaks live in (host arena dims
-     * on the guest, local canvas dims everywhere else).
+     * online guest (which runs no sim but still animates these): particle
+     * motion, trail decay, shake/flash decay.
+     *
+     * The measurement field that replaced the parallax streaks is static — it
+     * is graph paper, not weather — so it needs no per-frame update.
      */
-    function updateEffects(dt: number, w: number, h: number) {
-      // Parallax speed-streak field drifts opposite the players' motion
-      // (slot 0's own velocity in single-player, the living average in MP).
-      if (bgStreaksRef.current.length > 0) {
-        const av = avgPlayerVelocity()
-        for (const st of bgStreaksRef.current) {
-          st.x -= av.vx * dt * 0.12 * st.depth
-          st.y -= av.vy * dt * 0.12 * st.depth
-          if (st.x < 0) st.x += w
-          else if (st.x > w) st.x -= w
-          if (st.y < 0) st.y += h
-          else if (st.y > h) st.y -= h
-        }
-      }
-
+    function updateEffects(dt: number) {
       for (let i = 0; i < particlesRef.current.length; i++) {
         const p = particlesRef.current[i]
 
         // Handle spiral motion for burst particles
         if (p.angle !== undefined && p.currentRadius !== undefined && p.centerX !== undefined && p.centerY !== undefined) {
           // Update spiral motion
-          p.angle += (p.rotationSpeed || 0.15)
-          p.currentRadius += (p.radiusGrowth || 1.5)
+          p.angle += (p.rotationSpeed ?? 4.8) * dt
+          p.currentRadius += (p.radiusGrowth ?? 72) * dt
 
           // Calculate position based on spiral
           p.x = p.centerX + Math.cos(p.angle) * p.currentRadius
@@ -2329,60 +2436,266 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       net.send({ t: 'input', seq: ++inputSeqRef.current, k: mask })
     }
 
-    // ===== RENDERING FUNCTIONS =====
+    // ===== RENDERING: THE INSTRUMENT =====
+    //
+    // Everything on the field is either the specimen (player, targets, hazards)
+    // or the instrumentation reading it (ticks, rules, traces, labels).
+    // The governing rule is THE MARK IS THE SIGNAL. `shadowBlur` appears in
+    // exactly one place in this file and is gated strictly on
+    // `theme.luminous` — the printed instruments (Thermal, Plotter, Blackline)
+    // have no light to spend, so on those the specimen earns its presence from
+    // stroke weight and a double-struck contour instead of a halo. Every value
+    // below that differs between the two media reads that same flag; nothing is
+    // hardcoded for one chassis.
 
-    const drawGradientPuck = (x: number, y: number, radius: number, colorStop1: string, colorStop2: string) => {
-      // Use perfect circle with radial gradient - no distortion
-      const grad = ctx.createRadialGradient(x - 3, y - 3, 0, x, y, radius)
-      grad.addColorStop(0, colorStop1)
-      grad.addColorStop(1, colorStop2)
-      ctx.fillStyle = grad
-      ctx.beginPath()
-      // Perfect circle: same radius for x and y
-      ctx.arc(x, y, radius, 0, Math.PI * 2)
-      ctx.fill()
+    /**
+     * Diagonal hatch fill, cached per color. Hazards are hollow shapes filled
+     * with a screen — the mark of an annotated danger zone on a chart — and a
+     * pattern keeps that cheap: one small tile reused by every hazard on screen,
+     * instead of a clip + line loop per entity per frame.
+     *
+     * The tile carries ONE diagonal per period, so the hatch reads as ruled pen
+     * strokes (~3.5px apart) rather than the near-solid tint the old two-line
+     * tile produced. It is rasterized at device resolution and scaled back down
+     * by the pattern transform, because a hairline hatch blurred across a 2x
+     * canvas is exactly the mush that made red-on-paper look like a smudge.
+     */
+    const HATCH_TILE = 5
+    const hatchCache = new Map<string, CanvasPattern | null>()
+    const hatchFor = (color: string): CanvasPattern | null => {
+      const hit = hatchCache.get(color)
+      if (hit !== undefined) return hit
+      let pattern: CanvasPattern | null = null
+      if (typeof document !== 'undefined') {
+        const dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1))
+        const tile = document.createElement('canvas')
+        tile.width = Math.round(HATCH_TILE * dpr)
+        tile.height = Math.round(HATCH_TILE * dpr)
+        const tctx = tile.getContext('2d')
+        if (tctx) {
+          tctx.scale(dpr, dpr)
+          tctx.strokeStyle = color
+          tctx.lineWidth = 1
+          tctx.lineCap = 'square'
+          // x + y = TILE/2, extended past both corners so adjacent tiles join.
+          const c = HATCH_TILE / 2
+          tctx.beginPath()
+          tctx.moveTo(-HATCH_TILE, c + HATCH_TILE)
+          tctx.lineTo(c + HATCH_TILE, -HATCH_TILE)
+          tctx.stroke()
+          pattern = ctx.createPattern(tile, 'repeat')
+          if (pattern && typeof DOMMatrix !== 'undefined') {
+            pattern.setTransform(new DOMMatrix().scaleSelf(1 / dpr, 1 / dpr))
+          }
+        }
+      }
+      hatchCache.set(color, pattern)
+      return pattern
     }
 
-    const drawGlowCircle = (x: number, y: number, radius: number, color: string, blur: number, alpha: number) => {
-      // Draw perfect glow circle without distortion
-      ctx.shadowColor = color
-      ctx.shadowBlur = blur
-      ctx.fillStyle = `${color}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`
+    /** Diamond path — the moving-hazard silhouette. */
+    const diamondPath = (x: number, y: number, r: number) => {
       ctx.beginPath()
-      // Perfect circle: same radius for x and y
-      ctx.arc(x, y, radius, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.shadowColor = 'transparent'
-      ctx.shadowBlur = 0
+      ctx.moveTo(x, y - r)
+      ctx.lineTo(x + r, y)
+      ctx.lineTo(x, y + r)
+      ctx.lineTo(x - r, y)
+      ctx.closePath()
     }
 
-    /** Player puck body: velocity-reactive glow + squash/stretch + highlight. */
-    const drawPlayerBody = (p: Puck, body: string, light: string) => {
+    /**
+     * A hazard mark: hollow outline over a hatched screen. `square` is the
+     * fixed-hazard silhouette, `diamond` the moving one — neither reads as the
+     * ring-and-ticks of a target or the solid disc of a player. Silhouette, not
+     * hue, carries the safety-critical distinction (amber vs vermilion is a
+     * weak protan/deutan pair).
+     */
+    const drawHazardMark = (
+      x: number,
+      y: number,
+      r: number,
+      color: string,
+      shape: 'diamond' | 'square',
+      emphasis = 1
+    ) => {
+      // Incircle == the collision radius, so the mark never reads smaller than
+      // the thing that kills you.
+      const half = shape === 'diamond' ? r * Math.SQRT2 : r
+      if (shape === 'diamond') diamondPath(x, y, half)
+      else {
+        ctx.beginPath()
+        ctx.rect(x - half, y - half, half * 2, half * 2)
+      }
+
+      // Print media has no bloom to spend, so the hazard buys its weight in
+      // pen: a denser hatch and a heavier outline than a lit instrument needs.
+      const paper = !themeRef.current.luminous
+      const hatch = hatchFor(withAlpha(color, (paper ? 0.9 : 0.62) * emphasis))
+      if (hatch) {
+        ctx.fillStyle = hatch
+        ctx.fill()
+      } else {
+        ctx.fillStyle = withAlpha(color, 0.18 * emphasis)
+        ctx.fill()
+      }
+
+      ctx.strokeStyle = withAlpha(color, (paper ? 1 : 0.9) * emphasis)
+      ctx.lineWidth = paper ? 1.75 : 1.5
+      ctx.stroke()
+    }
+
+    /**
+     * The specimen. A solid disc of the signal pen — no gradient body, no
+     * specular highlight — plus a velocity vector whose length is speed.
+     * Momentum is the only input, so the renderer draws it.
+     *
+     * On a printed instrument the mark cannot glow, so it is given WEIGHT
+     * instead: the pen goes round the disc a second time (a hard-struck
+     * contour) and lays a registration ring just outside it. Both are drawn
+     * lines, not halos — the mark stays a mark, and it still finds the eye
+     * instantly against stock.
+     *
+     * `hollow` is P2's silhouette in multiplayer: an annulus against P1's solid
+     * disc, so the two players separate without a sixth hue.
+     */
+    const drawPlayerBody = (p: Puck, body: string, hollow = false) => {
+      const luminous = themeRef.current.luminous
       const pSpeed = Math.hypot(p.vx, p.vy)
       const speedT = Math.min(1, pSpeed / 500)
-      drawGlowCircle(p.x, p.y, p.radius + 8 + speedT * 8, body, 25 + speedT * 22, 0.4 + speedT * 0.25)
+
+      // ── Velocity vector: the reading this whole instrument exists to take.
+      if (pSpeed > 24) {
+        const ux = p.vx / pSpeed
+        const uy = p.vy / pSpeed
+        const from = p.radius + 3
+        const to = p.radius + 6 + speedT * 44
+        const hx = p.x + ux * to
+        const hy = p.y + uy * to
+        ctx.strokeStyle = withAlpha(body, 0.45 + speedT * 0.5)
+        ctx.lineWidth = 1.4
+        ctx.beginPath()
+        ctx.moveTo(p.x + ux * from, p.y + uy * from)
+        ctx.lineTo(hx, hy)
+        // Cross-tick at the head — a cursor on a scale, not an arrowhead.
+        ctx.moveTo(hx - uy * 3.5, hy + ux * 3.5)
+        ctx.lineTo(hx + uy * 3.5, hy - ux * 3.5)
+        ctx.stroke()
+      }
 
       ctx.save()
-      // Stretch the body along the direction of travel — subtle arcade juice.
+      // Squash/stretch survives: it still reads as mass resisting a direction
+      // change, which is the thing being measured.
       if (pSpeed > 30) {
         const ang = Math.atan2(p.vy, p.vx)
-        const stretch = speedT * 0.18
+        const stretch = speedT * 0.16
         ctx.translate(p.x, p.y)
         ctx.rotate(ang)
         ctx.scale(1 + stretch, 1 - stretch)
         ctx.rotate(-ang)
         ctx.translate(-p.x, -p.y)
       }
-      drawGradientPuck(p.x, p.y, p.radius, light, body)
 
-      // Player highlight
-      const highlightGrad = ctx.createRadialGradient(p.x - 4, p.y - 4, 0, p.x, p.y, p.radius)
-      highlightGrad.addColorStop(0, 'rgba(255, 255, 255, 0.6)')
-      highlightGrad.addColorStop(1, 'rgba(255, 255, 255, 0)')
-      ctx.fillStyle = highlightGrad
+      // The one permitted bloom in the whole renderer, and only on a tube. On a
+      // printed instrument this branch never runs.
+      if (luminous) {
+        ctx.shadowColor = body
+        ctx.shadowBlur = 8 + speedT * 8
+      }
+      ctx.fillStyle = body
+      if (hollow) {
+        // Annulus: outer disc minus a punched center, drawn as one even-odd
+        // path so the hole is transparent rather than filled with a guess at
+        // the background color (which light-stock themes would get wrong).
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.radius, 0, TAU)
+        ctx.arc(p.x, p.y, p.radius * 0.46, 0, TAU, true)
+        ctx.fill('evenodd')
+      } else {
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.radius, 0, TAU)
+        ctx.fill()
+      }
+
+      if (!luminous) {
+        // Double-struck contour: the pen retraces the edge, so the mark ends
+        // ~1px larger with a hard, dense boundary instead of a soft one.
+        ctx.shadowBlur = 0
+        ctx.strokeStyle = body
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.radius, 0, TAU)
+        if (hollow) {
+          ctx.moveTo(p.x + p.radius * 0.46, p.y)
+          ctx.arc(p.x, p.y, p.radius * 0.46, 0, TAU)
+        }
+        ctx.stroke()
+
+        // Registration ring: a separate hairline standing off the body, which
+        // is how a plotter says "this mark is the subject" without a halo. It
+        // presses harder the faster the specimen is travelling.
+        ctx.strokeStyle = withAlpha(body, 0.42 + speedT * 0.28)
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.radius + 3.5, 0, TAU)
+        ctx.stroke()
+      }
+      ctx.restore()
+    }
+
+    /**
+     * A target is a graduated mark, not a lamp: two concentric rings, a solid
+     * centre, and a scale of 24 graduations ruled around the outside (majors
+     * every sixth), like the face of a dial gauge or a range finder.
+     *
+     * The scale turns slowly — the instrument hunting for a reading — and
+     * `lock` (0..1, driven by player proximity) TIGHTENS the rings toward the
+     * centre as the specimen closes, so acquisition is read from geometry
+     * rather than brightness. Nothing here glows on either medium.
+     *
+     * Cost: the graduations are one batched path and their unit vectors are
+     * precomputed at module load, so a target is three draw calls flat —
+     * cheap enough for the seven-goal cataclysms.
+     */
+    const drawBullseye = (x: number, y: number, r: number, color: string, lock: number) => {
+      // Rings close in on approach; the outer never shrinks past the inner.
+      const outer = r * (0.98 - lock * 0.13)
+      const inner = r * (0.6 - lock * 0.17)
+      const dot = Math.max(1.6, r * (0.19 + lock * 0.07))
+
+      ctx.save()
+      ctx.translate(x, y)
+      if (!reducedMotionRef.current) {
+        ctx.rotate(((Date.now() % BULLSEYE_SPIN_MS) / BULLSEYE_SPIN_MS) * TAU)
+      }
+
+      // ── The graduation scale, batched into one path.
+      const base = outer + 3
+      ctx.strokeStyle = withAlpha(color, 0.45 + lock * 0.45)
+      ctx.lineWidth = 1
       ctx.beginPath()
-      ctx.arc(p.x - 4, p.y - 4, p.radius * 0.4, 0, Math.PI * 2)
+      for (const t of BULLSEYE_TICKS) {
+        const end = base + (t.major ? 5 : 2.5)
+        ctx.moveTo(t.c * base, t.s * base)
+        ctx.lineTo(t.c * end, t.s * end)
+      }
+      ctx.stroke()
+
+      // ── Two concentric rings, one path. They carry the silhouette, so they
+      // are struck heavier than the scale around them.
+      ctx.strokeStyle = withAlpha(color, 0.8 + lock * 0.2)
+      ctx.lineWidth = 1.6
+      ctx.beginPath()
+      ctx.arc(0, 0, outer, 0, TAU)
+      ctx.moveTo(inner, 0)
+      ctx.arc(0, 0, inner, 0, TAU)
+      ctx.stroke()
+
+      // ── The centre: a hard press of the pen.
+      ctx.fillStyle = withAlpha(color, 0.88 + lock * 0.12)
+      ctx.beginPath()
+      ctx.arc(0, 0, dot, 0, TAU)
       ctx.fill()
+
       ctx.restore()
     }
 
@@ -2395,6 +2708,12 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       // pick up the player's selected arena theme with no per-call changes.
       const theme = themeRef.current
       const palette = theme.palette
+
+      // Chassis roles (`panel`, `void`, `muted`, `warn`) now come off the
+      // resolved theme itself — `resolveActiveTheme` maps them to the
+      // instrument's own sheet, stock and secondary pen — so overlays read
+      // straight off `palette` on every medium. The old per-frame re-derivation
+      // is gone.
 
       // Multiplayer variant flags (mirrors update()); cataclysm visuals run in
       // survival AND co-op.
@@ -2429,50 +2748,77 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         h = guestArena.h
       }
 
-      // ===== THEMED ARENA BACKGROUND (radial wash + faint grid) =====
-      const bgGrad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.75)
-      bgGrad.addColorStop(0, theme.bgInner)
-      bgGrad.addColorStop(1, theme.bgOuter)
-      ctx.fillStyle = bgGrad
+      // ===== THE MEASUREMENT FIELD =====
+      // Flat ground, then graph paper: crosses at the grid intersections and a
+      // stepped graduation along the edges. Static and quiet — the field is the
+      // paper the run is drawn on, not weather. Everything batches into two
+      // paths, so the cost is two strokes per frame regardless of arena size.
+      ctx.fillStyle = theme.bgOuter
       ctx.fillRect(0, 0, w, h)
 
-      // Parallax speed-streak field — the arena's living texture. Streaks lengthen
-      // and align to the player's motion (idle = a slow ambient downward drift).
-      if (bgStreaksRef.current.length === 0 && w > 0) {
-        bgStreaksRef.current = Array.from({ length: 64 }, () => ({
-          x: Math.random() * w,
-          y: Math.random() * h,
-          depth: 0.4 + Math.random() * 1.2,
-        }))
-      }
-      const pv = avgPlayerVelocity()
-      const psp = Math.hypot(pv.vx, pv.vy)
-      const dirx = psp > 6 ? -pv.vx / psp : 0
-      const diry = psp > 6 ? -pv.vy / psp : 1
-      const baseLen = 5 + Math.min(28, psp * 0.06)
-      ctx.strokeStyle = withAlpha(palette.player, 0.05 + Math.min(0.16, psp * 0.0004))
+      const GRID = 80
+      const MINOR = 20
+      const CROSS = 2.5
+
+      // Interior intersection crosses.
+      ctx.strokeStyle = theme.grid
       ctx.lineWidth = 1
       ctx.beginPath()
-      for (const st of bgStreaksRef.current) {
-        const len = baseLen * st.depth
-        ctx.moveTo(st.x, st.y)
-        ctx.lineTo(st.x + dirx * len, st.y + diry * len)
+      for (let gx = GRID; gx < w; gx += GRID) {
+        const x = Math.round(gx) + 0.5
+        for (let gy = GRID; gy < h; gy += GRID) {
+          const y = Math.round(gy) + 0.5
+          ctx.moveTo(x - CROSS, y)
+          ctx.lineTo(x + CROSS, y)
+          ctx.moveTo(x, y - CROSS)
+          ctx.lineTo(x, y + CROSS)
+        }
       }
       ctx.stroke()
 
-      // ===== CHALLENGE ARENA BOUNDARY (tiny-arena challenges) =====
+      // Minor graduation stepping in from each edge. 0.07 was a legible ghost
+      // on a black field; against stock it disappeared, so the edge scale is
+      // printed at a value that actually survives paper.
+      ctx.strokeStyle = withAlpha(palette.ink, theme.luminous ? 0.09 : 0.14)
+      ctx.beginPath()
+      for (let gx = MINOR; gx < w; gx += MINOR) {
+        const x = Math.round(gx) + 0.5
+        ctx.moveTo(x, 0); ctx.lineTo(x, 4)
+        ctx.moveTo(x, h); ctx.lineTo(x, h - 4)
+      }
+      for (let gy = MINOR; gy < h; gy += MINOR) {
+        const y = Math.round(gy) + 0.5
+        ctx.moveTo(0, y); ctx.lineTo(4, y)
+        ctx.moveTo(w, y); ctx.lineTo(w - 4, y)
+      }
+      ctx.stroke()
+
+      // ===== CHALLENGE ARENA LIMIT (tiny-arena challenges) =====
+      // A ruled limit with corner brackets — the same language as the
+      // cataclysm's closing arena, and lethal for the same reason.
       const chArena =
         propsRef.current.gameMode === 'challenge'
           ? challengeArena(w, h, propsRef.current.challenge, runStatsRef.current.elapsed)
           : null
       if (chArena) {
-        ctx.strokeStyle = withAlpha(palette.hostile, 0.5)
+        const ax = Math.round(chArena.x) + 0.5
+        const ay = Math.round(chArena.y) + 0.5
+        const ax2 = Math.round(chArena.x + chArena.width) - 0.5
+        const ay2 = Math.round(chArena.y + chArena.height) - 0.5
+        ctx.strokeStyle = withAlpha(palette.hostile, 0.9)
+        ctx.lineWidth = 1.25
+        ctx.beginPath()
+        ctx.rect(ax, ay, ax2 - ax, ay2 - ay)
+        ctx.stroke()
+
+        const arm = 16
         ctx.lineWidth = 2
-        ctx.shadowColor = palette.hostile
-        ctx.shadowBlur = 16
-        ctx.strokeRect(chArena.x, chArena.y, chArena.width, chArena.height)
-        ctx.shadowColor = 'transparent'
-        ctx.shadowBlur = 0
+        ctx.beginPath()
+        ctx.moveTo(ax, ay + arm); ctx.lineTo(ax, ay); ctx.lineTo(ax + arm, ay)
+        ctx.moveTo(ax2 - arm, ay); ctx.lineTo(ax2, ay); ctx.lineTo(ax2, ay + arm)
+        ctx.moveTo(ax2, ay2 - arm); ctx.lineTo(ax2, ay2); ctx.lineTo(ax2 - arm, ay2)
+        ctx.moveTo(ax + arm, ay2); ctx.lineTo(ax, ay2); ctx.lineTo(ax, ay2 - arm)
+        ctx.stroke()
       }
 
       ctx.save()
@@ -2480,101 +2826,151 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
       const player = playerRef.current!
 
+      // Acquisition cue: how locked-on a target is, from the distance to the
+      // nearest puck that can still collect it. Single-player this is simply
+      // the player.
+      const LOCK_RANGE = 150
+      const lockAt = (x: number, y: number) => {
+        let best = Infinity
+        for (const s of playersRef.current) {
+          if (!s.alive) continue
+          best = Math.min(best, Math.hypot(s.puck.x - x, s.puck.y - y))
+        }
+        if (!Number.isFinite(best)) best = Math.hypot(player.x - x, player.y - y)
+        const t = Math.max(0, Math.min(1, 1 - best / LOCK_RANGE))
+        return t * t
+      }
+
       // ===== DRAW NORMAL MODE GOAL =====
       if (gameData.state === 'playing' && goalRef.current) {
         const goal = goalRef.current
-        const pulse = (Math.sin(Date.now() / 260) + 1) / 2
-        const glowSize = goal.radius + 7 + pulse * 3
-
-        drawGlowCircle(goal.x, goal.y, glowSize, palette.orb, 20, 0.3)
-        drawGradientPuck(goal.x, goal.y, goal.radius, palette.orb, palette.orbDeep)
+        drawBullseye(goal.x, goal.y, goal.radius, palette.orb, lockAt(goal.x, goal.y))
       }
 
       // ===== DRAW SWEEP CHALLENGE GOALS =====
       if (gameData.state === 'playing' && sweepGoalsRef.current.length > 0) {
-        const pulse = (Math.sin(Date.now() / 260) + 1) / 2
         for (const goal of sweepGoalsRef.current) {
-          drawGlowCircle(goal.x, goal.y, goal.radius + 7 + pulse * 3, palette.orb, 20, 0.3)
-          drawGradientPuck(goal.x, goal.y, goal.radius, palette.orb, palette.orbDeep)
+          drawBullseye(goal.x, goal.y, goal.radius, palette.orb, lockAt(goal.x, goal.y))
         }
       }
 
       // ===== DRAW CATACLYSM GOALS =====
       if (gameData.state === 'cataclysm' && gameData.cataclysm) {
         for (const goal of gameData.cataclysm.goals) {
-          drawGlowCircle(goal.x, goal.y, goal.radius + 6, palette.orb, 15, 0.25)
-          drawGradientPuck(goal.x, goal.y, goal.radius, palette.orb, palette.orbDeep)
+          drawBullseye(goal.x, goal.y, goal.radius, palette.orb, lockAt(goal.x, goal.y))
         }
       }
 
       // ===== DRAW TUTORIAL GOALS =====
       if (props.gameMode === 'tutorial') {
         for (const goal of tutorialGoalsRef.current) {
-          const pulse = (Math.sin(Date.now() / 260) + 1) / 2
-          const glowSize = goal.radius + 7 + pulse * 3
-          drawGlowCircle(goal.x, goal.y, glowSize, palette.orb, 20, 0.3)
-          drawGradientPuck(goal.x, goal.y, goal.radius, palette.orb, palette.orbDeep)
+          drawBullseye(goal.x, goal.y, goal.radius, palette.orb, lockAt(goal.x, goal.y))
         }
       }
 
       if (gameData.state === 'cataclysm' && gameData.cataclysm) {
-        renderCataclysmEvent({ ctx, cat: gameData.cataclysm, player, width: w, height: h })
+        renderCataclysmEvent({
+          ctx,
+          cat: gameData.cataclysm,
+          player,
+          width: w,
+          height: h,
+          // Event marks draw in the run's own pens, and the blackout mask needs
+          // to know which value counts as "dark" on this medium.
+          pal: palette,
+          luminous: theme.luminous,
+        })
       }
 
-      // ===== DRAW ENEMIES =====
+      // ===== DRAW ENEMIES (moving hazard: hatched diamond) =====
       for (const enemy of enemiesRef.current) {
-        drawGlowCircle(enemy.x, enemy.y, enemy.radius + 6, palette.hostile, 12, 0.2)
-        drawGradientPuck(enemy.x, enemy.y, enemy.radius, palette.hostileLight, palette.hostile)
+        drawHazardMark(enemy.x, enemy.y, enemy.radius, palette.hostile, 'diamond')
       }
 
-      // ===== DRAW STATIC OBSTACLES (navigate hazards) =====
+      // ===== DRAW STATIC OBSTACLES (fixed hazard: hatched square) =====
+      // Rectilinear and axis-aligned so it reads as bolted down, against the
+      // enemies' diamonds. Corner ticks are the surveyor's mark for a fixed
+      // point — they replace the old pulsing glow ring.
       if (obstaclesRef.current.length > 0) {
-        const pulse = (Math.sin(Date.now() / 300) + 1) / 2
         for (const o of obstaclesRef.current) {
-          drawGlowCircle(o.x, o.y, o.radius + 6 + pulse * 3, palette.hostile, 16, 0.24)
-          drawGradientPuck(o.x, o.y, o.radius, palette.hostileLight, palette.hostile)
-          ctx.strokeStyle = withAlpha(palette.hostileLight, 0.4 + pulse * 0.3)
-          ctx.lineWidth = 2
+          drawHazardMark(o.x, o.y, o.radius, palette.hostile, 'square')
+          const c = o.radius + 4
+          const arm = 4
+          ctx.strokeStyle = withAlpha(palette.hostile, 0.6)
+          ctx.lineWidth = 1
           ctx.beginPath()
-          ctx.arc(o.x, o.y, o.radius + 5, 0, Math.PI * 2)
-          ctx.stroke()
-          // Inner cross marks it as a fixed hazard, not a moving enemy
-          ctx.strokeStyle = withAlpha(palette.void, 0.55)
-          ctx.lineWidth = 2
-          ctx.beginPath()
-          ctx.moveTo(o.x - o.radius * 0.45, o.y)
-          ctx.lineTo(o.x + o.radius * 0.45, o.y)
-          ctx.moveTo(o.x, o.y - o.radius * 0.45)
-          ctx.lineTo(o.x, o.y + o.radius * 0.45)
+          ctx.moveTo(o.x - c, o.y - c + arm); ctx.lineTo(o.x - c, o.y - c); ctx.lineTo(o.x - c + arm, o.y - c)
+          ctx.moveTo(o.x + c - arm, o.y - c); ctx.lineTo(o.x + c, o.y - c); ctx.lineTo(o.x + c, o.y - c + arm)
+          ctx.moveTo(o.x + c, o.y + c - arm); ctx.lineTo(o.x + c, o.y + c); ctx.lineTo(o.x + c - arm, o.y + c)
+          ctx.moveTo(o.x - c + arm, o.y + c); ctx.lineTo(o.x - c, o.y + c); ctx.lineTo(o.x - c, o.y + c - arm)
           ctx.stroke()
         }
       }
 
+      // ===== DRAW EVENT ENEMIES (hunters carry a pursuit annotation) =====
       if (gameData.state === 'cataclysm' && gameData.cataclysm?.eventEnemies) {
+        // Hunters share the hazard hue on purpose. What separates them is the
+        // annotation: a dashed pursuit ring and a lead line pointing at whom
+        // they are tracking.
+        const dashOffset = reducedMotionRef.current ? 0 : (Date.now() / 90) % 12
         for (const enemy of gameData.cataclysm.eventEnemies) {
-          if (enemy.hue === 'purple') {
-            const pulse = Math.sin(Date.now() / 160) * 0.35 + 0.65
-            drawGlowCircle(enemy.x, enemy.y, enemy.radius + 8 + pulse * 4, palette.hunter, 18, 0.26)
-            drawGradientPuck(enemy.x, enemy.y, enemy.radius, palette.hunterLight, palette.hunter)
-            ctx.strokeStyle = withAlpha(palette.hunterLight, 0.35 + pulse * 0.35)
-            ctx.lineWidth = 2
-            ctx.beginPath()
-            ctx.arc(enemy.x, enemy.y, enemy.radius + 6, 0, Math.PI * 2)
-            ctx.stroke()
-          } else {
-            drawGlowCircle(enemy.x, enemy.y, enemy.radius + 6, palette.hostile, 12, 0.2)
-            drawGradientPuck(enemy.x, enemy.y, enemy.radius, palette.hostileLight, palette.hostile)
+          drawHazardMark(enemy.x, enemy.y, enemy.radius, palette.hostile, 'diamond')
+          if (enemy.hue !== 'purple') continue
+
+          const target = nearestLivingPlayer(playersRef.current, enemy.x, enemy.y)
+          ctx.save()
+          ctx.setLineDash([3, 4])
+          ctx.lineDashOffset = -dashOffset
+          ctx.strokeStyle = withAlpha(palette.hunter, 0.7)
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          ctx.arc(enemy.x, enemy.y, enemy.radius + 8, 0, Math.PI * 2)
+          ctx.stroke()
+
+          const dx = target.x - enemy.x
+          const dy = target.y - enemy.y
+          const d = Math.hypot(dx, dy)
+          if (d > 1) {
+            const lead = Math.min(d - enemy.radius - 4, 52)
+            if (lead > 0) {
+              const ux = dx / d
+              const uy = dy / d
+              ctx.strokeStyle = withAlpha(palette.hunter, 0.5)
+              ctx.beginPath()
+              ctx.moveTo(enemy.x + ux * (enemy.radius + 9), enemy.y + uy * (enemy.radius + 9))
+              ctx.lineTo(enemy.x + ux * (enemy.radius + 9 + lead), enemy.y + uy * (enemy.radius + 9 + lead))
+              ctx.stroke()
+            }
           }
+          ctx.restore()
         }
       }
 
       // ===== DRAW PARTICLES =====
+      // Radial tick marks rather than glowing dots — a burst is a scatter of
+      // marks thrown off the impact, drawn in the same pen as everything else.
+      ctx.lineWidth = 1.4
       for (const p of particlesRef.current) {
-        const alpha = p.life / 0.6
-        ctx.fillStyle = withAlpha(p.color ?? palette.orb, alpha * 0.7)
+        const alpha = Math.max(0, p.life / 0.6)
+        const cx = p.centerX ?? p.x
+        const cy = p.centerY ?? p.y
+        let ux = p.x - cx
+        let uy = p.y - cy
+        const d = Math.hypot(ux, uy)
+        if (d < 0.001) {
+          ux = 0
+          uy = -1
+        } else {
+          ux /= d
+          uy /= d
+        }
+        // A short ink stroke fading out. On stock a 0.7 ceiling read as a smear
+        // of gray, so the mark is struck nearer full pen and fades from there.
+        ctx.strokeStyle = withAlpha(p.color ?? palette.ink, alpha * (theme.luminous ? 0.7 : 0.9))
         ctx.beginPath()
-        ctx.arc(p.x, p.y, 5, 0, Math.PI * 2)
-        ctx.fill()
+        ctx.moveTo(p.x, p.y)
+        ctx.lineTo(p.x + ux * 4, p.y + uy * 4)
+        ctx.stroke()
       }
 
       // Slot colors resolve against the live theme every frame: slot 0 is the
@@ -2582,41 +2978,93 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       const colorsForSlot = (slot: PlayerSlot): { body: string; light: string } =>
         slot.index === 0
           ? { body: palette.player, light: palette.playerLight }
-          : pickP2Colors(palette.player)
+          : pickP2Colors(palette.player, theme.luminous)
 
+      // ===== THE TRACE =====
+      // The trail is not a smear, it is the chart recorder's pen: a hairline
+      // path through the last ~0.42s of travel, with a tick stamped at a FIXED
+      // TIME INTERVAL. Because the interval is time and the path is distance,
+      // tick spacing *is* speed — a momentum game drawing its own momentum.
+      //
+      // `point.life` counts down from TRAIL_LIFE at dt, so age is exact and
+      // frame-rate independent; a tick lands wherever the age crosses a
+      // multiple of TICK_SECONDS.
+      const TRAIL_LIFE = 0.42
+      const TICK_SECONDS = 0.09
       const trail = trailStyleRef.current
-      playersRef.current.forEach((slot, i) => {
-        const trailColor = colorsForSlot(slot).body
-        for (const point of playerTrailRef.current[i] ?? []) {
-          const alpha = Math.max(0, point.life / 0.42)
-          ctx.fillStyle = withAlpha(trailColor, alpha * trail.opacity)
-          ctx.beginPath()
-          ctx.arc(point.x, point.y, point.radius * trail.width * (1.15 + (1 - alpha) * 0.8), 0, Math.PI * 2)
-          ctx.fill()
-        }
-      })
+      // `trail.opacity` was authored for soft blobs smeared over a black field,
+      // where a low alpha still glowed. A hairline of ink laid on stock at the
+      // same value is simply pale, so the multiplier is medium-dependent: the
+      // pen presses harder on paper than the tube needs to be driven.
+      const traceAlpha = Math.min(0.95, trail.opacity * (theme.luminous ? 2.6 : 3.4))
+      const tickAlpha = Math.min(1, traceAlpha * (trail.ticks ? 1.15 : 0.75))
+      const tickLen = trail.ticks ? 4.5 : 2.75
 
-      // ===== DRAW PLAYERS (velocity-reactive glow + squash/stretch) =====
+      ctx.save()
+      playersRef.current.forEach((slot, i) => {
+        const points = playerTrailRef.current[i] ?? []
+        if (points.length < 2) return
+        const traceColor = colorsForSlot(slot).body
+
+        ctx.strokeStyle = withAlpha(traceColor, traceAlpha)
+        ctx.lineWidth = Math.max(0.9, 1.25 * trail.width)
+        ctx.lineJoin = 'round'
+        ctx.lineCap = 'round'
+        ctx.beginPath()
+        ctx.moveTo(points[0].x, points[0].y)
+        for (let k = 1; k < points.length; k++) ctx.lineTo(points[k].x, points[k].y)
+        ctx.stroke()
+
+        // Interval stamps, perpendicular to the direction of travel.
+        ctx.strokeStyle = withAlpha(traceColor, tickAlpha)
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        let stamped = 0
+        for (let k = 1; k < points.length; k++) {
+          const ageA = TRAIL_LIFE - points[k - 1].life
+          const ageB = TRAIL_LIFE - points[k].life
+          if (Math.floor(ageA / TICK_SECONDS) === Math.floor(ageB / TICK_SECONDS)) continue
+          const dx = points[k].x - points[k - 1].x
+          const dy = points[k].y - points[k - 1].y
+          const d = Math.hypot(dx, dy)
+          if (d < 0.01) continue
+          const nx = -dy / d
+          const ny = dx / d
+          ctx.moveTo(points[k].x - nx * tickLen, points[k].y - ny * tickLen)
+          ctx.lineTo(points[k].x + nx * tickLen, points[k].y + ny * tickLen)
+          stamped++
+        }
+        if (stamped > 0) ctx.stroke()
+      })
+      ctx.restore()
+
+      // ===== DRAW PLAYERS (the specimen) =====
       for (const slot of playersRef.current) {
         const colors = colorsForSlot(slot)
         const p = slot.puck
+        // P2 is an annulus against P1's solid disc — the silhouette, not a
+        // sixth hue, is what tells the two players apart.
+        const hollow = mpVariantR !== null && slot.index === 1
 
-        // Co-op downed: pulsing hollow ring in the slot color + a thin arc
-        // counting down the bleedout window — no body fill.
+        // Co-op downed: the specimen stops reading. A dashed hollow ring where
+        // the puck was, plus a vermilion arc counting the bleedout down.
         if (mpVariantR === 'coop' && !slot.alive) {
-          const pulse = (Math.sin(Date.now() / 220) + 1) / 2
-          ctx.strokeStyle = withAlpha(colors.body, 0.35 + pulse * 0.45)
-          ctx.lineWidth = 3
+          const pulse = reducedMotionRef.current ? 0.5 : (Math.sin(Date.now() / 220) + 1) / 2
+          ctx.save()
+          ctx.setLineDash([3, 3])
+          ctx.strokeStyle = withAlpha(colors.body, 0.4 + pulse * 0.4)
+          ctx.lineWidth = 2
           ctx.beginPath()
-          ctx.arc(p.x, p.y, p.radius + 2 + pulse * 2, 0, Math.PI * 2)
+          ctx.arc(p.x, p.y, p.radius + 2, 0, Math.PI * 2)
           ctx.stroke()
+          ctx.restore()
 
           const downedAt = slot.downedAt ?? runStatsRef.current.elapsed
           const frac = Math.min(
             1,
             Math.max(0, (runStatsRef.current.elapsed - downedAt) / COOP_BLEEDOUT_SECONDS)
           )
-          ctx.strokeStyle = withAlpha(palette.hostile, 0.85)
+          ctx.strokeStyle = withAlpha(palette.hostile, 0.9)
           ctx.lineWidth = 2
           ctx.beginPath()
           ctx.arc(p.x, p.y, p.radius + 9, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2)
@@ -2631,30 +3079,26 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         // so it plays identically on host and guest with no wire data.
         if (propsRef.current.gameMode === 'multiplayer') {
           if (prevStunnedRef.current[slot.index] && !stunned) {
-            spawnBurst(p.x, p.y, '#ffffff', 0.6)
+            spawnBurst(p.x, p.y, palette.ink, 0.6)
           }
           prevStunnedRef.current[slot.index] = stunned
         }
         if (stunned) {
-          // Ghosted while stunned, with a depleting white arc counting down
-          // the stagger (mirrors the co-op bleedout arc).
+          // Ghosted while stunned, with a depleting ink arc counting down the
+          // stagger (mirrors the co-op bleedout arc).
           ctx.save()
           ctx.globalAlpha = 0.4
-          drawPlayerBody(p, colors.body, colors.light)
+          drawPlayerBody(p, colors.body, hollow)
           ctx.restore()
           const remaining = slot.stunnedUntil - runStatsRef.current.elapsed
           const frac = Math.min(1, Math.max(0, remaining / DUEL_STUN_SECONDS))
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)'
+          ctx.strokeStyle = withAlpha(palette.ink, 0.85)
           ctx.lineWidth = 2
           ctx.beginPath()
           ctx.arc(p.x, p.y, p.radius + 6, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2)
           ctx.stroke()
         } else {
           const isIt = mpVariantR === 'tag' && slot.isIt
-          if (isIt) {
-            // The "it" puck reads hostile: a stronger red glow behind it...
-            drawGlowCircle(p.x, p.y, p.radius + 14, palette.hostile, 32, 0.3)
-          }
           // I-frame flicker after a duel stagger or co-op revive. Tag is
           // excluded: it reuses immuneUntil as the swap cooldown and has its
           // own dashed-ring treatment.
@@ -2666,18 +3110,28 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
             ctx.save()
             ctx.globalAlpha = 0.55 + 0.45 * Math.sin(runStatsRef.current.elapsed * 30)
           }
-          drawPlayerBody(p, colors.body, colors.light)
+          drawPlayerBody(p, colors.body, hollow)
           if (immuneFlicker) ctx.restore()
           if (isIt) {
-            // ...plus a red outer ring — dashed and dimmed during the
-            // post-swap cooldown while tags can't land.
+            // "It" is flagged, not lit: a vermilion ring with four cardinal
+            // ticks — the arena's mark for a live hazard attached to a player.
+            // Dashed and dimmed during the post-swap cooldown, when tags can't
+            // land.
             const inCooldown = runStatsRef.current.elapsed < slot.immuneUntil
+            const r = p.radius + 7
             ctx.save()
-            if (inCooldown) ctx.setLineDash([5, 5])
-            ctx.strokeStyle = withAlpha(palette.hostile, inCooldown ? 0.45 : 0.95)
-            ctx.lineWidth = 3
+            if (inCooldown) ctx.setLineDash([4, 4])
+            ctx.strokeStyle = withAlpha(palette.hostile, inCooldown ? 0.5 : 1)
+            ctx.lineWidth = 2
             ctx.beginPath()
-            ctx.arc(p.x, p.y, p.radius + 7, 0, Math.PI * 2)
+            ctx.arc(p.x, p.y, r, 0, Math.PI * 2)
+            ctx.stroke()
+            ctx.setLineDash([])
+            ctx.beginPath()
+            ctx.moveTo(p.x, p.y - r - 1); ctx.lineTo(p.x, p.y - r - 5)
+            ctx.moveTo(p.x, p.y + r + 1); ctx.lineTo(p.x, p.y + r + 5)
+            ctx.moveTo(p.x - r - 1, p.y); ctx.lineTo(p.x - r - 5, p.y)
+            ctx.moveTo(p.x + r + 1, p.y); ctx.lineTo(p.x + r + 5, p.y)
             ctx.stroke()
             ctx.restore()
           }
@@ -2686,16 +3140,19 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
       ctx.restore()
 
-      // ===== RENDER ORDER ===== 
-      // 1. Background (cleared above)
-      // 2. Border (canvas boundary)
-      // 3. Goals and enemies and player (drawn above)
-      // 4. Effects and particles (drawn above)
-      // 5. Now draw boundary border at the end
-      
-      // ===== DRAW BOUNDARY INDICATOR WITH PROXIMITY-BASED GLOW =====
-      // Compute distance to nearest edge — the closest living player counts
-      // (with one slot this is exactly the old single-player computation).
+      // ===== RENDER ORDER =====
+      // 1. Measurement field (drawn first, under everything)
+      // 2. Targets, hazards, trace, specimen (drawn above)
+      // 3. Limit rails — instrumentation reads on TOP of the field
+      // 4. Fault-state overlays and panels
+
+      // ===== LIMIT RAILS =====
+      // The old border was a red bloom scaling to an 80px blur. It is now a
+      // ruled edge: a hairline rail with a stepped graduation, where the ticks
+      // nearest you go vermilion and a mono readout states the gap in pixels.
+      // This is safety-critical feedback, so proximity gets MORE signal than
+      // before, not less: the local rail thickens, the ticks triple in length,
+      // and the number is unambiguous where a glow was only a vibe.
       const proximityThreshold = 120 // px where warning starts
       let minDistToBoundary = Math.min(
         player.x - player.radius,
@@ -2730,48 +3187,171 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         }
       }
 
-      // Default subtle border (used for Zen or safe state)
-      let outerLine = 6
-      let innerLine = 1
-      let outerColor = 'rgba(255,255,255,0.06)'
-      let innerColor = 'rgba(255,255,255,0.08)'
-      let shadowColor = 'transparent'
-      let shadowBlur = 0
+      // Walls are lethal in survival/tutorial and punishing in duel/co-op; tag
+      // and zen wrap, so their rails stay inert. Challenges are excluded for
+      // the same reason as before the redesign: a shrunken challenge arena has
+      // its own limit, and the canvas edge is not it.
+      const railsArmed =
+        props.gameMode === 'survival' ||
+        props.gameMode === 'tutorial' ||
+        (props.gameMode === 'multiplayer' && mpVariantR !== 'tag')
 
-      if (
-        (props.gameMode === 'survival' ||
-          props.gameMode === 'tutorial' ||
-          (props.gameMode === 'multiplayer' && mpVariantR !== 'tag')) &&
-        dangerFactor > 0
-      ) {
-        // Amplify for survival, tutorial and multiplayer (walls stun in duel,
-        // down in co-op); tag wraps like zen, so no warning there
-        const of = Math.min(1, 0.15 + dangerFactor * 0.95)
-        outerLine = 12 + dangerFactor * 16
-        innerLine = 2 + dangerFactor * 6
-        outerColor = withAlpha(palette.hostile, 0.6 * of)
-        innerColor = withAlpha(palette.hostileLight, 0.45 + dangerFactor * 0.55)
-        shadowColor = withAlpha(palette.hostile, 0.95)
-        shadowBlur = 20 + dangerFactor * 60
+      // Base rail + MAJOR graduation, batched into two paths for the whole
+      // frame. The minor graduation belongs to the measurement field below and
+      // steps at MINOR, so major ticks land on the same lattice as the interior
+      // crosses rather than fighting them.
+      //
+      // Both are graphite (`ink`) while the puck is clear of them, and the
+      // warning band below overprints in red pen. On stock the old 0.18/0.16
+      // values sat under the grid; the rail is a ruled edge and has to read as
+      // a drawn line, so print gets a firmer press than the tube.
+      const RAIL_STEP = GRID
+      const railAlpha = theme.luminous ? 0.2 : 0.3
+      ctx.lineWidth = 1
+      ctx.lineCap = 'butt'
+      ctx.strokeStyle = withAlpha(palette.ink, railAlpha)
+      ctx.beginPath()
+      ctx.rect(0.5, 0.5, Math.max(0, w - 1), Math.max(0, h - 1))
+      ctx.stroke()
+
+      ctx.strokeStyle = withAlpha(palette.ink, railAlpha * 0.85)
+      ctx.beginPath()
+      for (let gx = RAIL_STEP; gx < w; gx += RAIL_STEP) {
+        const x = Math.round(gx) + 0.5
+        ctx.moveTo(x, 0); ctx.lineTo(x, 9)
+        ctx.moveTo(x, h); ctx.lineTo(x, h - 9)
       }
+      for (let gy = RAIL_STEP; gy < h; gy += RAIL_STEP) {
+        const y = Math.round(gy) + 0.5
+        ctx.moveTo(0, y); ctx.lineTo(9, y)
+        ctx.moveTo(w, y); ctx.lineTo(w - 9, y)
+      }
+      ctx.stroke()
 
-      // Draw outer glow inset by half maximum stroke to avoid clipping
-      const halfMax = Math.max(outerLine, innerLine) / 2
-      ctx.strokeStyle = outerColor
-      ctx.lineWidth = outerLine
-      ctx.shadowColor = shadowColor
-      ctx.shadowBlur = shadowBlur
-      ctx.strokeRect(halfMax, halfMax, Math.max(0, w - halfMax * 2), Math.max(0, h - halfMax * 2))
+      if (railsArmed && dangerFactor > 0) {
+        // Per-player, per-edge: light up the stretch of rail the puck is
+        // actually closing on, and state the gap.
+        const watched =
+          propsRef.current.gameMode === 'multiplayer'
+            ? livingPlayers(playersRef.current).map((s) => s.puck)
+            : [player]
+        const SPAN = 150 // px of rail lit either side of the puck's projection
 
-      // Inner bright edge
-      ctx.strokeStyle = innerColor
-      ctx.lineWidth = innerLine
-      ctx.shadowColor = 'transparent'
-      ctx.shadowBlur = 0
-      const halfInner = innerLine / 2
-      ctx.strokeRect(halfInner + 2, halfInner + 2, Math.max(0, w - (halfInner + 2) * 2), Math.max(0, h - (halfInner + 2) * 2))
+        ctx.font = `500 11px ${FONT_DATA}`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
 
-      // (removed full-screen tint) Keep only two border layers: base + glow
+        for (const p of watched) {
+          const edges: { gap: number; horizontal: boolean; at: number; far: boolean }[] = [
+            { gap: p.x - p.radius, horizontal: false, at: p.y, far: false },
+            { gap: w - (p.x + p.radius), horizontal: false, at: p.y, far: true },
+            { gap: p.y - p.radius, horizontal: true, at: p.x, far: false },
+            { gap: h - (p.y + p.radius), horizontal: true, at: p.x, far: true },
+          ]
+
+          for (const e of edges) {
+            if (e.gap >= proximityThreshold) continue
+            const raw = Math.max(0, Math.min(1, 1 - e.gap / proximityThreshold))
+            const t = raw * raw * (3 - 2 * raw)
+            // Entry into the band has to be visible on stock too, where a
+            // 35%-alpha red is barely a tint — so the pen starts down harder.
+            const alpha = 0.45 + t * 0.55
+            const tickLong = 6 + t * 14
+            const lo = e.at - SPAN
+            const hi = e.at + SPAN
+
+            // The rail segment itself, thickening as the gap closes.
+            ctx.strokeStyle = withAlpha(palette.hostile, alpha)
+            ctx.lineWidth = 1 + t * 3
+            ctx.beginPath()
+            if (e.horizontal) {
+              const y = e.far ? h - 2 : 2
+              ctx.moveTo(Math.max(0, lo), y)
+              ctx.lineTo(Math.min(w, hi), y)
+            } else {
+              const x = e.far ? w - 2 : 2
+              ctx.moveTo(x, Math.max(0, lo))
+              ctx.lineTo(x, Math.min(h, hi))
+            }
+            ctx.stroke()
+
+            // Vermilion graduation over the same span.
+            ctx.lineWidth = 1
+            ctx.beginPath()
+            if (e.horizontal) {
+              const y = e.far ? h : 0
+              const dir = e.far ? -1 : 1
+              const start = Math.max(MINOR, Math.ceil(lo / MINOR) * MINOR)
+              for (let gx = start; gx < Math.min(w, hi); gx += MINOR) {
+                const x = Math.round(gx) + 0.5
+                const fall = 1 - Math.abs(gx - e.at) / SPAN
+                ctx.moveTo(x, y)
+                ctx.lineTo(x, y + dir * tickLong * Math.max(0.35, fall))
+              }
+            } else {
+              const x = e.far ? w : 0
+              const dir = e.far ? -1 : 1
+              const start = Math.max(MINOR, Math.ceil(lo / MINOR) * MINOR)
+              for (let gy = start; gy < Math.min(h, hi); gy += MINOR) {
+                const y = Math.round(gy) + 0.5
+                const fall = 1 - Math.abs(gy - e.at) / SPAN
+                ctx.moveTo(x, y)
+                ctx.lineTo(x + dir * tickLong * Math.max(0.35, fall), y)
+              }
+            }
+            ctx.stroke()
+
+            // Dimension line from the puck to the limit. The gap readout at the
+            // edge is peripheral; this puts the same fact where the player is
+            // actually looking, which is what the old bloom was doing badly.
+            if (t > 0.25) {
+              ctx.save()
+              ctx.setLineDash([2, 4])
+              ctx.strokeStyle = withAlpha(palette.hostile, 0.3 + t * 0.5)
+              ctx.lineWidth = 1
+              ctx.beginPath()
+              if (e.horizontal) {
+                ctx.moveTo(p.x, e.far ? p.y + p.radius : p.y - p.radius)
+                ctx.lineTo(p.x, e.far ? h : 0)
+              } else {
+                ctx.moveTo(e.far ? p.x + p.radius : p.x - p.radius, p.y)
+                ctx.lineTo(e.far ? w : 0, p.y)
+              }
+              ctx.stroke()
+              ctx.restore()
+            }
+
+            // Numeric gap readout: annotated on the dimension line the way a
+            // drawing dimensions a clearance, offset off the line so it never
+            // lands on top of the puck it is measuring.
+            if (t > 0.12) {
+              const label = String(Math.max(0, Math.round(e.gap)))
+              const lx = e.horizontal
+                ? Math.max(18, Math.min(w - 18, p.x + 22))
+                : Math.max(
+                    14,
+                    Math.min(w - 14, (e.far ? p.x + p.radius + w : p.x - p.radius) / 2)
+                  )
+              const ly = e.horizontal
+                ? Math.max(
+                    14,
+                    Math.min(h - 14, (e.far ? p.y + p.radius + h : p.y - p.radius) / 2)
+                  )
+                : Math.max(14, Math.min(h - 14, p.y - 22))
+
+              // A dimension figure sits in a break in the line, not on top of
+              // it. The break is cut in the medium's own stock so the number
+              // reads over grid, trace or hatch on either medium.
+              const lw = ctx.measureText(label).width
+              ctx.fillStyle = withAlphaAny(theme.bgOuter, 0.88)
+              ctx.fillRect(lx - lw / 2 - 3, ly - 8, lw + 6, 16)
+
+              ctx.fillStyle = withAlpha(palette.hostile, Math.min(1, 0.65 + t * 0.35))
+              ctx.fillText(label, lx, ly)
+            }
+          }
+        }
+      }
 
       // ===== COLLISION FLASH =====
       if (collisionFlashRef.current > 0) {
@@ -2779,22 +3359,92 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         ctx.fillRect(0, 0, w, h)
       }
 
-      // ===== OPTIONAL: EVENT VIGNETTE (subtle intensity effect, survival + co-op) =====
-      if (cataclysmsOn && gameData.state === 'cataclysm' && gameData.cataclysm) {
-        const vignetteIntensity = 0.15
-        const gradient = ctx.createRadialGradient(w / 2, h / 2, Math.max(w, h) * 0.3, w / 2, h / 2, Math.max(w, h) * 0.8)
-        gradient.addColorStop(0, `rgba(0, 0, 0, 0)`)
-        gradient.addColorStop(1, `rgba(0, 0, 0, ${vignetteIntensity})`)
-        ctx.fillStyle = gradient
-        ctx.fillRect(0, 0, w, h)
+      /**
+       * Mono timecode at the top of the field, over a hairline depletion rule.
+       * Replaces the 48px glowing countdown: ink while there is room, warn
+       * under 10s, vermilion under 5s. Shared by the fault clock and the
+       * challenge deadline so both read on the same instrument.
+       */
+      const drawTimecode = (secondsLeft: number, total: number) => {
+        const s = Math.max(0, secondsLeft)
+        const color = s > 10 ? palette.ink : s > 5 ? palette.warn : palette.hostile
+        const barW = Math.min(240, Math.max(110, w * 0.24))
+        const cx = w / 2
+        const y = 20
 
-        // Urgency pulse: the whole screen throbs red in the final seconds.
-        const tl = gameData.cataclysm.timeLeft
-        if (tl > 0 && tl <= 5) {
-          const pulse = (Math.sin(Date.now() / 140) + 1) / 2
-          ctx.fillStyle = withAlpha(palette.hostile, (1 - tl / 5) * 0.16 * pulse)
-          ctx.fillRect(0, 0, w, h)
+        ctx.save()
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillStyle = color
+        ctx.font = `600 19px ${FONT_DATA}`
+        drawTrackedText(ctx, `T-${s.toFixed(1)}`, cx, y, 2)
+
+        const ruleY = Math.round(y + 16) + 0.5
+        ctx.strokeStyle = withAlpha(palette.ink, 0.24)
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(cx - barW / 2, ruleY)
+        ctx.lineTo(cx + barW / 2, ruleY)
+        ctx.stroke()
+
+        const frac = total > 0 ? Math.max(0, Math.min(1, s / total)) : 0
+        if (frac > 0) {
+          ctx.strokeStyle = color
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.moveTo(cx - barW / 2, ruleY)
+          ctx.lineTo(cx - barW / 2 + barW * frac, ruleY)
+          ctx.stroke()
         }
+        ctx.restore()
+      }
+
+      /**
+       * Final-5s urgency, as a hairline scan and a 1px frame flash rather than
+       * a full-screen red wash. Under reduced motion the scan parks at the
+       * center line and the flash holds a steady value.
+       */
+      const drawUrgencyScan = (secondsLeft: number) => {
+        if (secondsLeft <= 0 || secondsLeft > 5) return
+        const intensity = 1 - secondsLeft / 5
+        const reduce = reducedMotionRef.current
+        const scanY = reduce
+          ? Math.round(h / 2) + 0.5
+          : Math.round(((Date.now() % 900) / 900) * h) + 0.5
+
+        ctx.save()
+        ctx.strokeStyle = withAlpha(palette.hostile, 0.18 + intensity * 0.42)
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(0, scanY)
+        ctx.lineTo(w, scanY)
+        ctx.stroke()
+
+        const pulse = reduce ? 0.6 : (Math.sin(Date.now() / 140) + 1) / 2
+        ctx.strokeStyle = withAlpha(palette.hostile, intensity * (0.25 + pulse * 0.6))
+        ctx.lineWidth = 2
+        ctx.strokeRect(1, 1, Math.max(0, w - 2), Math.max(0, h - 2))
+        ctx.restore()
+      }
+
+      /**
+       * Set `ctx.font` for a tracked mono line, shrinking it until it fits
+       * `maxWidth`, and return the tracking to use. Wide tracking plus a narrow
+       * phone arena would otherwise run the fault annunciation off both edges.
+       */
+      const fitTracked = (
+        text: string,
+        maxWidth: number,
+        weight: string,
+        size: number,
+        track: number
+      ) => {
+        ctx.font = `${weight} ${size}px ${FONT_DATA}`
+        const width = ctx.measureText(text).width + Math.max(0, text.length - 1) * track
+        if (width <= maxWidth || width <= 0 || maxWidth <= 0) return track
+        const k = maxWidth / width
+        ctx.font = `${weight} ${(size * k).toFixed(2)}px ${FONT_DATA}`
+        return track * k
       }
 
       // ===== CATACLYSM EVENT - INTRO OVERLAY + TIMER (survival + co-op) =====
@@ -2802,98 +3452,125 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         const cat = gameData.cataclysm
         const enterTime = cat.enterTime ?? 0
         
-        // ===== EVENT INTRO OVERLAY (First 1.5 seconds) =====
+        // ===== FAULT STATE: INTRO (first 1.5 seconds) =====
+        // Not a title card — a fault annunciator. Corner brackets frame the
+        // arena, a scan rule crosses it, the event is named in tracked mono
+        // caps and the clock is a timecode. No 56px glowing text, no vignette.
         if (enterTime < 1.5) {
           const fadeInDuration = 0.3
           const holdDuration = 0.9
           const fadeOutDuration = 0.3
-          
+
           let alpha = 1
           if (enterTime < fadeInDuration) {
-            // Fade in
             alpha = enterTime / fadeInDuration
           } else if (enterTime < fadeInDuration + holdDuration) {
-            // Hold
             alpha = 1
           } else {
-            // Fade out
-            alpha = 1 - ((enterTime - fadeInDuration - holdDuration) / fadeOutDuration)
+            alpha = 1 - (enterTime - fadeInDuration - holdDuration) / fadeOutDuration
           }
-          
-          // Semi-transparent dark background with blue tint
-          ctx.save()
-          ctx.globalAlpha = alpha * 0.5
-          ctx.fillStyle = withAlpha(palette.panel, 0.9)
-          ctx.fillRect(0, 0, w, h)
-          ctx.restore()
-          
-          // Centered event title and objective
+          alpha = Math.max(0, Math.min(1, alpha))
+
           ctx.save()
           ctx.globalAlpha = alpha
+
+          // The field is washed back so the annunciation reads. `void` is the
+          // instrument's own stock, so this darkens a tube and pales a sheet —
+          // either way the marks underneath drop back. Flat, no radial bloom.
+          ctx.fillStyle = withAlphaAny(palette.void, 0.72)
+          ctx.fillRect(0, 0, w, h)
+
+          // Corner brackets.
+          const inset = 18
+          const arm = Math.min(56, Math.max(24, Math.min(w, h) * 0.08))
+          const bx = inset + 0.5
+          const by = inset + 0.5
+          const bx2 = w - inset - 0.5
+          const by2 = h - inset - 0.5
+          ctx.strokeStyle = withAlpha(palette.hostile, 0.9)
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.moveTo(bx, by + arm); ctx.lineTo(bx, by); ctx.lineTo(bx + arm, by)
+          ctx.moveTo(bx2 - arm, by); ctx.lineTo(bx2, by); ctx.lineTo(bx2, by + arm)
+          ctx.moveTo(bx2, by2 - arm); ctx.lineTo(bx2, by2); ctx.lineTo(bx2 - arm, by2)
+          ctx.moveTo(bx + arm, by2); ctx.lineTo(bx, by2); ctx.lineTo(bx, by2 - arm)
+          ctx.stroke()
+
+          // Scan rule: a full-width hairline that sweeps into position, or
+          // simply sits at the reading line under reduced motion.
+          const settle = Math.min(1, enterTime / 0.45)
+          const scanY = reducedMotionRef.current
+            ? Math.round(h / 2) + 0.5
+            : Math.round(h / 2 - (1 - settle) * h * 0.22) + 0.5
+          // Annunciator band. The specimen keeps moving under the overlay, and
+          // a puck parked on the reading line would swallow the fault text; the
+          // band guarantees the annunciation reads whatever is behind it, and
+          // gives the scan rule something to be the axis of. It is cut from
+          // `panel` — the theme's own sheet — so it separates from the washed
+          // field on paper instead of vanishing into it.
+          const bandTop = scanY - 64
+          const bandH = 122
+          ctx.fillStyle = withAlphaAny(palette.panel, 0.94)
+          ctx.fillRect(0, bandTop, w, bandH)
+          ctx.strokeStyle = withAlpha(palette.hostile, 0.45)
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          ctx.moveTo(0, Math.round(bandTop) + 0.5)
+          ctx.lineTo(w, Math.round(bandTop) + 0.5)
+          ctx.moveTo(0, Math.round(bandTop + bandH) - 0.5)
+          ctx.lineTo(w, Math.round(bandTop + bandH) - 0.5)
+          ctx.stroke()
+
+          ctx.strokeStyle = withAlpha(palette.hostile, 0.35)
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          ctx.moveTo(inset, scanY)
+          ctx.lineTo(w - inset, scanY)
+          ctx.stroke()
+
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
-          
-          // Event name (large, bold, RED glow)
+
+          // Status word.
           ctx.fillStyle = palette.hostile
-          ctx.font = `bold 56px ${FONT_GAME}`
-          ctx.shadowColor = withAlpha(palette.hostile, 0.85)
-          ctx.shadowBlur = 30
-          ctx.fillText(cat.eventName, w / 2, h / 2 - 40)
-          
-          // Event objective (smaller, gray)
-          const objective = getCataclysmObjective(cat.eventType)
+          ctx.font = `600 11px ${FONT_DATA}`
+          drawTrackedText(ctx, 'FAULT', w / 2, scanY - 52, 5)
+
+          // Event name — mono caps, wide tracking, ink not alarm: the fault is
+          // flagged by the frame, named by the type.
+          const fitW = Math.max(80, w - inset * 2 - 16)
+          const nameText = cat.eventName.toUpperCase()
+          const nameSize = Math.min(30, Math.max(16, w * 0.035))
+          ctx.fillStyle = palette.ink
+          drawTrackedText(
+            ctx,
+            nameText,
+            w / 2,
+            scanY - 22,
+            fitTracked(nameText, fitW, '500', nameSize, nameSize * 0.18)
+          )
+
+          // Objective + timecode below the rule.
+          const objText = getCataclysmObjective(cat.eventType).toUpperCase()
           ctx.fillStyle = palette.muted
-          ctx.font = `24px ${FONT_GAME}`
-          ctx.shadowColor = withAlpha(palette.muted, 0.5)
-          ctx.shadowBlur = 15
-          ctx.fillText(objective, w / 2, h / 2 + 30)
-          
+          drawTrackedText(ctx, objText, w / 2, scanY + 22, fitTracked(objText, fitW, '400', 12, 1.4))
+
+          ctx.fillStyle = withAlpha(palette.ink, 0.7)
+          ctx.font = `500 13px ${FONT_DATA}`
+          drawTrackedText(ctx, `T-${cat.timeLeft.toFixed(1)}`, w / 2, scanY + 46, 2)
+
           ctx.restore()
-        
-        // ===== CATACLYSM TIMER (After intro ends) =====
+
+        // ===== FAULT STATE: RUNNING CLOCK =====
         } else {
-          const timeLeft = Math.ceil(cat.timeLeft)
-          
-          // Color based on time remaining
-          if (timeLeft > 10) {
-            ctx.fillStyle = palette.white
-            ctx.shadowColor = 'rgba(255, 255, 255, 0.5)'
-          } else if (timeLeft > 5) {
-            ctx.fillStyle = palette.warn
-            ctx.shadowColor = withAlpha(palette.warn, 0.8)
-          } else {
-            ctx.fillStyle = palette.hostile
-            ctx.shadowColor = withAlpha(palette.hostile, 1)
-          }
-          
-          ctx.font = `bold 48px ${FONT_GAME}`
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'top'
-          ctx.shadowBlur = 20
-          
-          // Apply subtle pulse when critical
-          let scaleOffset = 1
-          if (timeLeft <= 5) {
-            const pulsePhase = (Date.now() % 400) / 400
-            scaleOffset = 1 + Math.sin(pulsePhase * Math.PI * 2) * 0.05
-          }
-          
-          ctx.save()
-          ctx.translate(w / 2, 40)
-          ctx.scale(scaleOffset, scaleOffset)
-          ctx.translate(-w / 2, -40)
-          ctx.fillText(`${timeLeft}s`, w / 2, 40)
-          ctx.restore()
-          
-          ctx.shadowColor = 'transparent'
-          ctx.shadowBlur = 0
+          drawTimecode(cat.timeLeft, 30)
+          drawUrgencyScan(cat.timeLeft)
         }
       }
 
       // ===== CHALLENGE TIMER (time-bound challenges) =====
-      // Mirrors the Cataclysm countdown so timed challenges surface the clock the
-      // same way events do. Survive challenges count down their target; timed
-      // collect challenges count down their deadline. Both escalate to red.
+      // Same timecode as the fault clock, so a timed challenge reads on the
+      // same instrument as an event.
       if (
         props.gameMode === 'challenge' &&
         propsRef.current.challenge &&
@@ -2902,41 +3579,9 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         const ch = propsRef.current.challenge
         const limit = challengeTimeLimit(ch, w, h)
         if (limit > 0) {
-          const secs = Math.max(0, Math.ceil(limit - runStatsRef.current.elapsed))
-
-          // Color by urgency, matching the Cataclysm timer.
-          if (secs > 10) {
-            ctx.fillStyle = palette.white
-            ctx.shadowColor = 'rgba(255, 255, 255, 0.5)'
-          } else if (secs > 5) {
-            ctx.fillStyle = palette.warn
-            ctx.shadowColor = withAlpha(palette.warn, 0.8)
-          } else {
-            ctx.fillStyle = palette.hostile
-            ctx.shadowColor = withAlpha(palette.hostile, 1)
-          }
-
-          ctx.font = `bold 48px ${FONT_GAME}`
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'top'
-          ctx.shadowBlur = 20
-
-          // Subtle pulse in the final seconds.
-          let scaleOffset = 1
-          if (secs <= 5) {
-            const pulsePhase = (Date.now() % 400) / 400
-            scaleOffset = 1 + Math.sin(pulsePhase * Math.PI * 2) * 0.05
-          }
-
-          ctx.save()
-          ctx.translate(w / 2, 40)
-          ctx.scale(scaleOffset, scaleOffset)
-          ctx.translate(-w / 2, -40)
-          ctx.fillText(`${secs}s`, w / 2, 40)
-          ctx.restore()
-
-          ctx.shadowColor = 'transparent'
-          ctx.shadowBlur = 0
+          const secs = Math.max(0, limit - runStatsRef.current.elapsed)
+          drawTimecode(secs, limit)
+          drawUrgencyScan(secs)
         }
       }
 
@@ -2946,36 +3591,38 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         
         // ===== TUTORIAL DEATH POPUP =====
         if (tutorialState.isDead) {
-          drawArcadeGameOverOverlay(ctx, w, h, {
-            title: 'YOU DIED!',
-            middle: `Step ${tutorialState.currentStep + 1} Restart`,
-            hint: 'Press SPACE to respawn at this step',
+          drawArcadeGameOverOverlay(ctx, w, h, palette, {
+            title: 'Run terminated',
+            middle: `Step ${tutorialState.currentStep + 1}`,
+            hint: 'Space to restart the step',
           })
           return // Don't render anything else when dead
         }
-        
-        // ===== BORDER WARNING POP-UP =====
+
+        // ===== LIMIT WARNING PANEL =====
         if (tutorialState.hasShownBorderWarning) {
           const timeSinceWarning = Date.now() - borderWarningStartTime.current
           const warningDuration = 2500 // Show for ~2.5 seconds
-          
+
           if (timeSinceWarning < warningDuration) {
             const alpha = Math.max(0, 1 - timeSinceWarning / warningDuration)
             const boxWidth = Math.min(440, w - 80)
-            const warningText = 'The wall is dangerous. The red glow means you\'re close to death.'
-            ctx.font = `500 18px ${FONT_UI_BODY}`
+            const warningText =
+              'The limit rail is lethal. Vermilion ticks and the gap readout mean you are closing on it.'
+            ctx.font = `400 13px ${FONT_DATA}`
             const warningLines = wrapCanvasText(ctx, warningText, boxWidth - 48)
 
             drawRoundedTextBox(ctx, w, h, warningLines, {
               boxWidth,
-              fontSize: 18,
-              lineHeight: 26,
-              paddingY: 20,
-              fillStyle: withAlpha(palette.hostile, 0.95),
-              strokeStyle: withAlpha(palette.hostileLight, 0.8),
-              textColor: palette.white,
-              fontWeight: '600',
-              globalAlpha: alpha * 0.95,
+              fontSize: 13,
+              lineHeight: 22,
+              paddingY: 18,
+              fillStyle: palette.panel,
+              strokeStyle: withAlpha(palette.hostile, 0.9),
+              textColor: palette.ink,
+              label: 'LIMIT',
+              labelColor: palette.hostile,
+              globalAlpha: alpha,
             })
           }
         }
@@ -3007,16 +3654,16 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           if (alpha > 0) {
             ctx.save()
             ctx.globalAlpha = alpha * 0.35
-            ctx.fillStyle = withAlpha(palette.panel, 0.85)
+            ctx.fillStyle = withAlphaAny(palette.void, 0.85)
             ctx.fillRect(0, 0, w, h)
             ctx.restore()
 
             const boxWidth = Math.min(560, w - 64)
-            ctx.font = `600 16px ${FONT_UI_BODY}`
+            ctx.font = `400 14px ${FONT_DATA}`
             const lines = wrapCanvasText(ctx, currentStep.instruction, boxWidth - 56)
-            const stepLabel = `Step ${tutorialState.currentStep + 1} of ${tutorialSteps.length}`
+            const stepLabel = `Step ${tutorialState.currentStep + 1} / ${tutorialSteps.length}`
 
-            drawInstructionCard(ctx, w, stepLabel, lines, {
+            drawInstructionCard(ctx, w, stepLabel, lines, palette, {
               boxWidth,
               globalAlpha: alpha,
               topOffset: Math.max(40, h * 0.1),
@@ -3035,10 +3682,10 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         props.gameMode !== 'challenge' &&
         props.gameMode !== 'multiplayer'
       ) {
-        drawArcadeGameOverOverlay(ctx, w, h, {
-          title: 'GAME OVER',
-          middle: `Score: ${gameData.score}`,
-          hint: 'Press SPACE to restart',
+        drawArcadeGameOverOverlay(ctx, w, h, palette, {
+          title: 'Run terminated',
+          middle: `SCORE ${gameData.score}`,
+          hint: 'Space to restart',
         })
       }
 
@@ -3046,8 +3693,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       if (guestTransformed) ctx.restore()
 
       // ===== ONLINE GUEST: STALL RIBBON =====
-      // Snapshots stopped arriving mid-match — surface it in the same
-      // mono/terminal style as the cataclysm timer. Suppressed while paused.
+      // Snapshots stopped arriving mid-match — a status readout on a flat
+      // panel, same instrument as every other card. Suppressed while paused.
       if (
         props.netRole === 'guest' &&
         props.net &&
@@ -3055,27 +3702,19 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         !props.isPaused &&
         snapshotBufferRef.current.isStalled(performance.now())
       ) {
-        const text = 'CONNECTION UNSTABLE — waiting for host…'
+        const text = 'LINK UNSTABLE — WAITING FOR HOST'
         ctx.save()
-        ctx.font = `bold 13px ${FONT_GAME}`
+        ctx.font = `500 11px ${FONT_DATA}`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
-        const textW = ctx.measureText(text).width
+        const textW = ctx.measureText(text).width + text.length * 1.6
         const boxW = Math.min(localW - 16, textW + 36)
-        const boxH = 30
+        const boxH = 26
         const boxX = (localW - boxW) / 2
         const boxY = 10
-        ctx.fillStyle = withAlpha(palette.panel, 0.88)
-        ctx.strokeStyle = withAlpha(palette.warn, 0.8)
-        ctx.lineWidth = 1.5
-        ctx.beginPath()
-        ctx.roundRect(boxX, boxY, boxW, boxH, 8)
-        ctx.fill()
-        ctx.stroke()
+        drawPanel(ctx, boxX, boxY, boxW, boxH, palette.panel, withAlpha(palette.warn, 0.85))
         ctx.fillStyle = palette.warn
-        ctx.shadowColor = withAlpha(palette.warn, 0.6)
-        ctx.shadowBlur = 10
-        ctx.fillText(text, localW / 2, boxY + boxH / 2 + 1)
+        drawTrackedText(ctx, text, localW / 2, boxY + boxH / 2 + 1, 1.6)
         ctx.restore()
       }
     }
@@ -3089,20 +3728,19 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       const net = props.net
       if (props.netRole === 'guest' && net) {
         // Online guest: NO simulation. Interpolated host snapshots become the
-        // world; only local cosmetic effects (particles/trails/streaks)
-        // advance. Snapshots also apply while paused so the world never
-        // desyncs across a pause; the intro-banner clock (dt) freezes.
+        // world; only local cosmetic effects (particles/trails) advance.
+        // Snapshots also apply while paused so the world never desyncs across
+        // a pause; the intro-banner clock (dt) freezes.
         const active = props.uiState === 'playing' && !props.isPaused
         if (props.uiState === 'playing' || props.uiState === 'paused') {
           applySnapshotState(active ? capped : 0)
         }
         if (active) {
-          const arena = latestSnapRef.current?.arena
-          updateEffects(
-            capped,
-            arena?.w ?? canvasWidthRef.current,
-            arena?.h ?? canvasHeightRef.current
-          )
+          updateEffects(capped)
+          // The guest simulates nothing, so its speed trace comes off the
+          // interpolated puck it actually controls (slot 1).
+          const local = playersRef.current[1]?.puck ?? playerRef.current
+          if (local) recordSpeed(Math.hypot(local.vx, local.vy), capped)
         }
         sendGuestInput(net, now)
       } else {

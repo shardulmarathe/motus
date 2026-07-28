@@ -45,10 +45,12 @@ export default function AchievementToast({ queue, onDrained }: AchievementToastP
   return (
     <div className="achv-banner-wrap" role="status" aria-live="polite">
       <div className={`achv-banner${visible ? ' show' : ''}`}>
-        <span className="achv-banner-shine" />
-        <span className="achv-banner-icon">{a.icon}</span>
+        {/* The bordered tile is the annunciator socket; the glyph inside it is
+            decoration, so it is hidden from assistive tech and the label,
+            name and description carry the announcement. */}
+        <span className="achv-banner-icon" aria-hidden="true">{a.icon}</span>
         <span className="achv-banner-text">
-          <span className="achv-banner-label">Achievement Unlocked</span>
+          <span className="achv-banner-label">Achievement unlocked</span>
           <span className="achv-banner-name">{a.name}</span>
           <span className="achv-banner-desc">{a.description}</span>
         </span>

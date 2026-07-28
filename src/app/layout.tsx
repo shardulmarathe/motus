@@ -13,7 +13,7 @@ const ogImage = `/og-home.png?v=${(process.env.VERCEL_GIT_COMMIT_SHA ?? 'dev').s
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: 'Motus',
-  description: 'A momentum-based platformer where precision and movement are everything.',
+  description: 'A momentum game. You have mass, inertia, and one field to survive in.',
   alternates: {
     canonical: siteUrl,
   },
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   // headless Chrome can't run in Vercel's build container).
   openGraph: {
     title: 'Motus',
-    description: 'A momentum-based platformer where precision and movement are everything.',
+    description: 'A momentum game. You have mass, inertia, and one field to survive in.',
     url: siteUrl,
     type: 'website',
     siteName: 'Motus',
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Motus',
-    description: 'A momentum-based platformer where precision and movement are everything.',
+    description: 'A momentum game. You have mass, inertia, and one field to survive in.',
     images: [ogImage],
   },
   icons: {
@@ -44,7 +44,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: 'cover',
-  themeColor: '#05070f',
+  themeColor: '#04120a',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

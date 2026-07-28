@@ -30,6 +30,8 @@ import { RoomClient } from '../lib/net/room'
 import { PROTOCOL_VERSION, type AnyMsg } from '../lib/net/protocol'
 import { MP_P2_BODY } from '../lib/multiplayer/players'
 import AchievementToast from '../components/AchievementToast'
+import TraceStrip from '../components/TraceStrip'
+import { applyThemeToDocument, chassisTheme } from '../lib/customization'
 import { recordRun, loadStats, type RunSummary } from '../lib/stats'
 import { checkAchievements, type Achievement } from '../lib/achievements'
 import {
@@ -57,6 +59,19 @@ import {
 } from '../lib/leaderboard'
 
 const LeaderboardModal = dynamic(() => import('../components/LeaderboardModal'), { ssr: false })
+
+/**
+ * The numbers the title screen puts on its own menu rows. Read from local
+ * storage after mount — reading during render would disagree with the server
+ * render and break hydration.
+ */
+type HomeReadouts = {
+  best: number
+  cleared: number
+  stars: number
+  runs: number
+  instrument: string
+}
 
 type HudState = {
   score: number
@@ -274,6 +289,31 @@ export default function Home() {
     const unsubscribe = room.addMessageListener((msg) => netMsgRef.current(msg))
     return unsubscribe
   }, [room])
+
+  // The selected instrument skins the whole product, not just the arena.
+  // `saveSettings` re-applies on every change; this covers the first paint,
+  // which has to happen after mount because the choice lives in localStorage.
+  useEffect(() => {
+    applyThemeToDocument()
+  }, [])
+
+  // Refreshed every time we land back on the title screen so a finished run
+  // shows up on the menu immediately.
+  const [homeReadouts, setHomeReadouts] = useState<HomeReadouts | null>(null)
+  useEffect(() => {
+    if (uiState !== 'title') return
+    const stats = loadStats()
+    const cs = challengeStats()
+    setHomeReadouts({
+      best: stats.highestScore,
+      cleared: cs.completedCount,
+      stars: cs.totalStars,
+      runs: stats.gamesPlayed,
+      // Same resolver the chassis uses, so the readout can never disagree with
+      // the instrument actually on screen.
+      instrument: chassisTheme().name,
+    })
+  }, [uiState, menuScreen, endRun])
 
   useEffect(() => {
     setRegisteredName(loadRegisteredPlayerName())
@@ -621,12 +661,15 @@ export default function Home() {
 
       {(uiState === 'playing' || uiState === 'paused') && (
         <header className="hud-overlay">
+          {/* The bar is a live strip chart of your own speed; the readouts
+              below are annotations on it. */}
+          <TraceStrip mode="live" className="hud-trace" height="100%" plotScale={0.6} />
           <div className="hud-left">
             {gameMode === 'multiplayer' ? (
               mpVariant === 'coop' ? (
                 // Co-op: one shared score plus the survival-style event counter.
                 <>
-                  <div className="hud-box score-box">
+                  <div className="hud-box score-box signal">
                     <div className="box-label">Score</div>
                     <div className="box-value">{hud.score}</div>
                   </div>
@@ -654,7 +697,7 @@ export default function Home() {
               )
             ) : (
               <>
-                <div className="hud-box score-box">
+                <div className="hud-box score-box signal">
                   <div className="box-label">Score</div>
                   <div className="box-value">{hud.score}</div>
                 </div>
@@ -759,31 +802,78 @@ export default function Home() {
           <div className="title-screen-center">
             <div className="home-shell">
               <header className="home-head">
-                <span className="home-eyebrow">Neon momentum arcade</span>
-                <h1 className="home-wordmark glow-text">MOTUS</h1>
+                <span className="home-spec">
+                  <span>Inertial test rig</span>
+                  <span>100 trials</span>
+                  <span>8 instruments</span>
+                </span>
+                <h1 className="home-wordmark">MOTUS</h1>
+                <div className="home-rule" />
                 <p className="home-tagline">
-                  A bright signal adrift in a dark, hostile field. Drift, weave, and survive the Cataclysm.
+                  Momentum is the only input. You have mass — you accelerate, you drift,
+                  and you cannot stop on demand.
                 </p>
               </header>
 
+              {/* Each row carries a live reading of your own data instead of a
+                  decorative index. Rows with nothing measured yet stay blank. */}
               <nav className="menu-list" aria-label="Main menu">
                 {[
-                  { i: '01', title: 'Play', desc: 'Endless survival. Climb the global leaderboard.', on: () => { setGameMode('survival'); setUiState('rules') } },
-                  { i: '02', title: 'Challenges', desc: '100 handcrafted trials. Earn your stars.', on: () => setMenuScreen('challenges') },
-                  { i: '03', title: 'Practice', desc: 'No enemies, no death — just movement.', on: () => { setGameMode('zen'); setUiState('rules') } },
-                  { i: '04', title: 'Tutorial', desc: 'Learn the mechanics step by step.', on: () => { setGameMode('tutorial'); setUiState('rules') } },
-                  { i: '05', title: 'Leaderboard', desc: 'See who sits at the top.', on: () => setLeaderboardOpen(true) },
-                  { i: '06', title: 'Profile', desc: 'Your lifetime stats and achievements.', on: () => setMenuScreen('profile') },
-                  { i: '07', title: 'Settings', desc: 'Themes, skins and trails you’ve earned.', on: () => setMenuScreen('settings') },
-                  { i: '08', title: 'Versus', desc: 'Duel, co-op or tag — one keyboard, two pucks.', on: () => setMenuScreen('multiplayer') },
+                  {
+                    title: 'Play',
+                    desc: 'Endless survival. Posts to the global leaderboard.',
+                    readout: homeReadouts && homeReadouts.best > 0 ? `Best ${homeReadouts.best}` : null,
+                    on: () => { setGameMode('survival'); setUiState('rules') },
+                  },
+                  {
+                    title: 'Challenges',
+                    desc: '100 trials, each harder than the one before.',
+                    readout: homeReadouts ? `${homeReadouts.cleared}/100 · ${homeReadouts.stars}★` : null,
+                    on: () => setMenuScreen('challenges'),
+                  },
+                  {
+                    title: 'Practice',
+                    desc: 'No hazards, no death. Movement only.',
+                    readout: null,
+                    on: () => { setGameMode('zen'); setUiState('rules') },
+                  },
+                  {
+                    title: 'Tutorial',
+                    desc: 'Learn the controls step by step.',
+                    readout: null,
+                    on: () => { setGameMode('tutorial'); setUiState('rules') },
+                  },
+                  {
+                    title: 'Leaderboard',
+                    desc: 'Who is holding the top of the board.',
+                    readout: null,
+                    on: () => setLeaderboardOpen(true),
+                  },
+                  {
+                    title: 'Profile',
+                    desc: 'Lifetime measurements and achievements.',
+                    readout: homeReadouts && homeReadouts.runs > 0 ? `${homeReadouts.runs} runs` : null,
+                    on: () => setMenuScreen('profile'),
+                  },
+                  {
+                    title: 'Settings',
+                    desc: 'Instruments, marks and trails you have earned.',
+                    readout: homeReadouts?.instrument ?? null,
+                    on: () => setMenuScreen('settings'),
+                  },
+                  {
+                    title: 'Versus',
+                    desc: 'Duel, co-op or tag. One keyboard, or two machines.',
+                    readout: null,
+                    on: () => setMenuScreen('multiplayer'),
+                  },
                 ].map((item) => (
-                  <button key={item.i} type="button" className="menu-row" onClick={item.on}>
-                    <span className="menu-index">{item.i}</span>
+                  <button key={item.title} type="button" className="menu-row" onClick={item.on}>
                     <span className="menu-row-body">
                       <span className="menu-row-title">{item.title}</span>
                       <span className="menu-row-desc">{item.desc}</span>
                     </span>
-                    <span className="menu-arrow" aria-hidden="true">→</span>
+                    {item.readout && <span className="menu-readout">{item.readout}</span>}
                   </button>
                 ))}
               </nav>
@@ -832,10 +922,10 @@ export default function Home() {
                   ] : gameMode === 'multiplayer' ? (
                     mpVariant === 'coop' ? [
                       'One shared score — collect orbs together.',
-                      'Every 10 orbs triggers a Cataclysm event. Clear it to advance the stage.',
-                      `Enemy or wall contact downs you — a teammate's touch revives you within ${COOP_BLEEDOUT_SECONDS}s.`,
+                      'Every 10 orbs triggers a Cataclysm. Clear it to advance the stage.',
+                      `Hazard or wall contact downs you — a teammate's touch revives you within ${COOP_BLEEDOUT_SECONDS}s.`,
                       `Fresh revives are shielded for ${COOP_REVIVE_IMMUNITY}s.`,
-                      'Both down and the run is over. Co-op runs don’t post to the leaderboard.',
+                      'Both down and the run is over. Co-op runs do not post to the leaderboard.',
                     ] : mpVariant === 'tag' ? [
                       `One ${TAG_ROUND_SECONDS}s round — don’t be it when it ends.`,
                       'Touch the other puck to pass it. Whoever is it moves faster.',
@@ -843,24 +933,22 @@ export default function Home() {
                       'Least time spent as it wins.',
                     ] : [
                       `First to ${DUEL_TARGET_SCORE} orbs wins the duel.`,
-                      `Enemy contact knocks you back and staggers you for ${DUEL_STUN_SECONDS}s — staggered pucks can't collect.`,
+                      `Hazard contact knocks you back and staggers you for ${DUEL_STUN_SECONDS}s — staggered pucks can't collect.`,
                       `After a stagger you're briefly untouchable (${DUEL_POST_STUN_IMMUNITY}s) — and walls just bounce you back.`,
                     ]
                   ) : gameMode === 'zen' ? [
-                    'No enemies.',
-                    'No death — you cannot lose.',
-                    'Wrap-around borders teleport you to the opposite side.',
-                    'Focus on collecting green orbs and movement.',
+                    'No hazards. You cannot lose.',
+                    'The borders wrap — leave one edge, arrive at the opposite one.',
+                    'Collect orbs and learn how the puck carries speed.',
                   ] : gameMode === 'tutorial' ? [
-                    'Learn the game mechanics step by step.',
-                    'Follow the instructions to complete each step.',
-                    'Practice movement and goal collection.',
-                    'Learn to avoid enemies in a safe environment.',
+                    'Each step teaches one mechanic.',
+                    'Follow the instruction on screen to advance.',
+                    'Movement and collection first, hazards after.',
                   ] : [
-                    'Move with arrow keys or WASD.',
-                    'Avoid red enemies; touch green goals to score.',
-                    'Every few goals triggers a short Cataclysm event.',
-                    'Stay inside the field — the edges will warn you.',
+                    'Move with the arrow keys or WASD. You drift — plan the stop.',
+                    'Take the orbs to score. Hatched marks are hazards; contact ends the run.',
+                    'Every ten orbs triggers a Cataclysm.',
+                    'The limit rails read out your distance as you close on them.',
                   ]
                 // Versus briefings get a variant accent + a keycap control
                 // legend; single-player briefings render exactly as before.
@@ -887,9 +975,11 @@ export default function Home() {
                     </span>
                     <h2>{title}</h2>
                     <div className="brief-list">
+                      {/* Briefing lines are a spec sheet, not a sequence — a
+                          tick marks each entry rather than a fake step number. */}
                       {items.map((text, i) => (
                         <div className="brief-row" key={i}>
-                          <span className="brief-row-index">{String(i + 1).padStart(2, '0')}</span>
+                          <span className="brief-row-index" aria-hidden="true">—</span>
                           <span className="brief-row-text">{text}</span>
                         </div>
                       ))}
