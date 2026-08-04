@@ -1,7 +1,5 @@
 # Motus
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-
 A momentum-driven arcade game rendered on an HTML5 canvas. You pilot a puck with
 real inertia — it coasts after you let go — collecting orbs, dodging hazards, and
 surviving periodic **Cataclysm** events that rewrite the rules for thirty seconds
@@ -134,6 +132,7 @@ netcode model, and the anti-cheat scheme — see
 [ARCHITECTURE.md](./ARCHITECTURE.md). [MOTUS_V2.md](./MOTUS_V2.md) covers the
 progression layer's design.
 
-## License
+---
 
-MIT — see [LICENSE](./LICENSE).
+© 2026 Shardul Marathe. All rights reserved. This source is published for
+portfolio review; it is not licensed for reuse, modification, or redistribution.

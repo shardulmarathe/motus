@@ -1,0 +1,23 @@
+node_modules/
+.next/
+.env
+.env.local
+.DS_Store
+.vercel
+.env*
+
+# TypeScript incremental build cache
+tsconfig.tsbuildinfo
+
+# PartyKit dev cache
+.partykit/
+
+# Wrangler local dev state (miniflare SQLite for Durable Objects)
+.wrangler/
+
+# local editor config
+.cursor/
+.claude/
+
+# macOS/sync artefacts — duplicate copies nothing imports
+* [0-9].*
