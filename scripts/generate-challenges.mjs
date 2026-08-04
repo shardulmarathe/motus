@@ -7,7 +7,7 @@
 //     (Cycling every archetype through the first fourteen levels, as this
 //     script used to, meant levels 15-100 had nothing left to show.)
 //  2. A repeat is never just bigger numbers. Every archetype carries a list of
-//     twists — a compatible second modifier — and each successive instance
+//     twists, a compatible second modifier, and each successive instance
 //     takes the next one, so Collector V plays unlike Collector I.
 //
 // Difficulty still rises monotonically with id via the global ramp t, but the

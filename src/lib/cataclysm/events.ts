@@ -36,7 +36,7 @@ export type CataclysmData = {
 
 type CataclysmContext = {
   cat: CataclysmData
-  /** Legacy alias — always equals players[0]. */
+  /** Legacy alias, always equals players[0]. */
   player: Puck
   players: Puck[]
   worldEnemies: Enemy[]
@@ -264,7 +264,7 @@ function renderBlackoutMulti(
  * The closing limit, drawn as a moving rail rather than a glowing box: a red-pen
  * hairline, inward graduation ticks, and corner brackets that mark it as an
  * instrument boundary. Crossing it is lethal, so it stays the most legible mark
- * on the field without resorting to bloom — weight and graduation do the work
+ * on the field without resorting to bloom, weight and graduation do the work
  * a halo used to.
  */
 function renderShrinkingArena(ctx: CanvasRenderingContext2D, cat: CataclysmData, pal: Pal) {
@@ -278,7 +278,7 @@ function renderShrinkingArena(ctx: CanvasRenderingContext2D, cat: CataclysmData,
 
   ctx.save()
 
-  // Graduation ticks stepping inward — the rail reads as a ruled scale.
+  // Graduation ticks stepping inward, the rail reads as a ruled scale.
   const step = 26
   const tick = 6
   // Bumped from 0.4: a 40%-alpha red on bone stock washes out to pink, where on
@@ -300,7 +300,7 @@ function renderShrinkingArena(ctx: CanvasRenderingContext2D, cat: CataclysmData,
   }
   ctx.stroke()
 
-  // The limit itself — struck at full pen weight on both media.
+  // The limit itself, struck at full pen weight on both media.
   ctx.strokeStyle = pal.hostile
   ctx.lineWidth = 1.75
   ctx.beginPath()
@@ -324,7 +324,7 @@ function renderSwapWarning(ctx: CanvasRenderingContext2D, cat: CataclysmData, pa
   if (!cat.swapWarning || cat.swapWarning <= 0) return
 
   // Transfer lines: hairline vermilion leaders showing which mark is about to
-  // become which. Batched into one path — this fires for every pair at once.
+  // become which. Batched into one path, this fires for every pair at once.
   const alpha = Math.min(1, cat.swapWarning / 0.6)
   ctx.save()
   ctx.globalAlpha = alpha

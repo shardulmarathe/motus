@@ -34,7 +34,7 @@ export function botSecondsPerOrb(width: number, height: number): number {
 
 /**
  * Gap between the flawless line and a skilled player having a clean run.
- * Three stars sits exactly here — reachable on a good attempt, missed on a
+ * Three stars sits exactly here, reachable on a good attempt, missed on a
  * sloppy one.
  */
 const SKILL_FACTOR = 1.3
@@ -109,7 +109,7 @@ export function secondsPerOrb(ch: Challenge, width: number, height: number): num
 }
 
 /**
- * Reference clear time for a collect goal — the three-star bar. Scales with the
+ * Reference clear time for a collect goal, the three-star bar. Scales with the
  * real arena, so the same play earns the same rating on any screen.
  */
 export function parSeconds(ch: Challenge, width: number, height: number): number {
@@ -125,7 +125,7 @@ export function parSeconds(ch: Challenge, width: number, height: number): number
 export function challengeTimeLimit(ch: Challenge, width: number, height: number): number {
   if (ch.goal.type === 'survive') return ch.goal.target
   if (!ch.deadlineMult) return 0
-  // A deadline tighter than the two-star bar would make two stars unwinnable —
+  // A deadline tighter than the two-star bar would make two stars unwinnable -
   // you would fail the run before you could earn them. Clamp rather than trust
   // the authored value, so no future tuning pass can reintroduce that.
   const mult = Math.max(ch.deadlineMult || DEFAULT_DEADLINE_MULT, TWO_STAR_PAR_MULT * 1.1)

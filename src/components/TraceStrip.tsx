@@ -19,14 +19,14 @@ interface TraceStripProps {
   className?: string
   /** CSS height. Pass `'100%'` to fill a positioned parent. Width always fills. */
   height?: number | string
-  /** Stamp ticks along the baseline — spacing reads as speed. */
+  /** Stamp ticks along the baseline, spacing reads as speed. */
   ticks?: boolean
   /** Mark the final sample with a cross (the end screen's death point). */
   markEnd?: boolean
   /**
    * Fraction of the height the plot may occupy, measured up from the baseline.
    * Below 1 the trace keeps headroom so a peak reads as a peak instead of
-   * clipping against the top edge — the HUD bar needs this, a panel does not.
+   * clipping against the top edge, the HUD bar needs this, a panel does not.
    */
   plotScale?: number
   /** Phosphor bloom on the line. */
@@ -50,7 +50,7 @@ export default function TraceStrip({
   ticks = true,
   markEnd = false,
   plotScale = 1,
-  // A beam on a phosphor tube blooms. Kept small — this is a readout, and the
+  // A beam on a phosphor tube blooms. Kept small, this is a readout, and the
   // DOM type around it stays crisp.
   glow = 6,
   label,

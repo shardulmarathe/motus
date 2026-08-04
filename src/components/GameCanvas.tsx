@@ -148,7 +148,7 @@ function makeChallengeEnemy(w: number, h: number, ch: Challenge, homing = false)
 }
 
 /**
- * Hunters are additional to `enemyCount`, not carved out of it — the par model
+ * Hunters are additional to `enemyCount`, not carved out of it, the par model
  * counts them as their own pressure and the challenge text promises them on top
  * of the traffic.
  */
@@ -168,7 +168,7 @@ function challengeWon(ch: Challenge, orbs: number, elapsed: number): boolean {
 }
 
 /**
- * Lethal hazards for navigate/minefield challenges — placed clear of the
+ * Lethal hazards for navigate/minefield challenges, placed clear of the
  * player. `drift` gives them a slow wander, which turns a memorised route into
  * a read-and-react one.
  */
@@ -244,7 +244,7 @@ function driftInside(
 
 /**
  * Clearance an orb needs from a lethal hazard. Without it an orb can land on a
- * mine, where collecting it costs the run — and on a sweep, where the whole set
+ * mine, where collecting it costs the run, and on a sweep, where the whole set
  * is on the board at once, that makes the challenge unwinnable rather than
  * merely unlucky.
  */
@@ -314,7 +314,7 @@ function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: n
 /**
  * The active render palette. Themes rebuild this object per run (see
  * `resolveActiveTheme`), so every canvas-text helper takes it rather than
- * closing over the module import — two of the eight themes print dark marks on
+ * closing over the module import, two of the eight themes print dark marks on
  * light stock and nothing here may assume a dark field.
  */
 type Pal = typeof palette
@@ -325,7 +325,7 @@ const PANEL_RADIUS = 2
 const TAU = Math.PI * 2
 
 /**
- * The bullseye's dial face. A target is a *graduated* mark — two concentric
+ * The bullseye's dial face. A target is a *graduated* mark, two concentric
  * rings, a solid centre, and a scale of graduations around the outside, the way
  * a range finder or a dial gauge is ruled. The unit vectors are precomputed
  * once at module load; the ring rotates by transforming the context, so nothing
@@ -342,7 +342,7 @@ const BULLSEYE_TICKS: { c: number; s: number; major: boolean }[] = Array.from(
     return { c: Math.cos(a), s: Math.sin(a), major: i % 4 === 0 }
   }
 )
-/** One revolution of the graduation scale, in ms. Slow — a settling instrument. */
+/** One revolution of the graduation scale, in ms. Slow, a settling instrument. */
 const BULLSEYE_SPIN_MS = 14000
 
 /**
@@ -503,7 +503,7 @@ function drawInstructionCard(
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 
-  // Step label — wide-tracked mono caps, the control-panel register.
+  // Step label, wide-tracked mono caps, the control-panel register.
   ctx.fillStyle = pal.player
   ctx.font = `500 11px ${FONT_DATA}`
   drawTrackedText(ctx, stepLabel.toUpperCase(), w / 2, boxY + padTop + 6, 3)
@@ -556,7 +556,7 @@ function drawArcadeGameOverOverlay(
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 
-  // Vermilion status line — the only alarm color on the panel.
+  // Vermilion status line, the only alarm color on the panel.
   ctx.fillStyle = pal.hostile
   ctx.font = `600 15px ${FONT_DATA}`
   drawTrackedText(ctx, config.title.toUpperCase(), w / 2, boxY + 34, 4)
@@ -713,7 +713,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
   const remoteKeysRef = useRef<Set<string>>(new Set())
   /** GUEST: interpolation buffer over host snapshots. */
   const snapshotBufferRef = useRef<SnapshotBuffer>(new SnapshotBuffer())
-  /** GUEST: newest raw snapshot — source of the host sim clock + arena dims. */
+  /** GUEST: newest raw snapshot, source of the host sim clock + arena dims. */
   const latestSnapRef = useRef<SnapMsg | null>(null)
   const snapSeqRef = useRef(0) // HOST: outgoing snapshot sequence
   const snapAccumMsRef = useRef(0) // HOST: ms accumulated toward the next snapshot
@@ -723,7 +723,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
   /** GUEST: previously applied goals + score sum, to spot pickups and burst. */
   const prevGuestGoalsRef = useRef<Goal[]>([])
   const prevGuestScoreRef = useRef(0)
-  /** GUEST: false until the first snapshot lands — mutes join/rematch FX. */
+  /** GUEST: false until the first snapshot lands, mutes join/rematch FX. */
   const firstSnapAppliedRef = useRef(false)
 
   const propsRef = useRef(props)
@@ -804,7 +804,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       cataclysmsTriggered: rs.cataclysms,
       won,
       challengeId: p.challenge?.id,
-      // The run's own speed trace — the end screen plots it and marks the
+      // The run's own speed trace, the end screen plots it and marks the
       // point the run stopped.
       speedSamples: runSeries(),
     }
@@ -1039,7 +1039,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     } else if (props.gameMode === 'multiplayer') {
       const variant = props.mpVariant ?? 'duel'
       if (variant === 'tag') {
-        // Tag: no enemies, no orbs, no obstacles — just two pucks. One slot
+        // Tag: no enemies, no orbs, no obstacles, just two pucks. One slot
         // is randomly chosen to start as "it".
         enemiesRef.current = []
         goalRef.current = null
@@ -1056,7 +1056,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         )
         if (goalRef.current) clampGoalToCanvas(goalRef.current, w, h)
       } else {
-        // Duel: a fixed roster of linear red enemies (no stage scaling — stage
+        // Duel: a fixed roster of linear red enemies (no stage scaling, stage
         // stays 1) and a single orb placed clear of BOTH pucks.
         enemiesRef.current = Array.from(
           { length: DUEL_ENEMY_COUNT },
@@ -1130,7 +1130,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     // per frame, which made the spiral grow larger on a high-refresh display
     // than on a 60Hz one.
     const rotationSpeed = 4.8 // rad/s
-    const radiusGrowth = 72 * scale // px/s — `scale` reaches the spiral now
+    const radiusGrowth = 72 * scale // px/s, `scale` reaches the spiral now
 
     for (let i = 0; i < particleCount; i++) {
       const baseAngle = (i / particleCount) * Math.PI * 2
@@ -1336,7 +1336,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       // survival-only.
       const cataclysmsOn = props.gameMode === 'survival' || isCoop
 
-      /** Co-op: a slot goes down — frozen in place, bleedout clock running. */
+      /** Co-op: a slot goes down, frozen in place, bleedout clock running. */
       const downSlot = (slot: PlayerSlot) => {
         if (!slot.alive) return
         slot.alive = false
@@ -1393,12 +1393,12 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
             }
             case 'tag':
               // Nothing is lethal in tag (no enemies/obstacles, walls wrap),
-              // so this is unreachable — swaps happen on puck-vs-puck contact.
+              // so this is unreachable, swaps happen on puck-vs-puck contact.
               return
             case 'duel':
             default: {
               if (cause === 'wall') {
-                // Walls don't stun — they're elastic. Reflect the crossed axis
+                // Walls don't stun, they're elastic. Reflect the crossed axis
                 // (position not yet clamped, so the overshoot tells us which),
                 // bleed some energy, and spark.
                 if (p.x - p.radius < 0 || p.x + p.radius > w) p.vx = -p.vx * WALL_BOUNCE_DAMPING
@@ -1454,7 +1454,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
         playersRef.current.forEach((slot, i) => {
           const p = slot.puck
-          // Tag: the "it" puck is buffed — faster acceleration, higher cap.
+          // Tag: the "it" puck is buffed, faster acceleration, higher cap.
           const itBuffed = isTag && slot.isIt
           const slotAccel = itBuffed ? acceleration * TAG_IT_ACCEL : acceleration
           const slotMaxVel = itBuffed ? TAG_IT_MAXVEL : maxVel
@@ -1507,7 +1507,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         }
       }
 
-      // Feed the shared speed trace — the HUD strip chart, the arena trail and
+      // Feed the shared speed trace, the HUD strip chart, the arena trail and
       // the end-screen plot are all this one channel. Runs unconditionally so a
       // stalled or frozen puck still plots a flat line rather than a gap.
       recordSpeed(Math.hypot(player.vx, player.vy), dt)
@@ -1731,7 +1731,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
             player.vy = 0
             finalizeRun(true)
           } else if (deadline > 0 && ch.goal.type !== 'survive' && rsC.elapsed >= deadline) {
-            // Timed collect goal expired without finishing — a loss.
+            // Timed collect goal expired without finishing, a loss.
             challengeDoneRef.current = true
             gameData.state = 'gameOver'
             player.vx = 0
@@ -1817,7 +1817,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           if (slot.index === 0) gameData.score = slot.score
 
           if (propsRef.current.mpVariant === 'duel' && slot.score >= DUEL_TARGET_SCORE) {
-            // First to the target wins — end the match exactly once.
+            // First to the target wins, end the match exactly once.
             if (!matchEndFiredRef.current) {
               matchEndFiredRef.current = true
               gameData.state = 'gameOver'
@@ -1874,7 +1874,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
             )
           } else {
             if (props.gameMode === 'challenge' && propsRef.current.challenge) {
-              // Respawns dodge the hazards too — a mid-run orb landing on a mine
+              // Respawns dodge the hazards too, a mid-run orb landing on a mine
               // would stall the challenge just as badly as one placed there.
               goalRef.current = spawnSafeGoal(
                 w,
@@ -2035,7 +2035,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       const eventEnemies = gameData.cataclysm?.eventEnemies ?? []
       for (const slot of playersRef.current) {
         // Stunned pucks are ghosted; post-stun immunity also skips contact.
-        // Downed co-op pucks are already dead-ish — enemies pass through them.
+        // Downed co-op pucks are already dead-ish, enemies pass through them.
         if (!slot.alive) continue
         if (rs.elapsed < slot.stunnedUntil || rs.elapsed < slot.immuneUntil) continue
         for (const enemy of [...enemiesRef.current, ...eventEnemies]) {
@@ -2073,7 +2073,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           if (downed.alive) continue
           const helper = slots.find((s) => s !== downed && s.alive)
           if (helper && circlesCollide(helper.puck, downed.puck)) {
-            // Revived on touch: brief immunity, velocity stays frozen — the
+            // Revived on touch: brief immunity, velocity stays frozen, the
             // player accelerates away themselves.
             downed.alive = true
             downed.downedAt = null
@@ -2155,8 +2155,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
      * online guest (which runs no sim but still animates these): particle
      * motion, trail decay, shake/flash decay.
      *
-     * The measurement field that replaced the parallax streaks is static — it
-     * is graph paper, not weather — so it needs no per-frame update.
+     * The measurement field that replaced the parallax streaks is static, it
+     * is graph paper, not weather, so it needs no per-frame update.
      */
     function updateEffects(dt: number) {
       for (let i = 0; i < particlesRef.current.length; i++) {
@@ -2222,7 +2222,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           : { x: 0, y: 0, vx: 0, vy: 0, alive: true, stun: 0, imm: 0, it: false, score: 0 }
 
       // Cataclysm event enemies (hunters/swap sentinels/meteors) ride along in
-      // the same enemies list — the guest re-splits them by hue for styling.
+      // the same enemies list, the guest re-splits them by hue for styling.
       const cat = gameData.state === 'cataclysm' ? gameData.cataclysm : undefined
       const enemies: SnapEnemy[] = []
       let fallbackId = 0
@@ -2257,7 +2257,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         t: 'snap',
         seq: ++snapSeqRef.current,
         // Host sim-elapsed ms: monotonic while playing, frozen while paused
-        // (the guest buffer dedups frozen timestamps, which is fine — paused
+        // (the guest buffer dedups frozen timestamps, which is fine, paused
         // frames carry no new state).
         ts: Math.round(rs.elapsed * 1000),
         players: [toSnapPlayer(slots[0]), toSnapPlayer(slots[1])],
@@ -2292,7 +2292,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     })
 
     /**
-     * GUEST: no sim — pour the interpolated snapshot into the same refs
+     * GUEST: no sim, pour the interpolated snapshot into the same refs
      * render() already reads, so the entire existing render path draws the
      * host's world unchanged. `dt` only advances the local intro-banner clock
      * (pass 0 while paused).
@@ -2331,7 +2331,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
             collisionFlashRef.current = Math.max(collisionFlashRef.current, 0.2)
           }
           if (sp.it && !slot.isIt) {
-            // Tag passed to this slot (fire once — only for the newly-"it" side).
+            // Tag passed to this slot (fire once, only for the newly-"it" side).
             spawnBurst(sp.x, sp.y, themeRef.current.palette.hostile, 0.6)
             shakeIntensityRef.current = Math.max(shakeIntensityRef.current, 6)
           }
@@ -2351,7 +2351,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         slot.isIt = sp.it
         slot.score = sp.score
 
-        // Trails don't travel over the wire — regrow them from sampled motion
+        // Trails don't travel over the wire, regrow them from sampled motion
         // (same speed gate and cap as the sim's own trail writer).
         if (Math.hypot(sp.vx, sp.vy) > 60) {
           const slotTrail = (playerTrailRef.current[i] ??= [])
@@ -2445,7 +2445,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     // or the instrumentation reading it (ticks, rules, traces, labels).
     // The governing rule is THE MARK IS THE SIGNAL. `shadowBlur` appears in
     // exactly one place in this file and is gated strictly on
-    // `theme.luminous` — the printed instruments (Thermal, Plotter, Blackline)
+    // `theme.luminous`, the printed instruments (Thermal, Plotter, Blackline)
     // have no light to spend, so on those the specimen earns its presence from
     // stroke weight and a double-struck contour instead of a halo. Every value
     // below that differs between the two media reads that same flag; nothing is
@@ -2453,7 +2453,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
     /**
      * Diagonal hatch fill, cached per color. Hazards are hollow shapes filled
-     * with a screen — the mark of an annotated danger zone on a chart — and a
+     * with a screen, the mark of an annotated danger zone on a chart, and a
      * pattern keeps that cheap: one small tile reused by every hazard on screen,
      * instead of a clip + line loop per entity per frame.
      *
@@ -2496,7 +2496,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       return pattern
     }
 
-    /** Diamond path — the moving-hazard silhouette. */
+    /** Diamond path, the moving-hazard silhouette. */
     const diamondPath = (x: number, y: number, r: number) => {
       ctx.beginPath()
       ctx.moveTo(x, y - r)
@@ -2508,7 +2508,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
     /**
      * A hazard mark: hollow outline over a hatched screen. `square` is the
-     * fixed-hazard silhouette, `diamond` the moving one — neither reads as the
+     * fixed-hazard silhouette, `diamond` the moving one, neither reads as the
      * ring-and-ticks of a target or the solid disc of a player. Silhouette, not
      * hue, carries the safety-critical distinction (amber vs vermilion is a
      * weak protan/deutan pair).
@@ -2548,14 +2548,14 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     }
 
     /**
-     * The specimen. A solid disc of the signal pen — no gradient body, no
-     * specular highlight — plus a velocity vector whose length is speed.
+     * The specimen. A solid disc of the signal pen, no gradient body, no
+     * specular highlight, plus a velocity vector whose length is speed.
      * Momentum is the only input, so the renderer draws it.
      *
      * On a printed instrument the mark cannot glow, so it is given WEIGHT
      * instead: the pen goes round the disc a second time (a hard-struck
      * contour) and lays a registration ring just outside it. Both are drawn
-     * lines, not halos — the mark stays a mark, and it still finds the eye
+     * lines, not halos, the mark stays a mark, and it still finds the eye
      * instantly against stock.
      *
      * `hollow` is P2's silhouette in multiplayer: an annulus against P1's solid
@@ -2579,7 +2579,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         ctx.beginPath()
         ctx.moveTo(p.x + ux * from, p.y + uy * from)
         ctx.lineTo(hx, hy)
-        // Cross-tick at the head — a cursor on a scale, not an arrowhead.
+        // Cross-tick at the head, a cursor on a scale, not an arrowhead.
         ctx.moveTo(hx - uy * 3.5, hy + ux * 3.5)
         ctx.lineTo(hx + uy * 3.5, hy - ux * 3.5)
         ctx.stroke()
@@ -2650,13 +2650,13 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
      * centre, and a scale of 24 graduations ruled around the outside (majors
      * every sixth), like the face of a dial gauge or a range finder.
      *
-     * The scale turns slowly — the instrument hunting for a reading — and
+     * The scale turns slowly, the instrument hunting for a reading, and
      * `lock` (0..1, driven by player proximity) TIGHTENS the rings toward the
      * centre as the specimen closes, so acquisition is read from geometry
      * rather than brightness. Nothing here glows on either medium.
      *
      * Cost: the graduations are one batched path and their unit vectors are
-     * precomputed at module load, so a target is three draw calls flat —
+     * precomputed at module load, so a target is three draw calls flat -
      * cheap enough for the seven-goal cataclysms.
      */
     const drawBullseye = (x: number, y: number, r: number, color: string, lock: number) => {
@@ -2713,8 +2713,8 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       const palette = theme.palette
 
       // Chassis roles (`panel`, `void`, `muted`, `warn`) now come off the
-      // resolved theme itself — `resolveActiveTheme` maps them to the
-      // instrument's own sheet, stock and secondary pen — so overlays read
+      // resolved theme itself, `resolveActiveTheme` maps them to the
+      // instrument's own sheet, stock and secondary pen, so overlays read
       // straight off `palette` on every medium. The old per-frame re-derivation
       // is gone.
 
@@ -2753,7 +2753,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
 
       // ===== THE MEASUREMENT FIELD =====
       // Flat ground, then graph paper: crosses at the grid intersections and a
-      // stepped graduation along the edges. Static and quiet — the field is the
+      // stepped graduation along the edges. Static and quiet, the field is the
       // paper the run is drawn on, not weather. Everything batches into two
       // paths, so the cost is two strokes per frame regardless of arena size.
       ctx.fillStyle = theme.bgOuter
@@ -2797,7 +2797,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       ctx.stroke()
 
       // ===== CHALLENGE ARENA LIMIT (tiny-arena challenges) =====
-      // A ruled limit with corner brackets — the same language as the
+      // A ruled limit with corner brackets, the same language as the
       // cataclysm's closing arena, and lethal for the same reason.
       const chArena =
         propsRef.current.gameMode === 'challenge'
@@ -2893,7 +2893,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       // ===== DRAW STATIC OBSTACLES (fixed hazard: hatched square) =====
       // Rectilinear and axis-aligned so it reads as bolted down, against the
       // enemies' diamonds. Corner ticks are the surveyor's mark for a fixed
-      // point — they replace the old pulsing glow ring.
+      // point, they replace the old pulsing glow ring.
       if (obstaclesRef.current.length > 0) {
         for (const o of obstaclesRef.current) {
           drawHazardMark(o.x, o.y, o.radius, palette.hostile, 'square')
@@ -2950,7 +2950,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       }
 
       // ===== DRAW PARTICLES =====
-      // Radial tick marks rather than glowing dots — a burst is a scatter of
+      // Radial tick marks rather than glowing dots, a burst is a scatter of
       // marks thrown off the impact, drawn in the same pen as everything else.
       ctx.lineWidth = 1.4
       for (const p of particlesRef.current) {
@@ -2987,7 +2987,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       // The trail is not a smear, it is the chart recorder's pen: a hairline
       // path through the last ~0.42s of travel, with a tick stamped at a FIXED
       // TIME INTERVAL. Because the interval is time and the path is distance,
-      // tick spacing *is* speed — a momentum game drawing its own momentum.
+      // tick spacing *is* speed, a momentum game drawing its own momentum.
       //
       // `point.life` counts down from TRAIL_LIFE at dt, so age is exact and
       // frame-rate independent; a tick lands wherever the age crosses a
@@ -3045,7 +3045,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       for (const slot of playersRef.current) {
         const colors = colorsForSlot(slot)
         const p = slot.puck
-        // P2 is an annulus against P1's solid disc — the silhouette, not a
+        // P2 is an annulus against P1's solid disc, the silhouette, not a
         // sixth hue, is what tells the two players apart.
         const hollow = mpVariantR !== null && slot.index === 1
 
@@ -3078,7 +3078,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         const stunned =
           propsRef.current.gameMode === 'multiplayer' &&
           runStatsRef.current.elapsed < slot.stunnedUntil
-        // Recover pop: fires the frame a stun expires — render-side detection
+        // Recover pop: fires the frame a stun expires, render-side detection
         // so it plays identically on host and guest with no wire data.
         if (propsRef.current.gameMode === 'multiplayer') {
           if (prevStunnedRef.current[slot.index] && !stunned) {
@@ -3117,7 +3117,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           if (immuneFlicker) ctx.restore()
           if (isIt) {
             // "It" is flagged, not lit: a vermilion ring with four cardinal
-            // ticks — the arena's mark for a live hazard attached to a player.
+            // ticks, the arena's mark for a live hazard attached to a player.
             // Dashed and dimmed during the post-swap cooldown, when tags can't
             // land.
             const inCooldown = runStatsRef.current.elapsed < slot.immuneUntil
@@ -3146,7 +3146,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       // ===== RENDER ORDER =====
       // 1. Measurement field (drawn first, under everything)
       // 2. Targets, hazards, trace, specimen (drawn above)
-      // 3. Limit rails — instrumentation reads on TOP of the field
+      // 3. Limit rails, instrumentation reads on TOP of the field
       // 4. Fault-state overlays and panels
 
       // ===== LIMIT RAILS =====
@@ -3257,7 +3257,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
             const raw = Math.max(0, Math.min(1, 1 - e.gap / proximityThreshold))
             const t = raw * raw * (3 - 2 * raw)
             // Entry into the band has to be visible on stock too, where a
-            // 35%-alpha red is barely a tint — so the pen starts down harder.
+            // 35%-alpha red is barely a tint, so the pen starts down harder.
             const alpha = 0.45 + t * 0.55
             const tickLong = 6 + t * 14
             const lo = e.at - SPAN
@@ -3456,7 +3456,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         const enterTime = cat.enterTime ?? 0
         
         // ===== FAULT STATE: INTRO (first 1.5 seconds) =====
-        // Not a title card — a fault annunciator. Corner brackets frame the
+        // Not a title card, a fault annunciator. Corner brackets frame the
         // arena, a scan rule crosses it, the event is named in tracked mono
         // caps and the clock is a timecode. No 56px glowing text, no vignette.
         if (enterTime < 1.5) {
@@ -3478,7 +3478,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           ctx.globalAlpha = alpha
 
           // The field is washed back so the annunciation reads. `void` is the
-          // instrument's own stock, so this darkens a tube and pales a sheet —
+          // instrument's own stock, so this darkens a tube and pales a sheet -
           // either way the marks underneath drop back. Flat, no radial bloom.
           ctx.fillStyle = withAlphaAny(palette.void, 0.72)
           ctx.fillRect(0, 0, w, h)
@@ -3509,7 +3509,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           // a puck parked on the reading line would swallow the fault text; the
           // band guarantees the annunciation reads whatever is behind it, and
           // gives the scan rule something to be the axis of. It is cut from
-          // `panel` — the theme's own sheet — so it separates from the washed
+          // `panel`, the theme's own sheet, so it separates from the washed
           // field on paper instead of vanishing into it.
           const bandTop = scanY - 64
           const bandH = 122
@@ -3539,7 +3539,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
           ctx.font = `600 11px ${FONT_DATA}`
           drawTrackedText(ctx, 'FAULT', w / 2, scanY - 52, 5)
 
-          // Event name — mono caps, wide tracking, ink not alarm: the fault is
+          // Event name, mono caps, wide tracking, ink not alarm: the fault is
           // flagged by the frame, named by the type.
           const fitW = Math.max(80, w - inset * 2 - 16)
           const nameText = cat.eventName.toUpperCase()
@@ -3696,7 +3696,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       if (guestTransformed) ctx.restore()
 
       // ===== ONLINE GUEST: STALL RIBBON =====
-      // Snapshots stopped arriving mid-match — a status readout on a flat
+      // Snapshots stopped arriving mid-match, a status readout on a flat
       // panel, same instrument as every other card. Suppressed while paused.
       if (
         props.netRole === 'guest' &&
@@ -3748,7 +3748,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
         sendGuestInput(net, now)
       } else {
         update(capped)
-        // Online host: broadcast while a match is in progress — including
+        // Online host: broadcast while a match is in progress, including
         // paused, so the guest's buffer never reads as stalled mid-match.
         if (
           props.netRole === 'host' &&
@@ -3802,7 +3802,7 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       /* ignore */
     }
     // Must fire on uiState transitions only. Including resetGame would rerun
-    // this — and reset a run in progress — on any unrelated re-render.
+    // this, and reset a run in progress, on any unrelated re-render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.uiState])
 

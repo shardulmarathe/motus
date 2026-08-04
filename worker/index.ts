@@ -110,7 +110,7 @@ export class MotusVersusRoom {
     const reason = this.rejectionFor(role)
 
     if (reason) {
-      // Accept before closing so the client actually receives `roomError` —
+      // Accept before closing so the client actually receives `roomError` -
       // the lobby renders that reason. Tagged `rejected` so it can never be
       // mistaken for a live host or guest.
       this.ctx.acceptWebSocket(server, ['rejected'])

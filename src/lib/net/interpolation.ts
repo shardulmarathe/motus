@@ -39,7 +39,7 @@ function lerpPoint<T extends { x: number; y: number }>(older: T, newer: T, t: nu
  * Buffers host snapshots on the guest and samples them INTERP_DELAY_MS in
  * the past for smooth rendering. Snapshot `ts` (host sim-elapsed ms) is
  * mapped to the local clock via the median of the per-snapshot offsets
- * (receivedAtMs - ts) currently in the ring — the median is robust to the
+ * (receivedAtMs - ts) currently in the ring, the median is robust to the
  * occasional delayed packet while staying trivially simple.
  */
 export class SnapshotBuffer {

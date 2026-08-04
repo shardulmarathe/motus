@@ -324,7 +324,7 @@ body {
   gap: 18px;
 }
 
-/* Spec line — a plate on the chassis, not a marketing eyebrow. */
+/* Spec line, a plate on the chassis, not a marketing eyebrow. */
 .home-eyebrow,
 .home-spec {
   font-family: var(--font-data);
@@ -449,7 +449,7 @@ body {
   color: var(--ink-dim);
 }
 
-/* Real numbers, or nothing — never a decorative index. */
+/* Real numbers, or nothing, never a decorative index. */
 .menu-readout {
   font-family: var(--font-data);
   font-weight: 500;
@@ -564,7 +564,7 @@ body {
   gap: clamp(10px, 3vw, 18px);
 }
 
-/* Annotations on the chart — no chips, no wells. */
+/* Annotations on the chart, no chips, no wells. */
 .hud-box {
   display: flex;
   flex-direction: column;
@@ -630,7 +630,7 @@ body {
 .status-text.event-name::before { content: '[ '; }
 .status-text.event-name::after { content: ' ]'; }
 
-/* Menu control — a machined key. */
+/* Menu control, a machined key. */
 .menu-button {
   display: inline-flex;
   align-items: center;
@@ -698,7 +698,7 @@ body {
     max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
 }
 
-/* Every panel derives from .rules-modal — one sheet, several faceplates. */
+/* Every panel derives from .rules-modal, one sheet, several faceplates. */
 .rules-modal {
   position: relative;
   z-index: 20;
@@ -773,7 +773,7 @@ body {
   background-repeat: no-repeat;
 }
 
-/* Eyebrow with a leading tick — the label plate on a faceplate. */
+/* Eyebrow with a leading tick, the label plate on a faceplate. */
 .modal-eyebrow {
   display: flex;
   align-items: center;
@@ -1178,7 +1178,7 @@ body {
 
 .cos-chip.locked { opacity: 0.4; cursor: not-allowed; }
 
-/* The chip's own type — declared in markup, so it gets a rule of its own
+/* The chip's own type, declared in markup, so it gets a rule of its own
    rather than silently inheriting. */
 .cos-name {
   font: inherit;
@@ -1304,7 +1304,7 @@ body {
   background-color: transparent;
 }
 
-/* Dotted leader — the table device of every printed spec sheet. */
+/* Dotted leader, the table device of every printed spec sheet. */
 .stat-row-label {
   display: flex;
   align-items: baseline;

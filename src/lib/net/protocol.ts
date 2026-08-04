@@ -66,7 +66,7 @@ export type SnapPlayer = {
   vy: number
   alive: boolean
   stun: number // stunnedUntil (sim seconds)
-  imm: number // immuneUntil (sim seconds) — drives i-frame flicker + tag cooldown ring
+  imm: number // immuneUntil (sim seconds), drives i-frame flicker + tag cooldown ring
   it: boolean
   score: number
 }

@@ -62,7 +62,7 @@ const LeaderboardModal = dynamic(() => import('../components/LeaderboardModal'),
 
 /**
  * The numbers the title screen puts on its own menu rows. Read from local
- * storage after mount — reading during render would disagree with the server
+ * storage after mount, reading during render would disagree with the server
  * render and break hydration.
  */
 type HomeReadouts = {
@@ -231,7 +231,7 @@ export default function Home() {
           break
         case 'start':
           // Host started (or restarted) the match. The guest skips the
-          // briefing — the host already read it — and goes straight in.
+          // briefing, the host already read it, and goes straight in.
           if (role === 'guest') {
             setMpVariant(msg.variant)
             setGameMode('multiplayer')
@@ -432,7 +432,7 @@ export default function Home() {
     }
   }, [])
 
-  // A survival run can restart *in place* — the Retry button, the touch
+  // A survival run can restart *in place*, the Retry button, the touch
   // restart, or Space in the canvas all reset the game without changing
   // `uiState`. That means neither the session mint in `handleStartPlaying` nor
   // the `submittedDeathRef` reset keyed on `uiState` fires again, so before
@@ -560,7 +560,7 @@ export default function Home() {
   }, [activeChallenge])
 
   // Local versus + online host: GameCanvas resolves the match here. The
-  // online host additionally relays the verdict — the guest never simulates,
+  // online host additionally relays the verdict, the guest never simulates,
   // so this broadcast is the guest's only path to an end screen.
   const handleMatchEnd = useCallback(
     (r: MatchResult) => {
@@ -572,7 +572,7 @@ export default function Home() {
     [mpSession]
   )
 
-  // Pause control: an online guest may only *request* a pause — the host owns
+  // Pause control: an online guest may only *request* a pause, the host owns
   // the pause state and mirrors it back via 'pause'/'resume'.
   const handlePausePress = useCallback(() => {
     if (mpSession?.kind === 'online' && mpSession.role === 'guest') {
@@ -1029,7 +1029,7 @@ export default function Home() {
                     {gameMode === 'multiplayer' && (
                       <div className="mp-legend">
                         {onlineRole ? (
-                          // Online, both key groups steer YOUR puck — one row,
+                          // Online, both key groups steer YOUR puck, one row,
                           // tinted with the local slot's color.
                           <div
                             className="mp-legend-row"
@@ -1131,7 +1131,7 @@ export default function Home() {
           <div className="overlay-center" style={{ position: 'absolute', inset: 0, zIndex: 90 }}>
             <div className="overlay-backdrop" />
             {isOnline && onlineRole === 'guest' ? (
-              // Guests cannot resume — the host owns the pause state.
+              // Guests cannot resume, the host owns the pause state.
               <div className="rules-modal pause-modal">
                 <span className="modal-eyebrow">HOST PAUSED</span>
                 <div className="pause-modal-title">Paused</div>

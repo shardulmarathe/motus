@@ -53,7 +53,7 @@ export interface Challenge {
   goal: ChallengeGoal
   /**
    * Deadline as a multiple of par, or 0 for untimed. Deadlines are derived at
-   * run time rather than authored in seconds so they scale with the arena — a
+   * run time rather than authored in seconds so they scale with the arena, a
    * fixed second count is either trivial on a small window or impossible on a
    * large one.
    */
@@ -105,7 +105,7 @@ export interface ChallengePerf {
 }
 
 /**
- * Stars are scored against par — the time a skilled player needs for a clean
+ * Stars are scored against par, the time a skilled player needs for a clean
  * run of *this* challenge on *this* screen (see ./challenge-par).
  *
  *  - collect goals → 3 stars at par, 2 stars at 1.45x par, 1 star for clearing;
@@ -113,7 +113,7 @@ export interface ChallengePerf {
  *    the rest, so outlasting the clock is a floor rather than a perfect score.
  *
  * `noWallTouch` challenges then cap the result at one star if the boundary was
- * ever grazed. The wall is a scoring line there, not a wall — wrapping through
+ * ever grazed. The wall is a scoring line there, not a wall, wrapping through
  * it is survivable, which is the whole point of the archetype.
  */
 export function computeStars(ch: Challenge, perf: ChallengePerf): number {

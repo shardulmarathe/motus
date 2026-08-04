@@ -1,4 +1,4 @@
-// "Phosphor Scope" palette — Motus presents itself as an instrument measuring a
+// "Phosphor Scope" palette. Motus presents itself as an instrument measuring a
 // body in motion, and the instrument is a long-persistence phosphor tube.
 //
 // The governing rule is **the beam writes, the phosphor remembers**. The whole
@@ -22,7 +22,7 @@ export const palette = {
    * the renderer may assume `ink` is bright.
    */
   ink: '#c8ffdf',
-  /** Beam centre — the hottest the tube gets. */
+  /** Beam centre, the hottest the tube gets. */
   white: '#ffffff',
   text: '#c8ffdf',
   muted: '#6bc98f',
@@ -40,7 +40,7 @@ export const palette = {
   hostileLight: '#ff8566',
 
   /**
-   * Hunters share the hazard colour on purpose — they are differentiated by
+   * Hunters share the hazard colour on purpose, they are differentiated by
    * silhouette (a dashed pursuit ring and a lead line), not by a third hue.
    */
   hunter: '#ff3b21',

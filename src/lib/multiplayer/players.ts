@@ -86,7 +86,7 @@ export function livingPlayers(slots: PlayerSlot[]): PlayerSlot[] {
 // --- P2 colors ---
 //
 // P2 is a *second pen*, not a second lamp. P1 already holds the instrument's
-// own signal color, hazards hold red, and targets hold the foreground mark —
+// own signal color, hazards hold red, and targets hold the foreground mark -
 // so P2 takes the one hue none of the eight instruments spends: violet. It
 // stays clear of the signal on every theme (green scope, amber tube, white
 // blueprint, blue plotter), clear of hazard red, and clear of graphite.
@@ -101,7 +101,7 @@ export function livingPlayers(slots: PlayerSlot[]): PlayerSlot[] {
 // at speed, and for protan/deutan players. The colors below are the second
 // signal, not the first.
 
-/** Mid violet — the DOM value, legible on a dark chassis and on stock. */
+/** Mid violet, the DOM value, legible on a dark chassis and on stock. */
 export const MP_P2_BODY = '#8f5cf0'
 export const MP_P2_LIGHT = '#bfa1f7'
 /** The same pen pressed into paper, where a pale violet would not register. */
@@ -132,7 +132,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff }
 }
 
-/** Plain RGB distance — enough to catch "these are the same gray". */
+/** Plain RGB distance, enough to catch "these are the same gray". */
 function colorDistance(a: string, b: string): number | null {
   const ca = hexToRgb(a)
   const cb = hexToRgb(b)

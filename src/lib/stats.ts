@@ -14,7 +14,7 @@ export interface RunSummary {
   timeSurvived: number // seconds
   orbsCollected: number
   distanceTraveled: number // pixels
-  longestDrift: number // pixels — longest single no-input glide
+  longestDrift: number // pixels, longest single no-input glide
   averageSpeed: number // px/s
   highestSpeed: number // px/s
   cataclysmsTriggered: number
@@ -23,7 +23,7 @@ export interface RunSummary {
   starsEarned?: number
   /**
    * The run's speed trace (px/s, oldest first), sampled by src/lib/telemetry.
-   * Plotted on the end screen. In-memory only — `recordRun` folds scalars into
+   * Plotted on the end screen. In-memory only, `recordRun` folds scalars into
    * `LifetimeStats` and the summary itself is never persisted.
    */
   speedSamples?: number[]

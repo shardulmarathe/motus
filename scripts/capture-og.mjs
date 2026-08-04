@@ -2,7 +2,7 @@
 // public/og-home.png, so the link preview always shows the current site with no
 // manual work. Runs before `next build` (see package.json) against a local
 // `next dev` server. Resilient: on any failure it warns and exits 0 (never
-// blocks the deploy) — the last committed public/og-home.png stays as fallback.
+// blocks the deploy), the last committed public/og-home.png stays as fallback.
 import { spawn } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,7 +14,7 @@ const OUT = join(ROOT, "public", "og-home.png");
 
 const PORT = Number(process.env.OG_PORT || 4319);
 const URL = `http://localhost:${PORT}/`;
-const SETTLE_MS = Number(process.env.OG_SETTLE_MS || 3000); // 2D canvas title screen — settle for neon bg
+const SETTLE_MS = Number(process.env.OG_SETTLE_MS || 3000); // 2D canvas title screen, settle for neon bg
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

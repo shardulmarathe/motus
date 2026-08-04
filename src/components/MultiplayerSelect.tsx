@@ -40,7 +40,7 @@ const ROOM_ERROR_TEXT: Record<string, string> = {
 }
 
 /**
- * The lobby's status line. Nothing lights up here — the line is stamped in the
+ * The lobby's status line. Nothing lights up here, the line is stamped in the
  * ink its condition calls for: red pen for a fault, pen for a live link, and
  * plain graphite while the room is still waiting.
  */
@@ -75,7 +75,7 @@ export default function MultiplayerSelect({
 
   // Same coarse-pointer detection the rest of the app uses (see page.tsx /
   // TouchControls): local versus needs two hands on one keyboard. Online
-  // play is fine on touch — TouchControls drive the guest's puck.
+  // play is fine on touch. TouchControls drive the guest's puck.
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return
     const mq = window.matchMedia('(pointer: coarse)')
@@ -235,7 +235,7 @@ export default function MultiplayerSelect({
         {view === 'create' && (
           <>
             <span className="modal-eyebrow">
-              VERSUS // ONLINE — {MP_VARIANT_NAMES[selected ?? 'duel'].toUpperCase()}
+              VERSUS // ONLINE, {MP_VARIANT_NAMES[selected ?? 'duel'].toUpperCase()}
             </span>
             <h2>Room created</h2>
 

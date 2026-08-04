@@ -20,7 +20,7 @@ interface SettingsModalProps {
 /**
  * An instrument is a medium *and* a mark, so its sample shows both: the stock it
  * draws on, split against the pen it draws with. A pen-only swatch cannot tell
- * the eight apart on paper — Blueprint's white pen would vanish into the sheet.
+ * the eight apart on paper. Blueprint's white pen would vanish into the sheet.
  */
 function instrumentSwatch(theme: ArenaTheme): string {
   return `linear-gradient(135deg, ${theme.colors.bgOuter} 0 50%, ${theme.colors.player} 50% 100%)`

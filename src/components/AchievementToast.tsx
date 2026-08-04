@@ -12,7 +12,7 @@ interface AchievementToastProps {
 
 /**
  * Shows unlocked achievements one at a time as a subtle sliding toast.
- * Purely presentational — the parent owns the queue.
+ * Purely presentational, the parent owns the queue.
  */
 export default function AchievementToast({ queue, onDrained }: AchievementToastProps) {
   const [index, setIndex] = useState(0)

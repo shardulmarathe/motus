@@ -35,7 +35,7 @@ function toRgba(color: string, alpha: number): string {
 
 /**
  * Draw the measurement field: graph-paper intersections plus edge rulers.
- * Rendered once to an offscreen canvas and blitted per frame — it never
+ * Rendered once to an offscreen canvas and blitted per frame, it never
  * changes, and it must stay quiet enough for the wordmark to sit on top of it.
  */
 function paintField(ctx: CanvasRenderingContext2D, w: number, h: number, t: Tokens): void {
@@ -93,7 +93,7 @@ function paintField(ctx: CanvasRenderingContext2D, w: number, h: number, t: Toke
 /**
  * The title screen's instrument backdrop.
  *
- * One plotted channel — the cursor's own velocity over time — on a sparse
+ * One plotted channel, the cursor's own velocity over time, on a sparse
  * measurement field. The visitor moves the pointer and the instrument responds,
  * which states the game's premise before a key is pressed. It is real data:
  * a still pointer plots a still line.
@@ -174,7 +174,7 @@ export default function NeonBackground() {
     //
     //  - The sweep keeps moving whether or not the visitor does, so the page is
     //    never static. With no pointer input the trace simply fades to an empty
-    //    field with a live beam — an instrument idling, which is honest.
+    //    field with a live beam, an instrument idling, which is honest.
     //  - A flick burns a hot streak in place that visibly cools, instead of
     //    being shoved off-screen by newer samples.
 
@@ -190,7 +190,7 @@ export default function NeonBackground() {
     const SPEED_SCALE = 900
     /** Column width in CSS px. */
     const COL_PX = 2
-    /** Alpha buckets — one stroke each, rather than one per segment. */
+    /** Alpha buckets, one stroke each, rather than one per segment. */
     const BANDS = 12
 
     // Printed instruments (Thermal, Plotter, Blackline) set --bloom to `none`.
@@ -255,7 +255,7 @@ export default function NeonBackground() {
 
       const m = mouseRef.current
       // Low-pass the pointer so a flick reads as a measured excursion rather
-      // than a single-frame spike. No hard clamp any more — the soft knee below
+      // than a single-frame spike. No hard clamp any more, the soft knee below
       // does that job without flattening everything above the threshold.
       m.vx += (m.x - m.px - m.vx) * 0.22
       m.vy += (m.y - m.py - m.vy) * 0.22

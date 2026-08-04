@@ -1,4 +1,4 @@
-// Telemetry — the shared speed trace behind Motus's signature motif.
+// Telemetry, the shared speed trace behind Motus's signature motif.
 //
 // One amber line plotting real speed over time, drawn on four surfaces: the
 // title screen (cursor velocity), the in-game HUD (last 8 seconds), the player
@@ -6,13 +6,13 @@
 // data; `TraceStrip` and the canvas renderer own the pixels.
 //
 // The game loop writes here every frame, so nothing in this module allocates
-// per sample and React never re-renders to keep the chart moving — consumers
+// per sample and React never re-renders to keep the chart moving, consumers
 // read the buffer from their own rAF.
 
 /** Seconds of history held by the live strip chart. */
 export const LIVE_WINDOW_SECONDS = 8
 
-/** Live ring capacity — 30 samples/second across the window. */
+/** Live ring capacity, 30 samples/second across the window. */
 const LIVE_CAPACITY = 240
 const LIVE_INTERVAL = LIVE_WINDOW_SECONDS / LIVE_CAPACITY
 
@@ -102,7 +102,7 @@ export function livePeak(): number {
   return livePeakValue
 }
 
-/** The finished run, oldest sample first. Safe to keep — it is a fresh array. */
+/** The finished run, oldest sample first. Safe to keep, it is a fresh array. */
 export function runSeries(): number[] {
   return runValues.slice()
 }
@@ -136,14 +136,14 @@ export interface TraceStyle {
   fill?: string | null
   /** Optional baseline rule. */
   baseline?: string | null
-  /** Optional tick stamps along the trace — spacing reads as speed. */
+  /** Optional tick stamps along the trace, spacing reads as speed. */
   tick?: string | null
   /** Stamp a tick every N samples. */
   tickEvery?: number
   lineWidth?: number
   /** Phosphor bloom. Only the signal is allowed to glow. */
   glow?: number
-  /** Mark the final sample — used by the end screen to show where the run stopped. */
+  /** Mark the final sample, used by the end screen to show where the run stopped. */
   endMark?: string | null
 }
 

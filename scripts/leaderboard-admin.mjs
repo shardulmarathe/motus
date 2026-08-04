@@ -1,5 +1,5 @@
 /**
- * One-off admin script — run with: npx tsx scripts/leaderboard-admin.mjs
+ * One-off admin script, run with: npx tsx scripts/leaderboard-admin.mjs
  * Requires .env.local with DATABASE_URL.
  */
 import { readFileSync } from 'fs'

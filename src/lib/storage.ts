@@ -28,7 +28,7 @@ export function writeJSON<T>(key: string, value: T): void {
   try {
     window.localStorage.setItem(PREFIX + key, JSON.stringify(value))
   } catch {
-    // storage full / unavailable — progression is best-effort, never fatal
+    // storage full / unavailable, progression is best-effort, never fatal
   }
 }
 

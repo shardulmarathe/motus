@@ -11,7 +11,7 @@ interface EndScreenProps {
   stars?: number
   challengeTitle?: string
   hasNextChallenge?: boolean
-  /** Survival only — when not `ok`, the score never reached the leaderboard. */
+  /** Survival only, when not `ok`, the score never reached the leaderboard. */
   leaderboardSubmitState?: 'ok' | 'unavailable' | 'failed'
   onRetry: () => void
   onMenu: () => void
@@ -33,7 +33,7 @@ function StatRow({ label, value }: { label: string; value: string }) {
 /**
  * End of run, plotted: the run's own speed trace with the stop marked, and the
  * score read off it as an annotation. A run too short to plot shows the numbers
- * alone — an empty chart would be a shape the run never made.
+ * alone, an empty chart would be a shape the run never made.
  *
  * The trace is drawn as ink, not light: `TraceStrip` defaults `glow` to 0 and
  * resolves its stroke from `--pen` off the `.end-trace` wrapper, which also

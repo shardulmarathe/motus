@@ -1,10 +1,10 @@
 /**
  * Two-family type system for Motus ("Signal Lab").
  *
- * 1. Archivo (variable, wdth 62–125 / wght 400–800) — one family covering two
+ * 1. Archivo (variable, wdth 62–125 / wght 400–800), one family covering two
  *    roles. Set at wdth 125 it is an expanded grotesque, the typography of
  *    control-panel labels; at wdth 100 it is the body face.
- * 2. IBM Plex Mono — every number, label, timecode and telemetry readout, and
+ * 2. IBM Plex Mono, every number, label, timecode and telemetry readout, and
  *    ALL canvas text.
  *
  * Canvas text is mono by design: `ctx.font` cannot reliably carry
@@ -12,10 +12,10 @@
  * arena speaks entirely in instrument readouts.
  */
 
-/** Body copy — Archivo at normal width. */
+/** Body copy. Archivo at normal width. */
 export const FONT_BODY = 'Archivo, system-ui, sans-serif'
 
-/** Display — Archivo; the expanded width axis is applied via CSS `font-stretch`. */
+/** Display. Archivo; the expanded width axis is applied via CSS `font-stretch`. */
 export const FONT_DISPLAY = 'Archivo, system-ui, sans-serif'
 
 /** Data, labels, telemetry, and all canvas text. */

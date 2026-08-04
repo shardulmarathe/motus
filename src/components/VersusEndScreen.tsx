@@ -28,7 +28,7 @@ function StatRow({ label, value, valueColor }: { label: string; value: string; v
   )
 }
 
-/** Lightweight versus end screen — no stats/achievements, just the verdict. */
+/** Lightweight versus end screen, no stats/achievements, just the verdict. */
 export default function VersusEndScreen({ result, onRematch, onMenu, rematch = 'enabled' }: VersusEndScreenProps) {
   // A dropped peer is a fault, not a verdict: it reads in red pen and says what
   // happened, even though the remaining player is recorded as the winner.
@@ -42,7 +42,7 @@ export default function VersusEndScreen({ result, onRematch, onMenu, rematch = '
     'Run over — together'
 
   // Pen for a clean P1 win, red pen for a fault. P2 keeps their own puck colour
-  // — read from the shared constant, never restated here — so the verdict points
+  //, read from the shared constant, never restated here, so the verdict points
   // at the player who actually scored it.
   const headlineClass = dropped
     ? 'end-title end-title-lose'

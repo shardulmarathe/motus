@@ -39,7 +39,7 @@ export default function ChallengeSelect({ onSelect, onClose }: ChallengeSelectPr
             const rec = progress[ch.id]
             const unlocked = isChallengeUnlocked(ch.id, progress)
             const cleared = rec?.completed
-            // Locked cards state the condition rather than the name — the
+            // Locked cards state the condition rather than the name, the
             // requirement is the useful information, not a padlock glyph.
             const lockNote = `Locked. Clear challenge ${ch.id - 1} to unlock.`
             const label = unlocked

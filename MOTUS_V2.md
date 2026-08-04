@@ -1,12 +1,12 @@
-# Motus V2 — Gameplay & Progression Update
+# Motus V2. Gameplay & Progression Update
 
-An additive extension of Motus adding a full progression layer — challenges,
-achievements, statistics, cosmetics — plus a design and game-feel refresh, while
+An additive extension of Motus adding a full progression layer, challenges,
+achievements, statistics, cosmetics, plus a design and game-feel refresh, while
 preserving the original momentum-based feel. No existing gameplay was rewritten.
 
 ---
 
-## Design language — "Signal in the Void"
+## Design language: "Signal in the Void"
 
 Near-black canvas, confident neon, generous negative space, a mono "terminal"
 type texture for eyebrows and data, hairline rules instead of uniform rounded
@@ -31,7 +31,7 @@ aligns to the player's motion.
 generated from a single global difficulty ramp, so **every challenge is harder
 than the one before**. Types include collect-N, sprint (timed), survive, clean
 sweep, tiny arena, no-wrap void, reversed controls, low/high friction, sudden
-death, swarm, endurance, and **Navigator** — collect orbs while weaving through a
+death, swarm, endurance, and **Navigator**, collect orbs while weaving through a
 field of static lethal hazards (4→15 hazards as difficulty climbs). Unlock-gated;
 tracks stars (speed-based), completion, and best time.
 
@@ -49,7 +49,7 @@ score, longest survival, play time, fastest speed, longest drift, Cataclysms,
 challenges completed, stars.
 
 **Cosmetics + themes.** 8 unlockable arena themes (restyle background, player,
-orb, enemy colors), earned player skins, and trail styles — all earned through
+orb, enemy colors), earned player skins, and trail styles, all earned through
 play, chosen on the Settings screen.
 
 **End screen.** Final score, New Personal Best badge, challenge stars, run-stat
@@ -104,7 +104,7 @@ colors follow the theme with no per-call changes.
 
 - **Interactive playtest pass** to tune the difficulty ramp, star thresholds, and
   obstacle density (systems are build/typecheck/SSR-verified).
-- **Audio** — the game is silent; orb pickups, Cataclysm onsets, and achievement
+- **Audio**, the game is silent; orb pickups, Cataclysm onsets, and achievement
   unlocks are prime SFX moments.
 - **In-challenge Cataclysms** and **daily seeds / per-challenge leaderboards**.
 - **Cloud sync** of progression (local-only today).

@@ -1,5 +1,5 @@
-// Customization: arena themes, player skins, and trail styles — the earned,
-// no-purchase cosmetics — plus the settings that record the player's current
+// Customization: arena themes, player skins, and trail styles, the earned,
+// no-purchase cosmetics, plus the settings that record the player's current
 // selection and a resolver that produces the effective palette for rendering.
 //
 // Everything here is unlocked through play (score, orbs, challenges,
@@ -44,14 +44,14 @@ export function isConditionMet(u: Unlock): boolean {
 
 // ── Arena themes: eight instruments ─────────────────────────────────────
 //
-// Each theme is a different *machine* reading the same experiment — a phosphor
-// scope, a blueprint, an amber tube, a pen plotter — rather than a hue rotation
+// Each theme is a different *machine* reading the same experiment, a phosphor
+// scope, a blueprint, an amber tube, a pen plotter, rather than a hue rotation
 // of one look. Five are lit tubes; three (Thermal, Plotter, Blackline) print
 // dark marks on light stock. That is why `ink`, `sheet` and `luminous` exist:
 // nothing in the renderer may assume the field is dark, or that a mark glows.
 //
 // The `id` values are persisted in localStorage (see `loadSettings`), so they
-// must never change — renaming one silently resets every player to the default.
+// must never change, renaming one silently resets every player to the default.
 // Unlock conditions are likewise untouched.
 
 export interface ArenaTheme {
@@ -71,7 +71,7 @@ export interface ArenaTheme {
     orbDeep: string
     hostile: string
     hostileLight: string
-    /** Foreground marks — graduations, rules, labels. Dark on paper stock. */
+    /** Foreground marks, graduations, rules, labels. Dark on paper stock. */
     ink: string
     /** Secondary mark: subordinate labels and spent graduations. */
     muted: string
@@ -118,7 +118,7 @@ export const themes: ArenaTheme[] = [
       hostile: '#c62817', hostileLight: '#e0705d', ink: '#231d16', muted: '#7a7063', sheet: '#e6e2d9',
       bgInner: 'rgba(240,237,229,0.55)', bgOuter: '#d4d0c6', grid: 'rgba(35,29,22,0.12)' } },
 
-  // The pen plotter — the whole app wore this for a while; it lives on as
+  // The pen plotter, the whole app wore this for a while; it lives on as
   // something you earn.
   { id: 'matrix', name: 'Plotter', unlock: { kind: 'orbs', value: 500 }, luminous: false,
     colors: { player: '#1f3fd1', playerLight: '#4560e0', orb: '#16202b', orbDeep: '#5d6672',
@@ -142,7 +142,7 @@ export interface PlayerSkin {
 }
 
 // Skins recolour the measured body itself, so they have to survive every
-// medium — mid-tone values that hold up on a dark tube AND on paper stock.
+// medium, mid-tone values that hold up on a dark tube AND on paper stock.
 export const playerSkins: PlayerSkin[] = [
   { id: 'theme', name: 'Instrument Default', unlock: { kind: 'default' } },
   { id: 'ember', name: 'Amber', unlock: { kind: 'games', value: 10 }, color: '#e8912a', light: '#f6bf78' },
@@ -154,7 +154,7 @@ export const playerSkins: PlayerSkin[] = [
 
 // ── Trail styles: how long the phosphor holds ─────────────────────────────
 //
-// The trail is the player's own speed trace — on a tube it is literal
+// The trail is the player's own speed trace, on a tube it is literal
 // persistence, on a printed instrument it is how heavily the pen bears down.
 // `width`/`opacity` keep their old meaning, and the ids keep their old unlock
 // conditions.
@@ -165,7 +165,7 @@ export interface TrailStyle {
   unlock: Unlock
   width: number // multiplier on trail radius
   opacity: number // base alpha
-  /** Stamp interval ticks along the trace — spacing reads as speed. */
+  /** Stamp interval ticks along the trace, spacing reads as speed. */
   ticks?: boolean
 }
 
@@ -250,7 +250,7 @@ export function themeCssVars(theme: ArenaTheme): Record<string, string> {
     // nonsense, so it resolves to `none` there.
     '--bloom': theme.luminous ? `0 0 14px ${rgba(c.player, 0.4)}` : 'none',
     // For type sitting directly on the strip chart. Layers of the field colour
-    // hug the letterforms and knock the trace out from behind them — no
+    // hug the letterforms and knock the trace out from behind them, no
     // rectangle anywhere, unlike a backing box or a box-shadow halo. The lit
     // instruments add their bloom outside that, furthest back in the stack.
     '--label-shadow': theme.luminous
@@ -265,7 +265,7 @@ export function themeCssVars(theme: ArenaTheme): Record<string, string> {
 }
 
 /**
- * The instrument the chassis wears. This deliberately ignores `randomTheme` —
+ * The instrument the chassis wears. This deliberately ignores `randomTheme` -
  * that option re-rolls the arena each run, and having the menus change colour
  * underneath the player between runs would read as a bug, not a feature.
  */
@@ -299,7 +299,7 @@ export interface ResolvedTheme {
   themeId: string
   /** Foreground mark color. Mirrored into `palette.ink` for convenience. */
   ink: string
-  /** False on print media — the renderer must not bloom marks on light stock. */
+  /** False on print media, the renderer must not bloom marks on light stock. */
   luminous: boolean
 }
 
