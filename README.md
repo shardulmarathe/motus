@@ -1,22 +1,63 @@
 # Motus
 
-Simple Next.js + TypeScript HTML5 Canvas game MVP.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-Run:
+A momentum-driven arcade game rendered on an HTML5 canvas. You pilot a puck with
+real inertia — it coasts after you let go — collecting orbs, dodging hazards, and
+surviving periodic **Cataclysm** events that rewrite the rules for thirty seconds
+at a time.
+
+**[Play it →](https://playmotus.vercel.app)**
+
+Built with Next.js, TypeScript and a hand-written canvas engine. No game
+framework.
+
+## What's in it
+
+- **Survival** — score, stages, and a Neon Postgres leaderboard with server-side
+  anti-cheat.
+- **Eight Cataclysm events** — the arena shrinks, hunters home in, decoys swap
+  places, the lights go out, meteors streak through. Every 10 orbs, never the
+  same one twice in a row.
+- **A 100-challenge campaign** with achievements, lifetime stats, and earned
+  cosmetics and arena themes.
+- **Versus** — three multiplayer variants (Orb Duel, Co-op Survival, Tag),
+  playable locally on one keyboard or online across two devices.
+- **Practice** and an eight-step **Tutorial**.
+
+**Controls:** arrow keys or WASD to move, space to restart after game over, and
+an on-screen D-pad on touch devices.
+
+## Design — "Phosphor Scope"
+
+The game presents itself as an instrument measuring a body in motion: a
+long-persistence phosphor scope. The display is one monochrome tube, so
+brightness is the only hierarchy — red is the one colour the tube cannot produce,
+which is exactly why it means danger and nothing else.
+
+The signature motif is **the trace**: one line plotting real speed over time,
+drawn on four surfaces — the title backdrop (your cursor's velocity), the HUD
+strip chart, your tick-stamped trail in the arena, and the end screen showing the
+whole run with the death point marked.
+
+## Running it
 
 ```bash
 npm install
-npm run dev
+npm run dev      # http://localhost:3000
+npm run lint
+npm run build
 ```
 
-Controls:
-- Arrow keys or WASD: move the puck
-- Space: restart after game over
+**Required env** (leaderboard only): `LEADERBOARD_SESSION_SECRET` plus a Neon
+Postgres connection string as `DATABASE_URL`. Copy `.env.local.example` to
+`.env.local` and fill it in. The game itself plays fine without them; only score
+submission needs the database.
 
 ## Online multiplayer
 
-Versus matches (Orb Duel, Co-op Survival, Tag) can be played online through a
-small relay running on [Cloudflare Workers](https://developers.cloudflare.com/workers/)
+Versus matches can be played online through a small relay running on
+[Cloudflare Workers](https://developers.cloudflare.com/workers/)
 (`worker/index.ts` — a Worker plus one Durable Object per room). The host runs the
 simulation and broadcasts snapshots; the guest sends input. Rooms are identified
 by 5-character codes (create a room, share the code, the other player joins with it).
@@ -63,9 +104,36 @@ Notes:
 - Room codes are 5 characters from an unambiguous alphabet (no I/L/O/0/1).
 - Multiplayer matches never write to the leaderboard — it is survival-only.
 
-Project structure:
+## Project structure
 
-- `src/app` - Next.js App Router pages and layout
-- `src/components/GameCanvas.tsx` - canvas and game loop
-- `src/lib/physics.ts` - vector and collision helpers
-- `src/lib/gameLogic.ts` - spawn/reset helpers
+```
+src/
+  app/          App Router pages, layout, global styling, leaderboard API routes
+  components/
+    GameCanvas.tsx     canvas, main loop, all game state (the largest file)
+    NeonBackground.tsx title backdrop — graticule + plotted cursor velocity
+    TraceStrip.tsx     the trace, as a component
+    ...                challenge / settings / profile / end-screen overlays
+  lib/
+    physics.ts         vectors, integration, collisions, bounds
+    gameLogic.ts       spawning, cataclysm config, difficulty scaling
+    cataclysm/events.ts  the eight event definitions
+    telemetry.ts       speed ring buffer behind the trace
+    game-session.ts    HMAC session signing + anti-cheat limits
+    challenges.ts, achievements.ts, stats.ts, customization.ts
+    multiplayer/, net/ player slots, variant rules, wire protocol, interpolation
+worker/index.ts   Cloudflare Worker + Durable Object relay
+neon/schema.sql   leaderboard schema
+```
+
+Progression is stored client-side in `localStorage`, namespaced `motus:v2:`.
+Only the leaderboard touches the database.
+
+For how the engine actually works — the design system's token architecture, the
+netcode model, and the anti-cheat scheme — see
+[ARCHITECTURE.md](./ARCHITECTURE.md). [MOTUS_V2.md](./MOTUS_V2.md) covers the
+progression layer's design.
+
+## License
+
+MIT — see [LICENSE](./LICENSE).

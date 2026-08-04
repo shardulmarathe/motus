@@ -18,3 +18,6 @@ tsconfig.tsbuildinfo
 # local editor config
 .cursor/
 .claude/
+
+# macOS/sync artefacts — duplicate copies nothing imports
+* [0-9].*

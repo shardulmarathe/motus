@@ -1301,6 +1301,9 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
     }
+    // Mount-only by design: the listeners read live state through refs, so
+    // re-running this would only churn window listeners.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Main game loop
@@ -3770,6 +3773,10 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
+    // Intentionally keyed on `props` alone. The loop reads everything else
+    // through refs; adding the callbacks would cancel and restart the
+    // animation frame whenever their identity changed, stuttering the game.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props])
 
   // Watch UI state changes (title/rules/playing/paused) and react accordingly.
@@ -3794,6 +3801,9 @@ const GameCanvas = forwardRef<HTMLCanvasElement, GameCanvasProps>((props, ref) =
     } catch (e) {
       /* ignore */
     }
+    // Must fire on uiState transitions only. Including resetGame would rerun
+    // this — and reset a run in progress — on any unrelated re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.uiState])
 
   return (

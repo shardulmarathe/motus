@@ -1,2 +1,0 @@
--- Deprecated: Motus leaderboard now uses Neon Postgres.
--- See neon/schema.sql for the current schema.
