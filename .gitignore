@@ -14,3 +14,7 @@ tsconfig.tsbuildinfo
 
 # Wrangler local dev state (miniflare SQLite for Durable Objects)
 .wrangler/
+
+# local editor config
+.cursor/
+.claude/

@@ -1,7 +1,5 @@
 # Motus V2 — Gameplay & Progression Update
 
-Branch: `feature/challenge-mode-progression` (not merged into `main`).
-
 An additive extension of Motus adding a full progression layer — challenges,
 achievements, statistics, cosmetics — plus a design and game-feel refresh, while
 preserving the original momentum-based feel. No existing gameplay was rewritten.
