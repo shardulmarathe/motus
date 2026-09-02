@@ -18,12 +18,23 @@ export default function AchievementToast({ queue, onDrained }: AchievementToastP
   const [index, setIndex] = useState(0)
   const [visible, setVisible] = useState(false)
 
-  useEffect(() => {
+  // Reset to the first achievement when a new queue arrives. Adjusting state
+  // during render rather than in an effect: React re-renders immediately
+  // without painting the stale index, so the toast never flashes the previous
+  // queue's entry. This is the pattern React documents for derived resets.
+  const [queueSeen, setQueueSeen] = useState(queue)
+  if (queueSeen !== queue) {
+    setQueueSeen(queue)
     setIndex(0)
-  }, [queue])
+    setVisible(false)
+  }
 
   useEffect(() => {
     if (queue.length === 0 || index >= queue.length) return
+    // Slide-in is driven by a state flip on mount of each entry, so this has to
+    // happen here rather than being derived -- `visible` is not a function of
+    // the props, it is a function of elapsed time (see the timeouts below).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisible(true)
     const hide = setTimeout(() => setVisible(false), 3600)
     const next = setTimeout(() => {

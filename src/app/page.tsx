@@ -192,6 +192,9 @@ export default function Home() {
     if (uiState !== 'title' || menuScreen === 'multiplayer') return
     closeRoom()
     if (mpSession?.kind === 'online') {
+      // Part of tearing down an external system (the multiplayer room closed on
+      // the line above), not derived state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMpSession(null)
       setMpVariant(null)
     }
@@ -307,6 +310,9 @@ export default function Home() {
     if (uiState !== 'title') return
     const stats = loadStats()
     const cs = challengeStats()
+    // Reads localStorage, which is an external store React cannot derive from
+    // props.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHomeReadouts({
       best: stats.highestScore,
       cleared: cs.completedCount,
@@ -319,6 +325,8 @@ export default function Home() {
   }, [uiState, menuScreen, endRun])
 
   useEffect(() => {
+    // Reads localStorage and sessionStorage on mount; external stores.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRegisteredName(loadRegisteredPlayerName())
     try {
       const savedBest = sessionStorage.getItem('motus-session-best')
@@ -341,6 +349,8 @@ export default function Home() {
     if (uiState !== 'rules' || gameMode !== 'survival' || registeredName) return
 
     let cancelled = false
+    // Loading flag for the fetch below; standard data-fetching effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLeaderboardNamesLoading(true)
 
     fetch('/api/leaderboard')
@@ -445,6 +455,9 @@ export default function Home() {
     if (!wasOver || hud.gameOver) return
     if (gameMode !== 'survival' || uiState !== 'playing') return
     submittedDeathRef.current = false
+    // Mints a server-side session on the game-over -> alive edge. Reacting to a
+    // transition in state owned by the canvas game loop, not derivable.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void mintSurvivalSession(registeredName)
   }, [hud.gameOver, gameMode, uiState, registeredName, mintSurvivalSession])
 
@@ -615,6 +628,9 @@ export default function Home() {
   // Dismiss the end screen once the game is live again (covers a direct Space restart).
   useEffect(() => {
     if (!hud.gameOver && endRun) {
+      // Clears the end screen when the canvas reports the run is live again; the
+      // trigger lives outside React.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEndRun(null)
       setAchievementQueue([])
     }

@@ -56,8 +56,15 @@ export default function TraceStrip({
   label,
 }: TraceStripProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  // Latest-value ref. The drawing effect below deliberately leaves `series` out
+  // of its deps so a data tick does not tear down and rebuild the canvas
+  // listeners, and reads this instead. Written in an effect rather than during
+  // render: every read happens asynchronously (ResizeObserver, the theme
+  // listener, the rAF loop), so it is always current by the time it matters.
   const seriesRef = useRef(series)
-  seriesRef.current = series
+  useEffect(() => {
+    seriesRef.current = series
+  }, [series])
 
   useEffect(() => {
     const canvas = canvasRef.current
