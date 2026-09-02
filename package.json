@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "typecheck": "tsc --noEmit",
     "start": "next start",
     "lint": "next lint",
     "og": "node scripts/capture-og.mjs",
@@ -19,11 +20,11 @@
     "react-dom": "18.2.0"
   },
   "devDependencies": {
-    "@types/node": "20.5.2",
+    "@types/node": "^24.13.3",
     "@types/react": "18.2.14",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.0.0",
     "puppeteer": "^24.10.0",
-    "typescript": "5.4.2"
+    "typescript": "^5.9.3"
   }
 }
