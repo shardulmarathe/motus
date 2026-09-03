@@ -101,7 +101,7 @@ function paintField(ctx: CanvasRenderingContext2D, w: number, h: number, t: Toke
 export default function NeonBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const mouseRef = useRef({ x: -9999, y: -9999, px: -9999, py: -9999, vx: 0, vy: 0, seen: false })
-  const animationRef = useRef<number>()
+  const animationRef = useRef<number | undefined>(undefined)
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
   // Tokens are sampled once per setup, so a change of instrument has to force
   // a re-run rather than waiting for the next resize.

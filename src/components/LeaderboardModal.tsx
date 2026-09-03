@@ -33,6 +33,8 @@ export default function LeaderboardModal({ open, onClose }: LeaderboardModalProp
   useEffect(() => {
     if (!open) return
 
+    // Loading flag for the fetch below; standard data-fetching effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     void fetchLeaderboard()
 
