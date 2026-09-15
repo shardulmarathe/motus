@@ -201,7 +201,7 @@ pause relay (guest requests, host decides), and match-end/disconnect handling.
 Rooms enforce exactly one host and one guest. There is deliberately **no
 anti-cheat**, because multiplayer never posts scores.
 
-To run online locally: `npm run party:dev` (relay on `:1999`) alongside
+To run online locally: `npm run versus:dev` (relay on `:1999`) alongside
 `npm run dev`; the client defaults to `localhost:1999` when
 `NEXT_PUBLIC_VERSUS_HOST` is unset. Deploy with `npm run versus:deploy`,
 separately from Vercel, and set `NEXT_PUBLIC_VERSUS_HOST` in the Vercel env.
